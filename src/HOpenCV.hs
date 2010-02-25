@@ -13,10 +13,12 @@ import Foreign.Storable
 
 import C2HS
 
+
 type IplImage = Ptr (())
-{-# LINE 13 "HOpenCV.chs" #-}
-type CvCapture = Ptr (())
 {-# LINE 14 "HOpenCV.chs" #-}
+type CvCapture = Ptr (())
+{-# LINE 15 "HOpenCV.chs" #-}
+
 
 newCapture :: Int -> IO (CvCapture)
 newCapture a1 =
@@ -24,10 +26,15 @@ newCapture a1 =
   newCapture'_ a1' >>= \res ->
   let {res' = id res} in
   return (res')
-{-# LINE 17 "HOpenCV.chs" #-}
+{-# LINE 19 "HOpenCV.chs" #-}
 
---{#fun del_capture as ^
---      {id `PCvCapture'} -> `()' id#}
+delCapture :: CvCapture -> IO (())
+delCapture a1 =
+  let {a1' = id a1} in 
+  delCapture'_ a1' >>= \res ->
+  let {res' = id res} in
+  return (res')
+{-# LINE 22 "HOpenCV.chs" #-}
 
 queryFrame :: CvCapture -> IO (IplImage)
 queryFrame a1 =
@@ -35,17 +42,59 @@ queryFrame a1 =
   queryFrame'_ a1' >>= \res ->
   let {res' = id res} in
   return (res')
-{-# LINE 23 "HOpenCV.chs" #-}
+{-# LINE 25 "HOpenCV.chs" #-}
 
-main :: IO ()
-main = do
-  capture <- newCapture 0
-  frame <- queryFrame capture
-  return ()
+newWindow :: Int -> Int -> IO (())
+newWindow a1 a2 =
+  let {a1' = fromIntegral a1} in 
+  let {a2' = fromIntegral a2} in 
+  newWindow'_ a1' a2' >>= \res ->
+  let {res' = id res} in
+  return (res')
+{-# LINE 28 "HOpenCV.chs" #-}
 
+delWindow :: Int -> IO (())
+delWindow a1 =
+  let {a1' = fromIntegral a1} in 
+  delWindow'_ a1' >>= \res ->
+  let {res' = id res} in
+  return (res')
+{-# LINE 31 "HOpenCV.chs" #-}
+
+showImage :: Int -> IplImage -> IO (())
+showImage a1 a2 =
+  let {a1' = fromIntegral a1} in 
+  let {a2' = id a2} in 
+  showImage'_ a1' a2' >>= \res ->
+  let {res' = id res} in
+  return (res')
+{-# LINE 34 "HOpenCV.chs" #-}
+
+waitKey :: Int -> IO (())
+waitKey a1 =
+  let {a1' = fromIntegral a1} in 
+  waitKey'_ a1' >>= \res ->
+  let {res' = id res} in
+  return (res')
+{-# LINE 37 "HOpenCV.chs" #-}
 
 foreign import ccall safe "HOpenCV.chs.h new_capture"
   newCapture'_ :: (CInt -> (IO (CvCapture)))
 
+foreign import ccall safe "HOpenCV.chs.h del_capture"
+  delCapture'_ :: ((CvCapture) -> (IO ()))
+
 foreign import ccall safe "HOpenCV.chs.h query_frame"
   queryFrame'_ :: ((CvCapture) -> (IO (IplImage)))
+
+foreign import ccall safe "HOpenCV.chs.h new_window"
+  newWindow'_ :: (CInt -> (CInt -> (IO ())))
+
+foreign import ccall safe "HOpenCV.chs.h del_window"
+  delWindow'_ :: (CInt -> (IO ()))
+
+foreign import ccall safe "HOpenCV.chs.h show_image"
+  showImage'_ :: (CInt -> ((IplImage) -> (IO ())))
+
+foreign import ccall safe "HOpenCV.chs.h wait_key"
+  waitKey'_ :: (CInt -> (IO ()))
