@@ -8,6 +8,7 @@ import Foreign.C.Types
 import Foreign.Ptr
 import Foreign.Storable
 
+import C2HS
 
 {#pointer *IplImage as IplImage #}
 {#pointer *CvCapture as CvCapture #}
@@ -15,16 +16,9 @@ import Foreign.Storable
 {#fun new_capture as ^
       {fromIntegral `Int'} -> `CvCapture' id#}
 
-{#fun del_capture as ^
-      {id `CvCapture'} -> {}#}
+--{#fun del_capture as ^
+--      {id `PCvCapture'} -> `()' id#}
 
 {#fun query_frame as ^
       {id `CvCapture'} -> `IplImage' id#}
-
-
-main = do
-  capture <- newCapture
-  frame <- queryFrame capture
-  delCapture capture
-
 
