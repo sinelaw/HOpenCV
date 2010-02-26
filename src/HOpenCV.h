@@ -16,3 +16,8 @@ void show_image(int num, IplImage *image);
 
 void wait_key(int delay);
 
+IplImage *clone_image(IplImage *image);
+
+void del_image(IplImage *image);
+
+void dilate(IplImage *src, int iterations, IplImage *dest);

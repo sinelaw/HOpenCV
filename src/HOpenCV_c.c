@@ -52,3 +52,17 @@ void wait_key(int delay)
 }
 
 
+IplImage *clone_image(IplImage *image)
+{
+    return cvCloneImage(image);
+}
+
+void del_image(IplImage *image)
+{
+    cvReleaseImage(&image);
+}
+
+void dilate(IplImage *src, int iterations, IplImage *dest)
+{
+    cvDilate(src, dest, NULL, iterations);
+}

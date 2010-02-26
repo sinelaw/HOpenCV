@@ -35,3 +35,13 @@ import C2HS
 
 {#fun wait_key as ^
       {fromIntegral `Int'} -> `()' id#}
+
+{#fun clone_image as ^
+      {id `IplImage'} -> `IplImage' id#}
+
+{#fun del_image as ^
+      {id `IplImage'} -> `()' id#}
+
+{#fun dilate as ^
+      {id `IplImage', fromIntegral `Int', id `IplImage'} -> `()' id#}
+

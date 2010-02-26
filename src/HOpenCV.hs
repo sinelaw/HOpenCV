@@ -78,6 +78,33 @@ waitKey a1 =
   return (res')
 {-# LINE 37 "HOpenCV.chs" #-}
 
+cloneImage :: IplImage -> IO (IplImage)
+cloneImage a1 =
+  let {a1' = id a1} in 
+  cloneImage'_ a1' >>= \res ->
+  let {res' = id res} in
+  return (res')
+{-# LINE 40 "HOpenCV.chs" #-}
+
+delImage :: IplImage -> IO (())
+delImage a1 =
+  let {a1' = id a1} in 
+  delImage'_ a1' >>= \res ->
+  let {res' = id res} in
+  return (res')
+{-# LINE 43 "HOpenCV.chs" #-}
+
+dilate :: IplImage -> Int -> IplImage -> IO (())
+dilate a1 a2 a3 =
+  let {a1' = id a1} in 
+  let {a2' = fromIntegral a2} in 
+  let {a3' = id a3} in 
+  dilate'_ a1' a2' a3' >>= \res ->
+  let {res' = id res} in
+  return (res')
+{-# LINE 46 "HOpenCV.chs" #-}
+
+
 foreign import ccall safe "HOpenCV.chs.h new_capture"
   newCapture'_ :: (CInt -> (IO (CvCapture)))
 
@@ -98,3 +125,12 @@ foreign import ccall safe "HOpenCV.chs.h show_image"
 
 foreign import ccall safe "HOpenCV.chs.h wait_key"
   waitKey'_ :: (CInt -> (IO ()))
+
+foreign import ccall safe "HOpenCV.chs.h clone_image"
+  cloneImage'_ :: ((IplImage) -> (IO (IplImage)))
+
+foreign import ccall safe "HOpenCV.chs.h del_image"
+  delImage'_ :: ((IplImage) -> (IO ()))
+
+foreign import ccall safe "HOpenCV.chs.h dilate"
+  dilate'_ :: ((IplImage) -> (CInt -> ((IplImage) -> (IO ()))))

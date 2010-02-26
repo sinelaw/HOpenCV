@@ -7,10 +7,13 @@ main :: IO ()
 main = do
   capture <- HOpenCV.newCapture 0
   HOpenCV.newWindow 0 1
+  frame <- HOpenCV.queryFrame capture
+  dilated <- HOpenCV.cloneImage frame
   let showFrames = do
          frame <- HOpenCV.queryFrame capture
-         HOpenCV.showImage 0 frame
-         HOpenCV.waitKey 10
+         HOpenCV.dilate frame 6 dilated
+         HOpenCV.showImage 0 dilated
+         HOpenCV.waitKey 2
          showFrames
          return ()
   showFrames
