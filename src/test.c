@@ -3,11 +3,13 @@
 void lib_test()
 {
     CvCapture *capture = new_capture(0);
+    IplImage *frame = NULL;
     new_window(0,1);
 
     while (1) {
-        show_image(0, query_frame(capture));
-        wait_key(20);
+        frame = cvQueryFrame(capture);
+        //show_image(0, frame);
+        wait_key(30);
     }
 
     del_window(0);

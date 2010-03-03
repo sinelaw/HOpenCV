@@ -6,23 +6,42 @@ module HOpenCV where
 
 import Foreign.C.Types
 import Foreign.Ptr
+import Foreign.ForeignPtr
 import Foreign.Storable
 
 import C2HS
 
+data IplImage = IplImage
+data CvCapture = CvCapture
 
-{#pointer *IplImage as IplImage #}
-{#pointer *CvCapture as CvCapture #}
+{#pointer *IplImage as CIplImage foreign -> IplImage #}
+{#pointer *CvCapture as CCvCapture foreign -> CvCapture #}
 
 
-{#fun new_capture as ^
-      {fromIntegral `Int'} -> `CvCapture' id#}
+foreign import ccall "HOpenCV.h &del_capture"
+  p_del_capture :: FunPtr (Ptr CvCapture -> IO ())
+foreign import ccall "HOpenCV.h &del_image"
+  p_del_image :: FunPtr (Ptr IplImage -> IO ())
 
-{#fun del_capture as ^
-      {id `CvCapture'} -> `()' id#}
+newCapture :: Int -> IO CCvCapture
+newCapture deviceNum = do
+  ptr <- {#call unsafe new_capture#} (cIntConv deviceNum)
+  newForeignPtr p_del_capture ptr
 
-{#fun query_frame as ^
-      {id `CvCapture'} -> `IplImage' id#}
+--{#fun new_capture as ^
+--      {fromIntegral `Int'} -> `Ptr CvCapture' id#}
+
+--{#fun del_capture as ^
+--      {id `Ptr CvCapture'} -> `()' id#}
+
+queryClonedFrame :: CCvCapture -> IO CIplImage
+queryClonedFrame capture = do
+  ptr <- withForeignPtr capture $ \capture' -> {#call unsafe query_cloned_frame#} capture'
+  newForeignPtr p_del_image ptr
+
+  
+--{#fun query_frame as ^
+--      {id `Ptr CvCapture'} -> `Ptr IplImage' id#}
 
 {#fun new_window as ^
       {fromIntegral `Int', fromIntegral `Int'} -> `()' id#}
@@ -31,17 +50,22 @@ import C2HS
       {fromIntegral `Int'} -> `()' id#}
 
 {#fun show_image as ^
-      {fromIntegral `Int', id `IplImage'} -> `()' id#}
+      {fromIntegral `Int', unsafeForeignPtrToPtr `CIplImage'} -> `()' id#}
 
 {#fun wait_key as ^
       {fromIntegral `Int'} -> `()' id#}
 
-{#fun clone_image as ^
-      {id `IplImage'} -> `IplImage' id#}
+--{#fun clone_image as ^
+--      {id `Ptr IplImage'} -> `Ptr IplImage' id#}
+cloneImage :: CIplImage -> IO CIplImage
+cloneImage image = do
+  ptr <- withForeignPtr image $ \image' -> {#call unsafe clone_image#} image'
+  newForeignPtr p_del_image ptr
+  
+--{#fun del_image as ^
+--      {id `Ptr IplImage'} -> `()' id#}
 
-{#fun del_image as ^
-      {id `IplImage'} -> `()' id#}
-
-{#fun dilate as ^
-      {id `IplImage', fromIntegral `Int', id `IplImage'} -> `()' id#}
+--{#fun dilate as ^
+--      {id `CIplImage', fromIntegral `Int', id `CIplImage'} -> `()' id#}
+    
 

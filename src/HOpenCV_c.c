@@ -18,6 +18,10 @@ IplImage *query_frame(CvCapture *capture) {
     return cvQueryFrame( capture );
 }
 
+IplImage *query_cloned_frame(CvCapture *capture) {
+    return cvCloneImage(cvQueryFrame( capture ));
+}
+
 
 /*************/
 void num_to_name(int num, char *name, int length)
