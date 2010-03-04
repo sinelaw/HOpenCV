@@ -33,7 +33,7 @@ executable test-hopencv
   hs-source-dirs:  src
   Build-Depends: base >= 4
   main-is: Test.hs
-  Ghc-Options: -debug -Wall
+  Ghc-Options: -Wall
   Ghc-Prof-Options:  -prof -auto-all 
   extra-libraries: cv,highgui
   other-modules: AI.CV.OpenCV.CxCore, AI.CV.OpenCV.CV, AI.CV.OpenCV.HighGui
