@@ -60,7 +60,7 @@ void show_image(int num, IplImage *image)
     cvShowImage(name, image);
 }
 
-/**************/
+/**********************************************************/
 
 /* Haskell's FFI doesn't know how to pass structs by value, I think. */
 IplImage *create_image(int width, int height, int depth, int channels)
@@ -84,3 +84,10 @@ void get_size(const CvArr *arr, CvSize *size)
 {
     cvDilate(src, dest, NULL, iterations);
     }*/
+/**********************************************************/
+
+void release_mem_storage(CvMemStorage *mem_store)
+{
+    CvMemStorage *temp = mem_store;
+    cvReleaseMemStorage(&temp);
+}

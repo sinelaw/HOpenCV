@@ -35,6 +35,8 @@ instance IplArrayType CvArr
 data IplImage
 instance IplArrayType IplImage
 
+data CvMemStorage
+
 fromArr :: IplArrayType a => Ptr a -> Ptr CvArr
 fromArr = castPtr 
 
@@ -77,6 +79,24 @@ numToDepth :: CInt -> Maybe Depth
 numToDepth = flip Map.lookup $ mapNumDepths
 
 ---------------------------------------------------------------
+-- mem storage
+foreign import ccall unsafe "cxcore.h cvCreateMemStorage"
+  c_cvCreateMemStorage :: CInt -> IO (Ptr CvMemStorage)
+
+cvCreateMemStorage :: Integral a => a -> IO (Ptr CvMemStorage)
+cvCreateMemStorage = c_cvCreateMemStorage . fromIntegral
+
+foreign import ccall unsafe "HOpenCV_warp.h release_mem_storage"
+  cvReleaseMemStorage :: Ptr CvMemStorage -> IO ()
+
+foreign import ccall unsafe "HOpenCV_warp.h &release_mem_storage"
+  cp_release_mem_storage :: FunPtr (Ptr CvMemStorage -> IO ())
+
+createMemStorageF :: Integral a => a -> IO (Maybe (ForeignPtr CvMemStorage))
+createMemStorageF = (createForeignPtr cp_release_mem_storage) . cvCreateMemStorage
+  
+
+-- images / matrices / arrays
 
 foreign import ccall unsafe "HOpenCV_warp.h create_image"
   c_cvCreateImage :: CInt -> CInt -> CInt -> CInt -> IO (Ptr IplImage)

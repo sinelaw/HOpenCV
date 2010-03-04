@@ -17,10 +17,15 @@ showFrames winNum targetImage cvcapture  = do
     Nothing -> return ()
     Just frame  -> do 
       cvConvertImage (fromArr frame) (fromArr targetImage) 0
-      cvCanny targetImage targetImage 30 150 3
-      showImage winNum targetImage
-      key <- waitKey (5::Int) :: IO Int
-      unless (key /= -1) $ showFrames winNum targetImage cvcapture
+      targetSmall' <- createImageF (CvSize 160 120) 1 IPL_DEPTH_8U
+      case targetSmall' of 
+        Nothing -> return ()
+        Just ts -> withForeignPtr ts (\targetSmall -> do
+                                        cvResize targetImage targetSmall CV_INTER_LINEAR
+                                        cvCanny targetSmall targetSmall 50 180 3
+                                        showImage winNum targetSmall
+                                        key <- waitKey (5::Int) :: IO Int
+                                        unless (key /= -1) $ showFrames winNum targetImage cvcapture)
   
 processImages capture = do
   frame' <- cvQueryFrame capture
