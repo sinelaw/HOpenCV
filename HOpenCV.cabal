@@ -34,6 +34,6 @@ executable test-hopencv
   main-is: Test.hs
   Ghc-Prof-Options:  -prof -auto-all
   extra-libraries: cv,highgui
-
+  other-modules: AI.CV.OpenCV.CxCore
 
 
