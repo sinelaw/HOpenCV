@@ -17,6 +17,7 @@ library
       AI.CV.OpenCV.CV
       AI.CV.OpenCV.CxCore
       AI.CV.OpenCV.HighGui
+      AI.CV.OpenCV.Types
       Foreign.ForeignPtrWrap
    c-sources:
       src/AI/CV/OpenCV/HOpenCV_wrap.c
@@ -36,6 +37,6 @@ executable test-hopencv
   Ghc-Options: -Wall
   Ghc-Prof-Options:  -prof -auto-all 
   extra-libraries: cv,highgui
-  other-modules: AI.CV.OpenCV.CxCore, AI.CV.OpenCV.CV, AI.CV.OpenCV.HighGui
+  other-modules: AI.CV.OpenCV.CxCore, AI.CV.OpenCV.CV, AI.CV.OpenCV.HighGui, AI.CV.OpenCV.Types
 
 
