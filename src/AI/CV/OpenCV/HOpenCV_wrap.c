@@ -1,8 +1,8 @@
+#include <cxcore.h>
 #include <cv.h>
 #include <highgui.h>
 
 #include <stdio.h>
-
 
 void release_capture(CvCapture *capture)
 {
@@ -35,6 +35,14 @@ void show_image(int num, IplImage *image)
     char name[100];
     num_to_name(num, name, sizeof(name));
     cvShowImage(name, image);
+}
+
+/**************/
+
+/* Haskell's FFI doesn't know how to pass structs by value, I think. */
+IplImage *create_image(int width, int height, int depth, int channels)
+{
+    return cvCreateImage(cvSize(width,height), depth, channels);
 }
 
 /*void dilate(IplImage *src, int iterations, IplImage *dest)
