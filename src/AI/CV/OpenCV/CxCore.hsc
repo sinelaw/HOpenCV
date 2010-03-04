@@ -26,7 +26,15 @@ instance Storable CvSize where
         (#poke CvSize, height) ptr h
 
 ------------------------------------------------------
+class IplArrayType a
+
+data CvArr
+instance IplArrayType CvArr
+
 data IplImage
+instance IplArrayType IplImage
+
+
 
 data Depth = IPL_DEPTH_1U
              | IPL_DEPTH_8U -- Unsigned 8-bit integer
@@ -73,3 +81,16 @@ foreign import ccall unsafe "HOpenCV_warp.h create_image"
 
 cvCreateImage :: Integral a => CvSize -> a -> Depth -> IO (Ptr IplImage)
 cvCreateImage size numChans depth = c_cvCreateImage (width size) (height size) (fromIntegral numChans) (depthToNum depth)
+
+foreign import ccall unsafe "cxcore.h cvCloneImage"
+  cvCloneImage :: Ptr IplImage -> IO (Ptr IplImage)
+                  
+foreign import ccall unsafe "HOpenCV_warp.h get_size"
+  c_get_size :: Ptr CvArr -> Ptr CvSize -> IO ()
+
+cvGetSize :: IplArrayType a => Ptr a -> CvSize
+cvGetSize p = unsafePerformIO $
+              alloca $ \cvSizePtr -> do
+                c_get_size (castPtr p) cvSizePtr
+                size <- peek cvSizePtr
+                return size

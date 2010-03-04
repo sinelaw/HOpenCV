@@ -45,6 +45,12 @@ IplImage *create_image(int width, int height, int depth, int channels)
     return cvCreateImage(cvSize(width,height), depth, channels);
 }
 
+/* Notice that according to opencv docs, cvGetSize returns the ROI for images, not the image.width and .height */
+void get_size(const CvArr *arr, CvSize *size)
+{
+    *size = cvGetSize(arr);
+}
+    
 /*void dilate(IplImage *src, int iterations, IplImage *dest)
 {
     cvDilate(src, dest, NULL, iterations);

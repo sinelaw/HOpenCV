@@ -25,16 +25,15 @@ library
    build-depends: base >= 3 && < 5, containers
    ghc-options: -Wall 
 
--- executable test-hopencv
---   c-sources:
---      src/AI/CV/OpenCV/HOpenCV_wrap.c
---   include-dirs: /usr/include/opencv
---   hs-source-dirs:  src
---   ghc-options : -O2 -Wall
---   Build-Depends: base >= 4
---   main-is: Test.hs
---   Ghc-Prof-Options:  -prof -auto-all
---   extra-libraries: cv,highgui
+executable test-hopencv
+  c-sources:
+     src/AI/CV/OpenCV/HOpenCV_wrap.c
+  include-dirs: /usr/include/opencv
+  hs-source-dirs:  src
+  Build-Depends: base >= 4
+  main-is: Test.hs
+  Ghc-Prof-Options:  -prof -auto-all
+  extra-libraries: cv,highgui
 
 
 

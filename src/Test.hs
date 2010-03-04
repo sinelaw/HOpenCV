@@ -3,6 +3,7 @@ module Main where
 import Foreign.Ptr
 import Foreign.ForeignPtr
 
+import AI.CV.OpenCV.CxCore
 import AI.CV.OpenCV.HighGui
 
 import Control.Monad(unless)
