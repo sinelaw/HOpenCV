@@ -133,6 +133,8 @@ foreign import ccall unsafe "cxcore.h cvConvertScale"
   cvConvertScale :: Ptr CvArr -> Ptr CvArr -> CDouble -> CDouble -> IO ()
 
 
+
+-- Debugging stuff, not part of opencv
 foreign import ccall unsafe "HOpenCV_warp.h debug_print_image_header"
   c_debug_print_image_header :: Ptr IplImage -> IO ()
                                 
