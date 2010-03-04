@@ -2,6 +2,7 @@
 
 module AI.CV.OpenCV.CxCore where
 
+import Foreign.ForeignPtrWrap
 import Foreign.C.Types
 import Foreign
 
@@ -34,7 +35,8 @@ instance IplArrayType CvArr
 data IplImage
 instance IplArrayType IplImage
 
-
+fromArr :: IplArrayType a => Ptr a -> Ptr CvArr
+fromArr = castPtr 
 
 data Depth = IPL_DEPTH_1U
              | IPL_DEPTH_8U -- Unsigned 8-bit integer
@@ -80,11 +82,23 @@ foreign import ccall unsafe "HOpenCV_warp.h create_image"
   c_cvCreateImage :: CInt -> CInt -> CInt -> CInt -> IO (Ptr IplImage)
 
 cvCreateImage :: Integral a => CvSize -> a -> Depth -> IO (Ptr IplImage)
-cvCreateImage size numChans depth = c_cvCreateImage (width size) (height size) (fromIntegral numChans) (depthToNum depth)
+cvCreateImage size numChans depth = c_cvCreateImage (width size) (height size) (depthToNum depth) (fromIntegral numChans) 
+
+foreign import ccall unsafe "HOpenCV_warp.h release_image"
+  cvReleaseImage :: Ptr IplImage -> IO ()
+
+foreign import ccall unsafe "HOpenCV_warp.h &release_image"
+  cp_release_image :: FunPtr (Ptr IplImage -> IO ())
+
+createImageF :: Integral a => CvSize -> a -> Depth -> IO (Maybe (ForeignPtr IplImage))
+createImageF x y z = createForeignPtr cp_release_image $ cvCreateImage x y z
 
 foreign import ccall unsafe "cxcore.h cvCloneImage"
   cvCloneImage :: Ptr IplImage -> IO (Ptr IplImage)
                   
+cloneImageF :: Ptr IplImage -> IO (Maybe (ForeignPtr IplImage))
+cloneImageF x = createForeignPtr cp_release_image $ cvCloneImage x
+  
 foreign import ccall unsafe "HOpenCV_warp.h get_size"
   c_get_size :: Ptr CvArr -> Ptr CvSize -> IO ()
 
@@ -94,3 +108,11 @@ cvGetSize p = unsafePerformIO $
                 c_get_size (castPtr p) cvSizePtr
                 size <- peek cvSizePtr
                 return size
+
+foreign import ccall unsafe "cxcore.h cvConvertScale"
+  cvConvertScale :: Ptr CvArr -> Ptr CvArr -> CDouble -> CDouble -> IO ()
+
+
+foreign import ccall unsafe "HOpenCV_warp.h debug_print_image_header"
+  c_debug_print_image_header :: Ptr IplImage -> IO ()
+                                

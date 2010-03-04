@@ -14,6 +14,7 @@ extra-source-files:
 
 library
    exposed-modules:
+      AI.CV.OpenCV.CV
       AI.CV.OpenCV.CxCore
       AI.CV.OpenCV.HighGui
       Foreign.ForeignPtrWrap
@@ -32,8 +33,9 @@ executable test-hopencv
   hs-source-dirs:  src
   Build-Depends: base >= 4
   main-is: Test.hs
-  Ghc-Prof-Options:  -prof -auto-all
+  Ghc-Options: -debug
+  Ghc-Prof-Options:  -prof -auto-all 
   extra-libraries: cv,highgui
-  other-modules: AI.CV.OpenCV.CxCore
+  other-modules: AI.CV.OpenCV.CxCore, AI.CV.OpenCV.CV, AI.CV.OpenCV.HighGui
 
 

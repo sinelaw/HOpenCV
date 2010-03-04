@@ -11,6 +11,15 @@ import AI.CV.OpenCV.CxCore
 
 
 ------------------------------------------------
+------------------------------------------------
+-- General
+foreign import ccall unsafe "highgui.h cvConvertImage"
+  c_cvConvertImage :: Ptr CvArr -> Ptr CvArr -> CInt -> IO ()
+
+cvConvertImage :: (IplArrayType a, IplArrayType a1) => Ptr a -> Ptr a1 -> CInt -> IO ()
+cvConvertImage src dst flags = c_cvConvertImage (fromArr src) (fromArr dst) flags
+
+------------------------------------------------
 -- Capturing
 data CvCapture
 
@@ -18,13 +27,13 @@ foreign import ccall unsafe "highgui.h cvCreateCameraCapture"
   c_cvCreateCameraCapture :: CInt -> IO (Ptr CvCapture)
                           
 foreign import ccall unsafe "HOpenCV_warp.h &release_capture"
-  c_release_capture  :: FunPtr (Ptr CvCapture -> IO () )
+  cp_release_capture  :: FunPtr (Ptr CvCapture -> IO () )
  
 c_createCameraCapture :: CInt -> IO (Maybe (ForeignPtr CvCapture) )
-c_createCameraCapture = createForeignPtr c_cvCreateCameraCapture c_release_capture
+c_createCameraCapture = (createForeignPtr cp_release_capture) . c_cvCreateCameraCapture
 
-createCameraCapture :: Integral a => a -> IO (Maybe (ForeignPtr CvCapture))
-createCameraCapture = c_createCameraCapture . fromIntegral
+createCameraCaptureF :: Integral a => a -> IO (Maybe (ForeignPtr CvCapture))
+createCameraCaptureF = c_createCameraCapture . fromIntegral
 
 foreign import ccall unsafe "highgui.h cvQueryFrame"
   c_cvQueryFrame :: Ptr CvCapture -> IO (Ptr IplImage)

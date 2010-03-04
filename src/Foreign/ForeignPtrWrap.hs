@@ -3,9 +3,13 @@ module Foreign.ForeignPtrWrap where
 import Foreign.Ptr
 import Foreign.ForeignPtr
 
-createForeignPtr :: (a -> IO (Ptr b)) -> (FunPtr (Ptr b -> IO () )) -> a -> IO (Maybe (ForeignPtr b) )
-createForeignPtr alloc dealloc x = do
-    ptr <- alloc x
+-- A wrapper for newForeignPtr that handles nullPtrs, and can be chained to an IO Ptr creator.
+-- usage:
+-- myPtrCreator = (createForeignPtr deallocFunc) . allocFunc
+-- where, allocFunc :: a->b->c->...-> IO (Ptr z)
+createForeignPtr :: (FunPtr (Ptr a -> IO () )) -> IO (Ptr a) -> IO (Maybe (ForeignPtr a))
+createForeignPtr dealloc allocedPtr = do
+    ptr <- allocedPtr
     if ptr /= nullPtr
         then do
            foreignPtr <- newForeignPtr dealloc ptr

@@ -4,13 +4,36 @@
 
 #include <stdio.h>
 
+void debug_print_image_header(IplImage *image)
+{
+    printf("IplImage: \n"
+           "\tnSize: %d\n"
+           "\tID: %d\n"
+           "\tnChannels: %d\n"
+           "\talphaChannel: %d\n"
+           "\tdepth: %d\n"
+           "\tdataOrder: %d\n"
+           "\torigin: %d\n"
+           "\talign: %d\n"
+           "\twidth: %d\n"
+           "\theight: %d\n"
+           "\timageSize: %d\n"
+           "\twidthStep: %d\n",
+           image->nSize, image->ID, image->nChannels, image->alphaChannel,
+           image->depth, image->dataOrder, image->origin, image->align,
+           image->width, image->height, image->imageSize, image->widthStep);
+}
+
+/****************************************************************************/
+
 void release_capture(CvCapture *capture)
 {
     CvCapture *temp = capture;
     cvReleaseCapture(&temp);
 }
 
-/*************/
+/****************************************************************************/
+
 void num_to_name(int num, char *name, int length)
 {
     snprintf(name, length, "win-%d", num);
@@ -43,6 +66,12 @@ void show_image(int num, IplImage *image)
 IplImage *create_image(int width, int height, int depth, int channels)
 {
     return cvCreateImage(cvSize(width,height), depth, channels);
+}
+
+void release_image(IplImage *image)
+{
+    IplImage *temp = image;
+    return cvReleaseImage(&temp);
 }
 
 /* Notice that according to opencv docs, cvGetSize returns the ROI for images, not the image.width and .height */
