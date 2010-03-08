@@ -79,7 +79,19 @@ void get_size(const CvArr *arr, CvSize *size)
 {
     *size = cvGetSize(arr);
 }
-    
+
+/* TODO instead of get_depth, get_nChannels maybe we should allow serialization of the IplImage struct itself, as we do
+   for CvSize? */
+int get_depth(const IplImage *image)
+{
+    return image->depth;
+}
+
+int get_nChannels(const IplImage *image)
+{
+    return image->nChannels;
+}
+
 /*void dilate(IplImage *src, int iterations, IplImage *dest)
 {
     cvDilate(src, dest, NULL, iterations);

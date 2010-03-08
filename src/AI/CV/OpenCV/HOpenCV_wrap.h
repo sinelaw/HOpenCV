@@ -14,4 +14,7 @@ IplImage *create_image(int width, int height, int depth, int channels);
 void release_image(IplImage *image);
 
 void get_size(const CvArr *arr, CvSize *size);
-/*void dilate(IplImage *src, int iterations, IplImage *dest);*/
+int get_depth(const IplImage *image);
+int get_nChannels(const IplImage *image);
+
+    /*void dilate(IplImage *src, int iterations, IplImage *dest);*/

@@ -19,7 +19,7 @@ showFrames winNum targetImage cvcapture  = do
   lift . withForeignPtr ts $ calcFrame
       where calcFrame targetSmall = do
               cvResize targetImage targetSmall CV_INTER_LINEAR
-              cvCanny targetSmall targetSmall (50::Int) (180::Int) (3::Int)
+              cvCanny targetSmall targetSmall (30::Int) (150::Int) (3::Int)
               showImage winNum targetSmall
               key <- waitKey (5::Int) :: IO Int
               when (key == -1) (runMaybeT (showFrames winNum targetImage cvcapture) >> return ())

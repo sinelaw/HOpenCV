@@ -129,6 +129,24 @@ cvGetSize p = unsafePerformIO $
                 size <- peek cvSizePtr
                 return size
 
+foreign import ccall unsafe "HOpenCV_warp.h get_depth"
+  c_get_depth :: Ptr IplImage -> IO CInt
+
+getDepth :: Ptr IplImage -> IO Depth
+getDepth img = do
+  depthInt <- c_get_depth img
+  -- todo runtime errors can occur here if numToDepth returns Nothing (bad depth in image struct)
+  return (fromJust . numToDepth $ depthInt)
+
+foreign import ccall unsafe "HOpenCV_warp.h get_nChannels"
+  c_get_nChannels :: Ptr IplImage -> IO CInt
+
+getNumChannels :: Integral a => Ptr IplImage -> IO a
+getNumChannels img = do
+  chans <- c_get_nChannels img
+  return (fromIntegral chans)
+
+
 foreign import ccall unsafe "cxcore.h cvConvertScale"
   cvConvertScale :: Ptr CvArr -> Ptr CvArr -> CDouble -> CDouble -> IO ()
 
