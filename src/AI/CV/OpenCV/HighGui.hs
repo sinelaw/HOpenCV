@@ -23,24 +23,31 @@ cvConvertImage src dst flags = c_cvConvertImage (fromArr src) (fromArr dst) flag
 -- Capturing
 data CvCapture
 
+toMaybe :: (Eq a) => a -> a -> Maybe a
+toMaybe nValue x = if x == nValue then Nothing else Just x
+
+
 foreign import ccall unsafe "highgui.h cvCreateCameraCapture"
   c_cvCreateCameraCapture :: CInt -> IO (Ptr CvCapture)
                           
+cvCreateCameraCapture :: Integral a => a -> IO (Maybe (Ptr CvCapture))
+cvCreateCameraCapture x = do 
+  cap <- c_cvCreateCameraCapture . fromIntegral $ x
+  return $ toMaybe nullPtr cap
+
+foreign import ccall unsafe "HOpenCV_warp.h release_capture"
+  cvReleaseCapture  :: Ptr CvCapture -> IO ()
+
 foreign import ccall unsafe "HOpenCV_warp.h &release_capture"
   cp_release_capture  :: FunPtr (Ptr CvCapture -> IO () )
  
-c_createCameraCapture :: CInt -> IO (Maybe (ForeignPtr CvCapture) )
-c_createCameraCapture = (createForeignPtr cp_release_capture) . c_cvCreateCameraCapture
-
 createCameraCaptureF :: Integral a => a -> IO (Maybe (ForeignPtr CvCapture))
-createCameraCaptureF = c_createCameraCapture . fromIntegral
+createCameraCaptureF = (createForeignPtrM cp_release_capture) . cvCreateCameraCapture
+
+
 
 foreign import ccall unsafe "highgui.h cvQueryFrame"
   c_cvQueryFrame :: Ptr CvCapture -> IO (Ptr IplImage)
-
-
-toMaybe :: (Eq a) => a -> a -> Maybe a
-toMaybe nValue x = if x == nValue then Nothing else Just x
 
 cvQueryFrame :: Ptr CvCapture -> IO (Maybe (Ptr IplImage))
 cvQueryFrame cap = do

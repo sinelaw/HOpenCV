@@ -28,3 +28,10 @@ foreign import ccall unsafe "cv.h cvResize"
 
 cvResize :: (IplArrayType i1, IplArrayType i2) => Ptr i1 -> Ptr i2 -> InterpolationMethod -> IO ()
 cvResize src dst interp = c_cvResize (fromArr src) (fromArr dst) (fromIntegral . fromEnum $ interp)
+
+foreign import ccall unsafe "HOpenCV_warp.h dilate"
+  c_dilate :: CInt -> Ptr CvArr -> Ptr CvArr -> IO ()
+
+cvDilate :: (Integral a, IplArrayType i1, IplArrayType i2) => a -> Ptr i1 -> Ptr i2  -> IO ()
+cvDilate iter src dst = c_dilate (fromIntegral iter) (fromArr src) (fromArr dst)
+

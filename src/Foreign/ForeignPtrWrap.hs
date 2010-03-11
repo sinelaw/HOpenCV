@@ -17,4 +17,13 @@ createForeignPtr dealloc allocedPtr = do
         else
            return Nothing
 
+createForeignPtrM :: (FunPtr (Ptr a -> IO () )) -> IO (Maybe (Ptr a)) -> IO (Maybe (ForeignPtr a))
+createForeignPtrM dealloc allocedPtr = do
+  ptr <- allocedPtr
+  case ptr of
+    Nothing -> return Nothing
+    Just allocedPtr' -> do
+             foreignPtr <- newForeignPtr dealloc allocedPtr'
+             return $ Just foreignPtr
+
 

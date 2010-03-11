@@ -17,4 +17,4 @@ void get_size(const CvArr *arr, CvSize *size);
 int get_depth(const IplImage *image);
 int get_nChannels(const IplImage *image);
 
-    /*void dilate(IplImage *src, int iterations, IplImage *dest);*/
+void dilate(int iterations, const CvArr *src, CvArr *dest);

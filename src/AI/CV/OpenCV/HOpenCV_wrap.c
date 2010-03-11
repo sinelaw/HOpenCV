@@ -92,10 +92,10 @@ int get_nChannels(const IplImage *image)
     return image->nChannels;
 }
 
-/*void dilate(IplImage *src, int iterations, IplImage *dest)
+void dilate(int iterations, const CvArr *src, CvArr *dest)
 {
     cvDilate(src, dest, NULL, iterations);
-    }*/
+}
 /**********************************************************/
 
 void release_mem_storage(CvMemStorage *mem_store)
