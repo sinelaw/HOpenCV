@@ -11,7 +11,6 @@ import AI.CV.OpenCV.CxCore
 
 
 ------------------------------------------------
-------------------------------------------------
 -- General
 foreign import ccall unsafe "highgui.h cvConvertImage"
   c_cvConvertImage :: Ptr CvArr -> Ptr CvArr -> CInt -> IO ()
@@ -23,17 +22,13 @@ cvConvertImage src dst flags = c_cvConvertImage (fromArr src) (fromArr dst) flag
 -- Capturing
 data CvCapture
 
-toMaybe :: (Eq a) => a -> a -> Maybe a
-toMaybe nValue x = if x == nValue then Nothing else Just x
-
 
 foreign import ccall unsafe "highgui.h cvCreateCameraCapture"
   c_cvCreateCameraCapture :: CInt -> IO (Ptr CvCapture)
                           
-cvCreateCameraCapture :: Integral a => a -> IO (Maybe (Ptr CvCapture))
-cvCreateCameraCapture x = do 
-  cap <- c_cvCreateCameraCapture . fromIntegral $ x
-  return $ toMaybe nullPtr cap
+cvCreateCameraCapture :: Integral a => a -> IO (Ptr CvCapture)
+cvCreateCameraCapture x = errorName "Failed to create camera" . checkPtr $ c_cvCreateCameraCapture . fromIntegral $ x
+  
 
 foreign import ccall unsafe "HOpenCV_warp.h release_capture"
   cvReleaseCapture  :: Ptr CvCapture -> IO ()
@@ -41,18 +36,16 @@ foreign import ccall unsafe "HOpenCV_warp.h release_capture"
 foreign import ccall unsafe "HOpenCV_warp.h &release_capture"
   cp_release_capture  :: FunPtr (Ptr CvCapture -> IO () )
  
-createCameraCaptureF :: Integral a => a -> IO (Maybe (ForeignPtr CvCapture))
-createCameraCaptureF = (createForeignPtrM cp_release_capture) . cvCreateCameraCapture
+createCameraCaptureF :: Integral a => a -> IO (ForeignPtr CvCapture)
+createCameraCaptureF = (createForeignPtr cp_release_capture) . cvCreateCameraCapture
 
 
 
 foreign import ccall unsafe "highgui.h cvQueryFrame"
   c_cvQueryFrame :: Ptr CvCapture -> IO (Ptr IplImage)
 
-cvQueryFrame :: Ptr CvCapture -> IO (Maybe (Ptr IplImage))
-cvQueryFrame cap = do
-  frame <- c_cvQueryFrame cap
-  return $ toMaybe nullPtr frame
+cvQueryFrame :: Ptr CvCapture -> IO (Ptr IplImage)
+cvQueryFrame cap = errorName "Failed to query frame from camera" . checkPtr $ c_cvQueryFrame cap
 
 -------------------------------------------------
 -- Windows

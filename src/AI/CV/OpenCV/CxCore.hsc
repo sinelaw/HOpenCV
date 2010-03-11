@@ -9,6 +9,7 @@ import Foreign
 import Data.Maybe(fromJust)
 import qualified Data.Map as Map
 
+
 #include <cxcore.h>
 
 ------------------------------------------------------
@@ -84,7 +85,7 @@ foreign import ccall unsafe "cxcore.h cvCreateMemStorage"
   c_cvCreateMemStorage :: CInt -> IO (Ptr CvMemStorage)
 
 cvCreateMemStorage :: Integral a => a -> IO (Ptr CvMemStorage)
-cvCreateMemStorage = c_cvCreateMemStorage . fromIntegral
+cvCreateMemStorage = errorName "Failed to create mem storage" . checkPtr . c_cvCreateMemStorage . fromIntegral
 
 foreign import ccall unsafe "HOpenCV_warp.h release_mem_storage"
   cvReleaseMemStorage :: Ptr CvMemStorage -> IO ()
@@ -92,7 +93,7 @@ foreign import ccall unsafe "HOpenCV_warp.h release_mem_storage"
 foreign import ccall unsafe "HOpenCV_warp.h &release_mem_storage"
   cp_release_mem_storage :: FunPtr (Ptr CvMemStorage -> IO ())
 
-createMemStorageF :: Integral a => a -> IO (Maybe (ForeignPtr CvMemStorage))
+createMemStorageF :: Integral a => a -> IO (ForeignPtr CvMemStorage)
 createMemStorageF = (createForeignPtr cp_release_mem_storage) . cvCreateMemStorage
   
 
@@ -102,7 +103,7 @@ foreign import ccall unsafe "HOpenCV_warp.h create_image"
   c_cvCreateImage :: CInt -> CInt -> CInt -> CInt -> IO (Ptr IplImage)
 
 cvCreateImage :: Integral a => CvSize -> a -> Depth -> IO (Ptr IplImage)
-cvCreateImage size numChans depth = c_cvCreateImage (width size) (height size) (depthToNum depth) (fromIntegral numChans) 
+cvCreateImage size numChans depth = errorName "Failed to create image" . checkPtr $ c_cvCreateImage (width size) (height size) (depthToNum depth) (fromIntegral numChans) 
 
 foreign import ccall unsafe "HOpenCV_warp.h release_image"
   cvReleaseImage :: Ptr IplImage -> IO ()
@@ -110,13 +111,16 @@ foreign import ccall unsafe "HOpenCV_warp.h release_image"
 foreign import ccall unsafe "HOpenCV_warp.h &release_image"
   cp_release_image :: FunPtr (Ptr IplImage -> IO ())
 
-createImageF :: Integral a => CvSize -> a -> Depth -> IO (Maybe (ForeignPtr IplImage))
+createImageF :: Integral a => CvSize -> a -> Depth -> IO (ForeignPtr IplImage)
 createImageF x y z = createForeignPtr cp_release_image $ cvCreateImage x y z
 
 foreign import ccall unsafe "cxcore.h cvCloneImage"
-  cvCloneImage :: Ptr IplImage -> IO (Ptr IplImage)
+  c_cvCloneImage :: Ptr IplImage -> IO (Ptr IplImage)
+
+cvCloneImage :: Ptr IplImage -> IO (Ptr IplImage)
+cvCloneImage = errorName "Failed to clone image" . checkPtr . c_cvCloneImage
                   
-cloneImageF :: Ptr IplImage -> IO (Maybe (ForeignPtr IplImage))
+cloneImageF :: Ptr IplImage -> IO (ForeignPtr IplImage)
 cloneImageF x = createForeignPtr cp_release_image $ cvCloneImage x
   
 foreign import ccall unsafe "HOpenCV_warp.h get_size"
@@ -135,8 +139,9 @@ foreign import ccall unsafe "HOpenCV_warp.h get_depth"
 getDepth :: Ptr IplImage -> IO Depth
 getDepth img = do
   depthInt <- c_get_depth img
-  -- todo runtime errors can occur here if numToDepth returns Nothing (bad depth in image struct)
-  return (fromJust . numToDepth $ depthInt)
+  case numToDepth depthInt of
+    Nothing -> fail "Bad depth in image struct"
+    Just depth -> return depth
 
 foreign import ccall unsafe "HOpenCV_warp.h get_nChannels"
   c_get_nChannels :: Ptr IplImage -> IO CInt
@@ -149,8 +154,6 @@ getNumChannels img = do
 
 foreign import ccall unsafe "cxcore.h cvConvertScale"
   cvConvertScale :: Ptr CvArr -> Ptr CvArr -> CDouble -> CDouble -> IO ()
-
-
 
 -- Debugging stuff, not part of opencv
 foreign import ccall unsafe "HOpenCV_warp.h debug_print_image_header"
