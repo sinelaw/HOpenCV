@@ -13,6 +13,7 @@ import Foreign
 ------------------------------------------------------
 
 data CvSize  = CvSize { sizeWidth :: CInt, sizeHeight :: CInt }
+               deriving (Show, Eq)
 instance Storable CvSize where
     sizeOf    _ = (#size CvSize)
     alignment _ = alignment (undefined :: CInt)
@@ -25,6 +26,8 @@ instance Storable CvSize where
         (#poke CvSize, height) ptr h
 
 data CvRect  = CvRect { rectX :: CInt, rectY :: CInt, rectWidth :: CInt, rectHeight :: CInt }
+               deriving (Show, Eq)
+                        
 instance Storable CvRect where
     sizeOf    _ = (#size CvRect)
     alignment _ = alignment (undefined :: CInt)
@@ -168,7 +171,7 @@ cvLoad filename memstorage name = withCString filename cvLoad'
               Nothing -> cvLoad'' filenameC nullPtr
               Just n' -> withCString n' $ cvLoad'' filenameC
           cvLoad'' filenameC nameC = alloca $ \ptrRealNameC -> do
-              ptrObj <- c_cvLoad filenameC memstorage nameC ptrRealNameC
+              ptrObj <- errorName "cvLoad failed" . checkPtr $ c_cvLoad filenameC memstorage nameC ptrRealNameC
               realNameC <- peek ptrRealNameC
               realName <- if realNameC == nullPtr 
                           then return Nothing 
@@ -179,24 +182,32 @@ cvLoad filename memstorage name = withCString filename cvLoad'
 foreign import ccall unsafe "cxcore.h cvGetSeqElem"
   cvGetSeqElem :: Ptr (CvSeq a) -> CInt -> IO (Ptr a)
   
-foreign import ccall unsafe "HOpenCV_warp.h c_rect_cvGetSeqElem"
-  cvGetSeqElemRect :: Ptr (CvSeq CvRect) -> CInt -> IO (Ptr CvRect)
+-- foreign import ccall unsafe "HOpenCV_warp.h c_rect_cvGetSeqElem"
+--   cvGetSeqElemRect :: Ptr (CvSeq (Ptr CvRect)) -> CInt -> IO (Ptr CvRect)
 
 foreign import ccall unsafe "HOpenCV_warp.h seq_total"
   seqNumElems :: Ptr (CvSeq a) -> IO CInt
 
-seqToList :: Ptr (CvSeq a) -> IO [Ptr a]
-seqToList pseq = do
+seqToPList :: Ptr (CvSeq a) -> IO [Ptr a]
+seqToPList pseq = do
   numElems <- seqNumElems pseq
   mapM (cvGetSeqElem pseq) [1..(numElems)]
 
-seqToRectList :: Ptr (CvSeq CvRect) -> IO [CvRect]
-seqToRectList pseq = do
+seqToList :: Storable a => Ptr (CvSeq a) -> IO [a]
+seqToList pseq = do
   numElems <- seqNumElems pseq
   flip mapM [1..(numElems)] $ \i -> do
-    rectP <- cvGetSeqElemRect pseq i
-    rect <- peek rectP
-    return rect
+    elemP <- cvGetSeqElem pseq i
+    elem' <- peek elemP
+    return elem'
+
+-- seqToRectList :: Ptr (CvSeq (Ptr CvRect)) -> IO [CvRect]
+-- seqToRectList pseq = do
+--   numElems <- seqNumElems pseq
+--   flip mapM [1..(numElems)] $ \i -> do
+--     rectP <- cvGetSeqElemRect pseq i
+--     rect <- peek rectP
+--     return rect
 
 ------------------------------------------------------------------------------
 -- Debugging stuff, not part of opencv

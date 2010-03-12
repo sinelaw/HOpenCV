@@ -120,9 +120,9 @@ int seq_total(const CvSeq *seq) {
 /* Commonly used case of CV_GET_SEQ_ELEM is CvRect-typed elements.
    The macro CV_GET_SEQ_ELEM is supposed to be faster in some cases
    than the function cvGetSeqElem. */
-CvRect *c_rect_cvGetSeqElem(const CvSeq *seq, int index) {
+/*CvRect *c_rect_cvGetSeqElem(const CvSeq *seq, int index) {
     return CV_GET_SEQ_ELEM( CvRect, seq, index);
-}
+    }*/
 
 
 /****************************************************************************/

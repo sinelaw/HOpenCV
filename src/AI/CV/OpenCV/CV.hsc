@@ -58,10 +58,11 @@ newtype HaarDetectFlag = HaarDetectFlag { unHaarDetectFlag :: CInt }
     deriving (Eq, Show)
              
 #{enum HaarDetectFlag, HaarDetectFlag
-  , cvHaarDoCannyPruning    = CV_HAAR_DO_CANNY_PRUNING 
-  , cvHaarScaleImage        = CV_HAAR_SCALE_IMAGE 
-  , cvHaarFindBiggestObject = CV_HAAR_FIND_BIGGEST_OBJECT 
-  , cvHaarDoRoughSearch     = CV_HAAR_DO_ROUGH_SEARCH
+ , cvHaarFlagNone = 0
+ , cvHaarDoCannyPruning    = CV_HAAR_DO_CANNY_PRUNING 
+ , cvHaarScaleImage        = CV_HAAR_SCALE_IMAGE 
+ , cvHaarFindBiggestObject = CV_HAAR_FIND_BIGGEST_OBJECT 
+ , cvHaarDoRoughSearch     = CV_HAAR_DO_ROUGH_SEARCH
  }
 
 combineHaarFlags :: [HaarDetectFlag] -> HaarDetectFlag
