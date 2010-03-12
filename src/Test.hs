@@ -14,9 +14,7 @@ showFrames :: CInt -> Ptr IplImage -> Ptr CvCapture -> IO ()
 showFrames winNum targetImage cvcapture  = do
   frame <- cvQueryFrame cvcapture 
   cvConvertImage (fromArr frame) (fromArr targetImage) 0
-  
-  ts <- createImageF (CvSize 320 240) 1 iplDepth8u
-  withForeignPtr ts $ calcFrame
+  calcFrame targetImage
       where calcFrame targetSmall = do
               cvResize targetImage targetSmall CV_INTER_LINEAR
               cvCanny targetSmall targetSmall 30 190 3
@@ -29,7 +27,7 @@ processImages :: Ptr CvCapture -> IO ()
 processImages capture = do
   frame <- cvQueryFrame capture
   let winNum = 0
-  newWindow winNum 0
+  newWindow winNum True
   target <- createImageF (cvGetSize frame) 1 iplDepth8u
   withForeignPtr target $ (\target' -> showFrames winNum target' capture) 
     

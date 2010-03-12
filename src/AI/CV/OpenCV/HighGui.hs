@@ -50,7 +50,10 @@ cvQueryFrame cap = errorName "Failed to query frame from camera" . checkPtr $ c_
 -------------------------------------------------
 -- Windows
 foreign import ccall unsafe "HOpenCV_wrap.h new_window"
-  newWindow :: CInt -> CInt -> IO ()
+  c_newWindow :: CInt -> CInt -> IO ()
+
+newWindow :: CInt -> Bool -> IO ()
+newWindow num autoSize = c_newWindow num (if autoSize then 1 else 0)
 
 foreign import ccall unsafe "HOpenCV_wrap.h del_window"
   delWindow :: CInt -> IO ()
