@@ -26,7 +26,7 @@ data CvCapture
 foreign import ccall unsafe "highgui.h cvCreateCameraCapture"
   c_cvCreateCameraCapture :: CInt -> IO (Ptr CvCapture)
                           
-cvCreateCameraCapture :: Integral a => a -> IO (Ptr CvCapture)
+cvCreateCameraCapture :: CInt -> IO (Ptr CvCapture)
 cvCreateCameraCapture x = errorName "Failed to create camera" . checkPtr $ c_cvCreateCameraCapture . fromIntegral $ x
   
 
@@ -36,7 +36,7 @@ foreign import ccall unsafe "HOpenCV_warp.h release_capture"
 foreign import ccall unsafe "HOpenCV_warp.h &release_capture"
   cp_release_capture  :: FunPtr (Ptr CvCapture -> IO () )
  
-createCameraCaptureF :: Integral a => a -> IO (ForeignPtr CvCapture)
+createCameraCaptureF :: CInt -> IO (ForeignPtr CvCapture)
 createCameraCaptureF = (createForeignPtr cp_release_capture) . cvCreateCameraCapture
 
 
@@ -50,31 +50,13 @@ cvQueryFrame cap = errorName "Failed to query frame from camera" . checkPtr $ c_
 -------------------------------------------------
 -- Windows
 foreign import ccall unsafe "HOpenCV_wrap.h new_window"
-  c_new_window :: CInt -> CInt -> IO ()
-
-newWindow :: Integral a => a -> IO ()
-newWindow num = c_new_window (fromIntegral num) 1
-  
+  newWindow :: CInt -> CInt -> IO ()
 
 foreign import ccall unsafe "HOpenCV_wrap.h del_window"
-  c_del_window :: CInt -> IO ()
-
-delWindow :: Integral a => a -> IO ()
-delWindow = c_del_window . fromIntegral
-
+  delWindow :: CInt -> IO ()
 
 foreign import ccall unsafe "HOpenCV_wrap.h show_image"
-  c_show_image :: CInt -> Ptr IplImage -> IO ()
-
-showImage :: Integral a => a -> Ptr IplImage -> IO ()
-showImage = c_show_image . fromIntegral
+  showImage :: CInt -> Ptr IplImage -> IO ()
 
 foreign import ccall unsafe "highgui.h cvWaitKey"
-  c_waitKey :: CInt -> IO CInt
-               
-waitKey :: (Integral a, Integral b) => a -> IO b
-waitKey = f . fromIntegral 
-    where f x = do
-            key <- c_waitKey x
-            return $ fromIntegral key
-  
+  waitKey :: CInt -> IO CInt

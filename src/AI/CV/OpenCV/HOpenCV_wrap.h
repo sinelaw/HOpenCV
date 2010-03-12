@@ -1,5 +1,5 @@
 #include <cv.h>
-
+#include <cxcore.h>
 
 void debug_print_image_header(IplImage *image);
 
@@ -17,4 +17,17 @@ void get_size(const CvArr *arr, CvSize *size);
 int get_depth(const IplImage *image);
 int get_nChannels(const IplImage *image);
 
-void dilate(int iterations, const CvArr *src, CvArr *dest);
+void dilate(const CvArr *src, CvArr *dest, int iterations);
+
+void release_mem_storage(CvMemStorage *mem_store);
+void cv_free(void *obj);
+
+int seq_total(const CvSeq *seq);
+CvRect *c_rect_cvGetSeqElem(const CvSeq *seq, int index);
+
+CvSeq *c_cvHaarDetectObjects( const CvArr* image,
+                              CvHaarClassifierCascade* cascade,
+                              CvMemStorage* storage, double scale_factor,
+                              int min_neighbors , int flags,
+                              int width, int height);
+

@@ -4,28 +4,41 @@ module AI.CV.OpenCV.CxCore where
 
 import Foreign.ForeignPtrWrap
 import Foreign.C.Types
+import Foreign.C.String
 import Foreign
-
-import Data.Maybe(fromJust)
-import qualified Data.Map as Map
 
 
 #include <cxcore.h>
 
 ------------------------------------------------------
 
-data CvSize  = CvSize { width :: CInt, height :: CInt }
-
+data CvSize  = CvSize { sizeWidth :: CInt, sizeHeight :: CInt }
 instance Storable CvSize where
     sizeOf    _ = (#size CvSize)
     alignment _ = alignment (undefined :: CInt)
     peek ptr = do
         w <- (#peek CvSize, width) ptr
         h <- (#peek CvSize, height) ptr
-        return  CvSize { width = w, height = h }
+        return  (CvSize w h)
     poke ptr (CvSize w h) = do
         (#poke CvSize, width) ptr w
         (#poke CvSize, height) ptr h
+
+data CvRect  = CvRect { rectX :: CInt, rectY :: CInt, rectWidth :: CInt, rectHeight :: CInt }
+instance Storable CvRect where
+    sizeOf    _ = (#size CvRect)
+    alignment _ = alignment (undefined :: CInt)
+    peek ptr = do
+        x <- (#peek CvRect, x) ptr
+        y <- (#peek CvRect, y) ptr
+        w <- (#peek CvRect, width) ptr
+        h <- (#peek CvRect, height) ptr
+        return  (CvRect x y w h)
+    poke ptr (CvRect x y w h) = do
+        (#poke CvRect, x) ptr x
+        (#poke CvRect, y) ptr y
+        (#poke CvRect, width) ptr w
+        (#poke CvRect, height) ptr h
 
 ------------------------------------------------------
 class IplArrayType a
@@ -38,54 +51,42 @@ instance IplArrayType IplImage
 
 data CvMemStorage
 
+data CvSeq a
+
 fromArr :: IplArrayType a => Ptr a -> Ptr CvArr
 fromArr = castPtr 
 
-data Depth = IPL_DEPTH_1U
-             | IPL_DEPTH_8U -- Unsigned 8-bit integer
-             | IPL_DEPTH_8S -- Signed 8-bit integer
-             | IPL_DEPTH_16U -- Unsigned 16-bit integer
-             | IPL_DEPTH_16S -- Signed 16-bit integer
-             | IPL_DEPTH_32S -- Signed 32-bit integer
-             | IPL_DEPTH_32F -- Single-precision floating point
-             | IPL_DEPTH_64F -- Double-precision floating point
-             deriving (Eq, Ord) -- for the map lookups
-               
-iplDepthSign :: CInt
-iplDepthSign = 0x80000000
+newtype Depth = Depth { unDepth :: CInt } 
+    deriving (Eq, Show)
+             
+#{enum Depth, Depth             
+  , iplDepth1u = IPL_DEPTH_1U
+  , iplDepth8u = IPL_DEPTH_8U
+  , iplDepth8s = IPL_DEPTH_8S
+  , iplDepth16u = IPL_DEPTH_16U
+  , iplDepth16s = IPL_DEPTH_16S
+  , iplDepth32s = IPL_DEPTH_32S
+  , iplDepth32f = IPL_DEPTH_32F
+  , iplDepth64f = IPL_DEPTH_64F
+}               
 
-toIplDepthSigned :: CInt -> CInt
-toIplDepthSigned x = x .|. iplDepthSign
+validDepths :: [Depth]
+validDepths = [iplDepth1u, iplDepth8u, iplDepth8s, iplDepth16u, iplDepth16s, iplDepth32s, iplDepth32f, iplDepth64f]
 
-depthNums :: [(Depth, CInt)]
-depthNums = [(IPL_DEPTH_1U,  1),
-             (IPL_DEPTH_8U,  8),
-             (IPL_DEPTH_8S,  toIplDepthSigned 8),
-             (IPL_DEPTH_16U, 16),
-             (IPL_DEPTH_16S, toIplDepthSigned 16),
-             (IPL_DEPTH_32S, toIplDepthSigned 32),
-             (IPL_DEPTH_32F, 32),
-             (IPL_DEPTH_64F, 64)]
-            
-mapDepthNums :: Map.Map Depth CInt
-mapDepthNums = Map.fromList depthNums
-
-mapNumDepths:: Map.Map CInt Depth
-mapNumDepths = Map.fromList . map (\(x,y)->(y,x)) $ depthNums
-
-depthToNum :: Depth -> CInt
-depthToNum = fromJust . (flip Map.lookup $ mapDepthNums)
+depthsLookupList :: [(CInt, Depth)]
+depthsLookupList = map (\d -> (unDepth d, d)) validDepths
 
 numToDepth :: CInt -> Maybe Depth
-numToDepth = flip Map.lookup $ mapNumDepths
+numToDepth x = lookup x depthsLookupList
+  
 
 ---------------------------------------------------------------
 -- mem storage
 foreign import ccall unsafe "cxcore.h cvCreateMemStorage"
   c_cvCreateMemStorage :: CInt -> IO (Ptr CvMemStorage)
 
-cvCreateMemStorage :: Integral a => a -> IO (Ptr CvMemStorage)
-cvCreateMemStorage = errorName "Failed to create mem storage" . checkPtr . c_cvCreateMemStorage . fromIntegral
+cvCreateMemStorage :: CInt -> IO (Ptr CvMemStorage)
+cvCreateMemStorage = errorName "Failed to create mem storage" . checkPtr . c_cvCreateMemStorage 
 
 foreign import ccall unsafe "HOpenCV_warp.h release_mem_storage"
   cvReleaseMemStorage :: Ptr CvMemStorage -> IO ()
@@ -93,7 +94,7 @@ foreign import ccall unsafe "HOpenCV_warp.h release_mem_storage"
 foreign import ccall unsafe "HOpenCV_warp.h &release_mem_storage"
   cp_release_mem_storage :: FunPtr (Ptr CvMemStorage -> IO ())
 
-createMemStorageF :: Integral a => a -> IO (ForeignPtr CvMemStorage)
+createMemStorageF :: CInt -> IO (ForeignPtr CvMemStorage)
 createMemStorageF = (createForeignPtr cp_release_mem_storage) . cvCreateMemStorage
   
 
@@ -102,8 +103,8 @@ createMemStorageF = (createForeignPtr cp_release_mem_storage) . cvCreateMemStora
 foreign import ccall unsafe "HOpenCV_warp.h create_image"
   c_cvCreateImage :: CInt -> CInt -> CInt -> CInt -> IO (Ptr IplImage)
 
-cvCreateImage :: Integral a => CvSize -> a -> Depth -> IO (Ptr IplImage)
-cvCreateImage size numChans depth = errorName "Failed to create image" . checkPtr $ c_cvCreateImage (width size) (height size) (depthToNum depth) (fromIntegral numChans) 
+cvCreateImage :: CvSize -> CInt -> Depth -> IO (Ptr IplImage)
+cvCreateImage size numChans depth = errorName "Failed to create image" . checkPtr $ c_cvCreateImage (sizeWidth size) (sizeHeight size) (unDepth depth) numChans
 
 foreign import ccall unsafe "HOpenCV_warp.h release_image"
   cvReleaseImage :: Ptr IplImage -> IO ()
@@ -111,7 +112,7 @@ foreign import ccall unsafe "HOpenCV_warp.h release_image"
 foreign import ccall unsafe "HOpenCV_warp.h &release_image"
   cp_release_image :: FunPtr (Ptr IplImage -> IO ())
 
-createImageF :: Integral a => CvSize -> a -> Depth -> IO (ForeignPtr IplImage)
+createImageF :: CvSize -> CInt -> Depth -> IO (ForeignPtr IplImage)
 createImageF x y z = createForeignPtr cp_release_image $ cvCreateImage x y z
 
 foreign import ccall unsafe "cxcore.h cvCloneImage"
@@ -147,15 +148,57 @@ foreign import ccall unsafe "HOpenCV_warp.h get_nChannels"
   c_get_nChannels :: Ptr IplImage -> IO CInt
 
 getNumChannels :: Integral a => Ptr IplImage -> IO a
-getNumChannels img = do
-  chans <- c_get_nChannels img
-  return (fromIntegral chans)
+getNumChannels img = fmap fromIntegral $ c_get_nChannels img
 
 
 foreign import ccall unsafe "cxcore.h cvConvertScale"
   cvConvertScale :: Ptr CvArr -> Ptr CvArr -> CDouble -> CDouble -> IO ()
 
+                                
+foreign import ccall unsafe "HOpenCV_warp.h cv_free"
+  cvFree :: Ptr a -> IO ()
+            
+foreign import ccall unsafe "cxcore.h cvLoad"
+  c_cvLoad :: CString -> Ptr CvMemStorage -> CString -> Ptr CString -> IO (Ptr a)
+
+cvLoad :: String -> Ptr CvMemStorage -> Maybe String -> IO (Ptr a, Maybe String)
+cvLoad filename memstorage name = withCString filename cvLoad'
+    where cvLoad' filenameC = do
+            case name of
+              Nothing -> cvLoad'' filenameC nullPtr
+              Just n' -> withCString n' $ cvLoad'' filenameC
+          cvLoad'' filenameC nameC = alloca $ \ptrRealNameC -> do
+              ptrObj <- c_cvLoad filenameC memstorage nameC ptrRealNameC
+              realNameC <- peek ptrRealNameC
+              realName <- if realNameC == nullPtr 
+                          then return Nothing 
+                          else fmap Just $ peekCString realNameC
+              cvFree realNameC
+              return (ptrObj, realName)
+              
+foreign import ccall unsafe "cxcore.h cvGetSeqElem"
+  cvGetSeqElem :: Ptr (CvSeq a) -> CInt -> IO (Ptr a)
+  
+foreign import ccall unsafe "HOpenCV_warp.h c_rect_cvGetSeqElem"
+  cvGetSeqElemRect :: Ptr (CvSeq CvRect) -> CInt -> IO (Ptr CvRect)
+
+foreign import ccall unsafe "HOpenCV_warp.h seq_total"
+  seqNumElems :: Ptr (CvSeq a) -> IO CInt
+
+seqToList :: Ptr (CvSeq a) -> IO [Ptr a]
+seqToList pseq = do
+  numElems <- seqNumElems pseq
+  mapM (cvGetSeqElem pseq) [1..(numElems)]
+
+seqToRectList :: Ptr (CvSeq CvRect) -> IO [CvRect]
+seqToRectList pseq = do
+  numElems <- seqNumElems pseq
+  flip mapM [1..(numElems)] $ \i -> do
+    rectP <- cvGetSeqElemRect pseq i
+    rect <- peek rectP
+    return rect
+
+------------------------------------------------------------------------------
 -- Debugging stuff, not part of opencv
 foreign import ccall unsafe "HOpenCV_warp.h debug_print_image_header"
   c_debug_print_image_header :: Ptr IplImage -> IO ()
-                                

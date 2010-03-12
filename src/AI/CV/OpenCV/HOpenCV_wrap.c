@@ -92,10 +92,11 @@ int get_nChannels(const IplImage *image)
     return image->nChannels;
 }
 
-void dilate(int iterations, const CvArr *src, CvArr *dest)
+void dilate(const CvArr *src, CvArr *dest, int iterations)
 {
     cvDilate(src, dest, NULL, iterations);
 }
+
 /**********************************************************/
 
 void release_mem_storage(CvMemStorage *mem_store)
@@ -103,3 +104,35 @@ void release_mem_storage(CvMemStorage *mem_store)
     CvMemStorage *temp = mem_store;
     cvReleaseMemStorage(&temp);
 }
+
+void cv_free(void *obj)
+{
+    void *temp = obj;
+    cvFree(&temp);
+}
+
+/****************************************************************************/
+
+int seq_total(const CvSeq *seq) {
+    return seq->total;
+}
+
+/* Commonly used case of CV_GET_SEQ_ELEM is CvRect-typed elements.
+   The macro CV_GET_SEQ_ELEM is supposed to be faster in some cases
+   than the function cvGetSeqElem. */
+CvRect *c_rect_cvGetSeqElem(const CvSeq *seq, int index) {
+    return CV_GET_SEQ_ELEM( CvRect, seq, index);
+}
+
+
+/****************************************************************************/
+
+CvSeq *c_cvHaarDetectObjects( const CvArr* image,
+                              CvHaarClassifierCascade* cascade,
+                              CvMemStorage* storage, double scale_factor,
+                              int min_neighbors , int flags,
+                              int width, int height)
+{
+    return cvHaarDetectObjects(image, cascade, storage, scale_factor, min_neighbors, flags, cvSize(width, height));
+}
+
