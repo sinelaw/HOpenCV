@@ -209,6 +209,9 @@ seqToList pseq = do
 --     rect <- peek rectP
 --     return rect
 
+foreign import ccall unsafe "HOpenCV_warp.h c_cvRectangle"
+  cvRectangle :: Ptr CvArr -> Ptr CvRect -> IO ()
+
 ------------------------------------------------------------------------------
 -- Debugging stuff, not part of opencv
 foreign import ccall unsafe "HOpenCV_warp.h debug_print_image_header"

@@ -125,6 +125,14 @@ int seq_total(const CvSeq *seq) {
     }*/
 
 
+void c_cvRectangle(CvArr *img, CvRect *rect)
+{
+    cvRectangle(img, cvPoint(rect->x,rect->y),
+                     cvPoint((rect->x+rect->width),
+                             (rect->y+rect->height)),
+                CV_RGB(255,0,0), 3 , 8, 0);
+}
+
 /****************************************************************************/
 
 CvSeq *c_cvHaarDetectObjects( const CvArr* image,

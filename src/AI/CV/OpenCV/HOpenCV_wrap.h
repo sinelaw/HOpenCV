@@ -23,7 +23,10 @@ void release_mem_storage(CvMemStorage *mem_store);
 void cv_free(void *obj);
 
 int seq_total(const CvSeq *seq);
-CvRect *c_rect_cvGetSeqElem(const CvSeq *seq, int index);
+/* CvRect *c_rect_cvGetSeqElem(const CvSeq *seq, int index); */
+
+void c_cvRectangle(CvArr *img, CvRect *rect);
+
 
 CvSeq *c_cvHaarDetectObjects( const CvArr* image,
                               CvHaarClassifierCascade* cascade,
