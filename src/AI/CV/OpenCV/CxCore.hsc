@@ -130,6 +130,13 @@ cloneImageF x = createForeignPtr cp_release_image $ cvCloneImage x
 foreign import ccall unsafe "HOpenCV_warp.h get_size"
   c_get_size :: Ptr CvArr -> Ptr CvSize -> IO ()
 
+foreign import ccall unsafe "cxcore.h cvCopy"
+  c_cvCopy :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> IO ()
+                   
+-- todo add mask support
+cvCopy :: IplArrayType a => Ptr a -> Ptr a -> IO ()
+cvCopy src dst = c_cvCopy (fromArr src) (fromArr dst) nullPtr
+
 cvGetSize :: IplArrayType a => Ptr a -> CvSize
 cvGetSize p = unsafePerformIO $
               alloca $ \cvSizePtr -> do
@@ -210,9 +217,14 @@ seqToList pseq = do
 --     return rect
 
 foreign import ccall unsafe "HOpenCV_warp.h c_cvRectangle"
-  cvRectangle :: Ptr CvArr -> Ptr CvRect -> IO ()
+  c_cvRectangle :: Ptr CvArr -> CInt -> CInt -> CInt -> CInt -> IO ()
+
+cvRectangle :: IplArrayType a => Ptr a -> CvRect -> IO ()
+cvRectangle dst (CvRect x y w h) = c_cvRectangle (fromArr dst) x y w h
 
 ------------------------------------------------------------------------------
 -- Debugging stuff, not part of opencv
+
+-- | Debugging function to print some of the internal details of an IplImage structure
 foreign import ccall unsafe "HOpenCV_warp.h debug_print_image_header"
   c_debug_print_image_header :: Ptr IplImage -> IO ()

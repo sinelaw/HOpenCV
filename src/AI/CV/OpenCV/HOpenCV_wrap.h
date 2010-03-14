@@ -25,7 +25,7 @@ void cv_free(void *obj);
 int seq_total(const CvSeq *seq);
 /* CvRect *c_rect_cvGetSeqElem(const CvSeq *seq, int index); */
 
-void c_cvRectangle(CvArr *img, CvRect *rect);
+void c_cvRectangle(CvArr *img, int x, int y, int width, int height);
 
 
 CvSeq *c_cvHaarDetectObjects( const CvArr* image,

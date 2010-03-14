@@ -125,11 +125,11 @@ int seq_total(const CvSeq *seq) {
     }*/
 
 
-void c_cvRectangle(CvArr *img, CvRect *rect)
+void c_cvRectangle(CvArr *img, int x, int y, int width, int height)
 {
-    cvRectangle(img, cvPoint(rect->x,rect->y),
-                     cvPoint((rect->x+rect->width),
-                             (rect->y+rect->height)),
+    cvRectangle(img, cvPoint(x,y),
+                     cvPoint((x+width),
+                             (y+height)),
                 CV_RGB(255,0,0), 3 , 8, 0);
 }
 
