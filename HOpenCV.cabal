@@ -25,7 +25,7 @@ library
    include-dirs: /usr/include/opencv
    extra-libraries: cv,highgui
    build-depends: base >= 3 && < 5, containers, MaybeT, mtl
-   ghc-options: -Wall -debug
+   ghc-options: -Wall
 
 executable test-hopencv
   c-sources:
@@ -34,7 +34,7 @@ executable test-hopencv
   hs-source-dirs:  src
   Build-Depends: base >= 4
   main-is: Test.hs
-  Ghc-Options: -Wall -debug
+  Ghc-Options: -Wall 
   Ghc-Prof-Options:  -prof -auto-all 
   extra-libraries: cv,highgui
   other-modules: AI.CV.OpenCV.CxCore, AI.CV.OpenCV.CV, AI.CV.OpenCV.HighGui, AI.CV.OpenCV.Types
