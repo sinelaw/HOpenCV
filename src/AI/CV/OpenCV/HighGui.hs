@@ -6,6 +6,7 @@ import Foreign.ForeignPtrWrap
 import Foreign.C.Types
 import Foreign.Ptr
 import Foreign.ForeignPtr
+import Foreign.C.String
  
 import AI.CV.OpenCV.CxCore
 
@@ -28,6 +29,14 @@ foreign import ccall unsafe "highgui.h cvCreateCameraCapture"
                           
 cvCreateCameraCapture :: CInt -> IO (Ptr CvCapture)
 cvCreateCameraCapture x = errorName "Failed to create camera" . checkPtr $ c_cvCreateCameraCapture . fromIntegral $ x
+  
+foreign import ccall unsafe "highgui.h cvCreateFileCapture"
+  c_cvCreateFileCapture :: CString -> IO (Ptr CvCapture)
+                          
+cvCreateFileCapture :: String -> IO (Ptr CvCapture)
+cvCreateFileCapture filename = err' . checkPtr $ withCString filename f
+    where err' = errorName $ "Failed to capture from file: '" ++ filename ++ "'"
+          f filenameC = c_cvCreateFileCapture filenameC
   
 
 foreign import ccall unsafe "HOpenCV_warp.h release_capture"

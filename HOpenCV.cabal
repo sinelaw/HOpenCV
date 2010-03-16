@@ -1,12 +1,31 @@
 name: HOpenCV
-version: 0.1
+version: 0.1.1
 license: BSD3
 maintainer: Noam Lewis <jones.noamle@gmail.com>
 bug-reports: mailto:jones.noamle@gmail.com
 category: AI, Graphics
 synopsis: A binding for the OpenCV computer vision library
+Tested-With:   GHC == 6.10.4
 description:
-   Initial version with very limited bindings to OpenCV
+   Initial version with very limited bindings to OpenCV 2.0. (See: <http://opencv.willowgarage.com/wiki/Welcome>)
+   .
+   For a functional interface to this library, see the package "cv-combinators".
+   .
+   Online module documentation, if not build below, can be found at <http://www.ee.bgu.ac.il/~noamle/>.
+   .
+   /Installation/
+   .
+   You must install OpenCV (development packages) prior to installing this package. Currently only tested on Ubuntu Linux, but should work on most linux distributions. For OpenCV installation on other *nix platforms, see <http://sourceforge.net/projects/opencvlibrary/files/opencv-unix/2.0/>
+   .
+   On /Ubuntu/ systems, the appropriate version of OpenCV can be installed by (the instructions are for Karmic):
+   .
+   > sudo add-apt-repository ppa:gijzelaar/opencv2-karmic
+   > sudo apt-get update
+   > sudo apt-get install libcv-dev libhighgui-dev
+   .
+   You should then have libcv4 and libhighgui4 installed automatically too.
+   .
+   
 build-type: Simple
 cabal-version:  >= 1.2
 extra-source-files:
@@ -24,7 +43,7 @@ library
    hs-Source-Dirs: src
    include-dirs: /usr/include/opencv
    extra-libraries: cv,highgui
-   build-depends: base >= 3 && < 5, containers, MaybeT, mtl
+   build-depends: base >= 3 && < 5
    ghc-options: -Wall
 
 executable test-hopencv
@@ -40,3 +59,6 @@ executable test-hopencv
   other-modules: AI.CV.OpenCV.CxCore, AI.CV.OpenCV.CV, AI.CV.OpenCV.HighGui, AI.CV.OpenCV.Types
 
 
+--source-repository head
+--  type: git
+--  location: git://github.com/sinelaw/HOpenCV.git
