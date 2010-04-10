@@ -1,4 +1,4 @@
-{-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls #-}
+{-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, TypeFamilies #-}
 
 module AI.CV.OpenCV.CxCore where
 
@@ -7,9 +7,16 @@ import Foreign.C.Types
 import Foreign.C.String
 import Foreign
 
+import Data.VectorSpace as VectorSpace
 
 #include <cxcore.h>
 
+------------------------------------------------------
+toFromIntegral :: (RealFrac c, Integral b, Integral a, Num b1) => (b1 -> c) -> a -> b
+toFromIntegral f = round . f . fromIntegral
+
+toFromIntegral2 :: (Integral a, Num b, Integral a1, Num b1, RealFrac a2, Integral b2) => (b -> b1 -> a2) -> a -> a1 -> b2
+toFromIntegral2 f x y = round (f (fromIntegral x) (fromIntegral y))
 ------------------------------------------------------
 
 data CvSize  = CvSize { sizeWidth :: CInt, sizeHeight :: CInt }
@@ -24,6 +31,24 @@ instance Storable CvSize where
     poke ptr (CvSize w h) = do
         (#poke CvSize, width) ptr w
         (#poke CvSize, height) ptr h
+
+liftCvSize ::(RealFrac c, Num b) => (b -> c) -> CvSize -> CvSize
+liftCvSize f (CvSize w h) = CvSize (f' w) (f' h)
+    where f' = toFromIntegral f
+
+liftCvSize2 :: (Num b, Num b1, RealFrac a) => (b -> b1 -> a) -> CvSize -> CvSize -> CvSize
+liftCvSize2 f (CvSize w1 h1) (CvSize w2 h2) = CvSize (f' w1 w2) (f' h1 h2)
+    where f' = toFromIntegral2 f
+
+instance AdditiveGroup CvSize where
+  zeroV = CvSize 0 0
+  (^+^) = liftCvSize2 (+)
+  negateV = liftCvSize (0-)
+
+instance VectorSpace CvSize where
+  type Scalar CvSize = Double -- todo: use CInt instead of Double here?
+  a *^ s = liftCvSize (a*) s
+
 
 data CvRect  = CvRect { rectX :: CInt, rectY :: CInt, rectWidth :: CInt, rectHeight :: CInt }
                deriving (Show, Eq)
@@ -42,6 +67,26 @@ instance Storable CvRect where
         (#poke CvRect, y) ptr y
         (#poke CvRect, width) ptr w
         (#poke CvRect, height) ptr h
+        
+
+liftCvRect :: (RealFrac c, Num b) => (b -> c) -> CvRect -> CvRect
+liftCvRect f (CvRect x y w h) = CvRect (f' x) (f' y) (f' w) (f' h)
+    where f' = toFromIntegral f
+
+liftCvRect2 :: (Num b, Num b1, RealFrac a) => (b -> b1 -> a) -> CvRect -> CvRect -> CvRect
+liftCvRect2 f (CvRect x1 y1 w1 h1) (CvRect x2 y2 w2 h2) = CvRect (f' x1 x2) (f' y1 y2) (f' w1 w2) (f' h1 h2)
+    where f' = toFromIntegral2 f
+
+instance AdditiveGroup CvRect where
+  zeroV = CvRect 0 0 0 0
+  (^+^) = liftCvRect2 (+)
+  negateV = liftCvRect (0-)
+
+instance VectorSpace CvRect where
+  type Scalar CvRect = Double -- todo: use CInt instead of Double here?
+  a *^ r = liftCvRect (a*) r
+  
+
 
 ------------------------------------------------------
 class IplArrayType a

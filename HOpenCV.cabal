@@ -1,5 +1,5 @@
 name: HOpenCV
-version: 0.1.2
+version: 0.1.2.1
 license: BSD3
 maintainer: Noam Lewis <jones.noamle@gmail.com>
 bug-reports: mailto:jones.noamle@gmail.com
@@ -37,23 +37,22 @@ library
       AI.CV.OpenCV.CxCore
       AI.CV.OpenCV.HighGui
       AI.CV.OpenCV.Types
-      Foreign.ForeignPtrWrap
    c-sources:
       src/AI/CV/OpenCV/HOpenCV_wrap.c
    hs-Source-Dirs: src
    include-dirs: /usr/include/opencv
    extra-libraries: cv,highgui
-   build-depends: base >= 3 && < 5
-   ghc-options: -Wall
+   build-depends: base >=4 && <5, allocated-processor, vector-space
+   ghc-options: -Wall -fno-warn-type-defaults
 
 executable test-hopencv
   c-sources:
      src/AI/CV/OpenCV/HOpenCV_wrap.c
   include-dirs: /usr/include/opencv
   hs-source-dirs:  src
-  Build-Depends: base >= 4
+  Build-Depends: base >=4 && <5
   main-is: Test.hs
-  Ghc-Options: -Wall 
+  Ghc-Options: -Wall -fno-warn-type-defaults
   Ghc-Prof-Options:  -prof -auto-all 
   extra-libraries: cv,highgui
   other-modules: AI.CV.OpenCV.CxCore, AI.CV.OpenCV.CV, AI.CV.OpenCV.HighGui, AI.CV.OpenCV.Types
