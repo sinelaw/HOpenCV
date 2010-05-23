@@ -1,5 +1,5 @@
 name: HOpenCV
-version: 0.1.2.1
+version: 0.1.2.2
 license: BSD3
 maintainer: Noam Lewis <jones.noamle@gmail.com>
 bug-reports: mailto:jones.noamle@gmail.com
@@ -42,7 +42,7 @@ library
    hs-Source-Dirs: src
    include-dirs: /usr/include/opencv
    extra-libraries: cv,highgui
-   build-depends: base >=4 && <5, allocated-processor, vector-space
+   build-depends: base >=4 && <5, allocated-processor >= 0.0.1, vector-space
    ghc-options: -Wall -fno-warn-type-defaults
 
 executable test-hopencv
