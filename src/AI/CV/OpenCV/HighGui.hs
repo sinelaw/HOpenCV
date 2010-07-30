@@ -39,10 +39,10 @@ cvCreateFileCapture filename = err' . checkPtr $ withCString filename f
           f filenameC = c_cvCreateFileCapture filenameC
   
 
-foreign import ccall unsafe "HOpenCV_warp.h release_capture"
-  cvReleaseCapture  :: Ptr CvCapture -> IO ()
+foreign import ccall unsafe "HOpenCV_wrap.h release_capture"
+  release_capture  :: Ptr CvCapture -> IO ()
 
-foreign import ccall unsafe "HOpenCV_warp.h &release_capture"
+foreign import ccall unsafe "HOpenCV_wrap.h &release_capture"
   cp_release_capture  :: FunPtr (Ptr CvCapture -> IO () )
  
 createCameraCaptureF :: CInt -> IO (ForeignPtr CvCapture)

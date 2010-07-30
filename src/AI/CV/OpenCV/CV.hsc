@@ -1,24 +1,30 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls #-}
-
-module AI.CV.OpenCV.CV where
+-- |Support for features from the OpenCV Image Filtering library.
+module AI.CV.OpenCV.CV 
+    ( InterpolationMethod(..),
+      cvCanny, cvResize, cvDilate, cvErode, cvPyrDown,
+      CvHaarClassifierCascade, HaarDetectFlag,
+      cvHaarFlagNone, cvHaarDoCannyPruning, 
+      cvHaarScaleImage, cvHaarFindBiggestObject, cvHaarDoRoughSearch,
+      combineHaarFlags, cvHaarDetectObjects
+    ) where
 
 import Foreign.C.Types
 import Foreign.Ptr
- 
 import Data.Bits
-
 import AI.CV.OpenCV.CxCore
 
-#include <cv.h>
+#include <opencv/cv.h>
 
-
-foreign import ccall unsafe "cv.h cvCanny"
+foreign import ccall unsafe "opencv/cv.h cvCanny"
   c_cvCanny :: Ptr CvArr -> Ptr CvArr -> CDouble -> CDouble -> CInt -> IO ()
 
+-- Canny 
 cvCanny :: (IplArrayType i1, IplArrayType i2) =>
            Ptr i1 -> Ptr i2 -> CDouble -> CDouble -> CInt -> IO ()
 cvCanny src dst threshold1 threshold2 apertureSize = 
-  c_cvCanny (fromArr src) (fromArr dst) (realToFrac threshold1) (realToFrac threshold2) apertureSize
+  c_cvCanny (fromArr src) (fromArr dst) (realToFrac threshold1) 
+            (realToFrac threshold2) apertureSize
 
 
 data InterpolationMethod = CV_INTER_NN 
@@ -27,20 +33,31 @@ data InterpolationMethod = CV_INTER_NN
                          | CV_INTER_AREA
                            deriving (Enum,Eq)
 
-foreign import ccall unsafe "cv.h cvResize"
+foreign import ccall unsafe "opencv/cv.h cvResize"
   c_cvResize :: Ptr CvArr -> Ptr CvArr -> CInt -> IO ()
 
 cvResize :: (IplArrayType i1, IplArrayType i2) => Ptr i1 -> Ptr i2 -> InterpolationMethod -> IO ()
 cvResize src dst interp = c_cvResize (fromArr src) (fromArr dst) (fromIntegral . fromEnum $ interp)
 
-foreign import ccall unsafe "HOpenCV_warp.h dilate"
-  c_dilate :: Ptr CvArr -> Ptr CvArr -> CInt -> IO ()
+foreign import ccall unsafe "opencv/cv.h cvDilate"
+  c_dilate :: Ptr CvArr -> Ptr CvArr -> Ptr () -> CInt -> IO ()
 
+-- |Dilate the first image using a 3x3 rectangular structuring element
+-- and store the result in the second image. The third parameter is
+-- the number of dilation iterations to perform.
 cvDilate :: (IplArrayType i1, IplArrayType i2) => Ptr i1 -> Ptr i2  -> CInt -> IO ()
-cvDilate src dst iter = c_dilate (fromArr src) (fromArr dst) iter
+cvDilate src dst iter = c_dilate (fromArr src) (fromArr dst) nullPtr iter
 
+foreign import ccall unsafe "opencv/cv.h cvErode"
+  c_erode :: Ptr CvArr -> Ptr CvArr -> Ptr () -> CInt -> IO ()
 
-foreign import ccall unsafe "cv.h cvPyrDown"
+-- |Erode the first image using a 3x3 rectangular structuring element
+-- and store the result in the second image. The third parameter is
+-- the number of erosion iterations to perform.
+cvErode :: (IplArrayType i1, IplArrayType i2) => Ptr i1 -> Ptr i2 -> CInt -> IO ()
+cvErode src dst iter = c_erode (fromArr src) (fromArr dst) nullPtr iter
+
+foreign import ccall unsafe "opencv/cv.h cvPyrDown"
   c_cvPyrDown :: Ptr CvArr -> Ptr CvArr -> CInt -> IO ()
 
 -- for now only one filter type is supported so no need for the CInt (filter type)
@@ -68,7 +85,7 @@ newtype HaarDetectFlag = HaarDetectFlag { unHaarDetectFlag :: CInt }
 combineHaarFlags :: [HaarDetectFlag] -> HaarDetectFlag
 combineHaarFlags = HaarDetectFlag . foldr ((.|.) . unHaarDetectFlag) 0
   
-foreign import ccall unsafe "HOpenCV_warp.h c_cvHaarDetectObjects"
+foreign import ccall unsafe "HOpenCV_wrap.h c_cvHaarDetectObjects"
   c_cvHaarDetectObjects :: Ptr CvArr   -- ^ image
                         -> Ptr CvHaarClassifierCascade -- ^ cascade
                         -> Ptr CvMemStorage            -- ^ storage

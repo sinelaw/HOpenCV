@@ -1,6 +1,6 @@
-#include <cxcore.h>
-#include <cv.h>
-#include <highgui.h>
+#include <opencv/cxcore.h>
+#include <opencv/cv.h>
+#include <opencv/highgui.h>
 
 #include <stdio.h>
 
