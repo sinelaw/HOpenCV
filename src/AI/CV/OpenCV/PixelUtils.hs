@@ -80,3 +80,4 @@ toMono img = if nChannels img == 1 then dropAlpha w pix
           getAvg i = avg (get i) (get (i+1)) (get (i+2))
           avg :: Int -> Int -> Int -> Word8
           avg b g r = fromIntegral $ (b + g + r) `div` 3
+

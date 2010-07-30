@@ -144,9 +144,7 @@ foreign import ccall unsafe "opencv/cxcore.h cvReleaseMemStorage"
   c_cvReleaseMemStorage :: Ptr (Ptr CvMemStorage) -> IO ()
 
 cvReleaseMemStorage :: Ptr CvMemStorage -> IO ()
-cvReleaseMemStorage mem = 
-    do fp <- mallocForeignPtr
-       withForeignPtr fp (\p -> do poke p mem >> c_cvReleaseMemStorage p)
+cvReleaseMemStorage mem = alloca $ \p -> poke p mem >> c_cvReleaseMemStorage p
 
 foreign import ccall unsafe "HOpenCV_wrap.h &release_mem_storage"
   cp_release_mem_storage :: FunPtr (Ptr CvMemStorage -> IO ())
@@ -173,9 +171,7 @@ foreign import ccall unsafe "opencv/cxcore.h cvReleaseImage"
 
 -- |Release the memory allocated to an 'IplImage'.
 cvReleaseImage :: Ptr IplImage -> IO ()
-cvReleaseImage mem = 
-    do fp <- mallocForeignPtr
-       withForeignPtr fp (\p -> poke p mem >> c_cvReleaseImage p)
+cvReleaseImage mem = alloca $ \p -> poke p mem >> c_cvReleaseImage p
 
 foreign import ccall unsafe "HOpenCV_wrap.h &release_image"
   cp_release_image :: FunPtr (Ptr IplImage -> IO ())

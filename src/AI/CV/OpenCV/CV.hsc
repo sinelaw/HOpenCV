@@ -6,13 +6,15 @@ module AI.CV.OpenCV.CV
       CvHaarClassifierCascade, HaarDetectFlag,
       cvHaarFlagNone, cvHaarDoCannyPruning, 
       cvHaarScaleImage, cvHaarFindBiggestObject, cvHaarDoRoughSearch,
-      combineHaarFlags, cvHaarDetectObjects
+      combineHaarFlags, cvHaarDetectObjects,
+      cvCvtColor
     ) where
 
 import Foreign.C.Types
 import Foreign.Ptr
 import Data.Bits
 import AI.CV.OpenCV.CxCore
+import AI.CV.OpenCV.ColorConversion
 
 #include <opencv/cv.h>
 
@@ -56,6 +58,17 @@ foreign import ccall unsafe "opencv/cv.h cvErode"
 -- the number of erosion iterations to perform.
 cvErode :: (IplArrayType i1, IplArrayType i2) => Ptr i1 -> Ptr i2 -> CInt -> IO ()
 cvErode src dst iter = c_erode (fromArr src) (fromArr dst) nullPtr iter
+
+foreign import ccall unsafe "opencv/cv.h cvCvtColor"
+  c_cvCvtColor :: Ptr CvArr -> Ptr CvArr -> CInt -> IO ()
+
+-- |Convert the color of the first 'IplImage', storing the result in
+-- the second. The second image must have the same dimensions as the
+-- first and the same depth, but it's number of color channels may be
+-- different and must be compatible with the given 'ColorConversion'
+-- code.
+cvCvtColor :: Ptr CvArr -> Ptr CvArr -> ColorConversion -> IO ()
+cvCvtColor src dst code = c_cvCvtColor src dst (colorConv code)
 
 foreign import ccall unsafe "opencv/cv.h cvPyrDown"
   c_cvPyrDown :: Ptr CvArr -> Ptr CvArr -> CInt -> IO ()

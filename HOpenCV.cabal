@@ -29,6 +29,7 @@ library
       AI.CV.OpenCV.Types
       AI.CV.OpenCV.HIplImage
       AI.CV.OpenCV.PixelUtils
+      AI.CV.OpenCV.ColorConversion
    c-sources:
       src/AI/CV/OpenCV/HOpenCV_wrap.c
    hs-Source-Dirs: src
@@ -49,4 +50,4 @@ executable test-hopencv
   Ghc-Prof-Options:  -prof -auto-all 
   extra-libraries: cxcore,cv,highgui
   other-modules: AI.CV.OpenCV.CxCore, AI.CV.OpenCV.CV, AI.CV.OpenCV.HighGui, 
-                 AI.CV.OpenCV.Types
+                 AI.CV.OpenCV.Types AI.CV.OpenCV.ColorConversion
