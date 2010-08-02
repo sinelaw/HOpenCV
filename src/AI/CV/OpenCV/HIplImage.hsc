@@ -45,8 +45,7 @@ IplImage;
 
 -- |A Haskell data structure representing the information OpenCV uses
 -- from an 'IplImage' struct.
-data HIplImage = HIplImage { nSize           :: Int
-                           , nChannels       :: Int
+data HIplImage = HIplImage { numChannels       :: Int
                            , depth           :: Depth
                            , dataOrder       :: Int
                            , origin          :: Int
@@ -100,8 +99,7 @@ fromPtr = peek . castPtr
 mkHIplImage :: Int -> Int -> Int -> IO HIplImage
 mkHIplImage w h numChan = do buffer <- mallocArray numBytes
                              ptr <- newForeignPtr finalizerFree buffer
-                             return $ HIplImage (#size IplImage)
-                                                numChan
+                             return $ HIplImage numChan
                                                 iplDepth8u 0 0 w h
                                                 numBytes
                                                 ptr
@@ -115,10 +113,10 @@ mkHIplImage w h numChan = do buffer <- mallocArray numBytes
 compatibleImage :: HIplImage -> IO HIplImage
 compatibleImage img = 
     do ptr <- newForeignPtr finalizerFree =<< mallocArray sz
-       return $ HIplImage (#size IplImage) nc d 0 0 w h sz ptr stride ptr
+       return $ HIplImage nc d 0 0 w h sz ptr stride ptr
     where w = width img
           h = height img
-          nc = nChannels img
+          nc = numChannels img
           d = depth img
           sz = imageSize img
           stride = widthStep img
@@ -130,8 +128,7 @@ fromPixels :: Integral a => a -> a -> V.Vector Word8 -> HIplImage
 fromPixels w h pix = unsafePerformIO $ 
                      V.unsafeWith pix $
                          \p -> do fp <- newForeignPtr_ p
-                                  return $ HIplImage (#size IplImage) nc 
-                                                     iplDepth8u 0 0 w' h'
+                                  return $ HIplImage nc iplDepth8u 0 0 w' h'
                                                      sz fp stride fp
     where sz = V.length pix
           nc = if sz == w'*h' then 1 else 3
@@ -143,26 +140,6 @@ fromPixels w h pix = unsafePerformIO $
 -- underlying the given 'HIplImage'.
 withHIplImage :: HIplImage -> (Ptr IplImage -> IO a) -> IO a
 withHIplImage img f = alloca $ \p -> poke p img >> f (castPtr p)
-
--- |Erode an 'HIplImage' with a 3x3 structuring element for the
--- specified number of iterations.
-erode :: HIplImage -> Int -> HIplImage
-erode img n = unsafePerformIO $ 
-              do destImg <- compatibleImage img
-                 withHIplImage img (\src -> withHIplImage destImg $
-                                            \dst -> cvErode src dst n')
-                 return destImg
-    where n' = fromIntegral n
-
--- |Dilate an 'HIplImage' with a 3x3 structuring element for the
--- specified number of iterations.
-dilate :: HIplImage -> Int -> HIplImage
-dilate img n = unsafePerformIO $ 
-               do destImg <- compatibleImage img
-                  withHIplImage img (\src -> withHIplImage destImg $
-                                             \dst -> cvDilate src dst n')
-                  return destImg
-    where n' = fromIntegral n
 
 -- |An 'HIplImage' in Haskell is isomorphic with OpenCV's 'IplImage'
 -- structure type. They share the same binary representation through
@@ -178,9 +155,9 @@ instance Storable HIplImage where
     sizeOf _ = (#size IplImage)
     alignment _ = alignment (undefined :: CDouble)
     poke ptr himg = do
-      (#poke IplImage, nSize) ptr (nSize himg)
+      (#poke IplImage, nSize) ptr ((#size IplImage)::Int)
       (#poke IplImage, ID) ptr (0::Int)
-      (#poke IplImage, nChannels) ptr (nChannels himg)
+      (#poke IplImage, nChannels) ptr (numChannels himg)
       (#poke IplImage, depth) ptr (unDepth (depth himg))
       (#poke IplImage, dataOrder) ptr (dataOrder himg)
       (#poke IplImage, origin) ptr (origin himg)
@@ -196,8 +173,7 @@ instance Storable HIplImage where
       withForeignPtr (imageDataOrigin himg) $ 
          \p ->(#poke IplImage, imageDataOrigin) ptr p
     peek ptr = do
-      nSize' <- (#peek IplImage, nSize) ptr
-      nChannels' <- (#peek IplImage, nChannels) ptr
+      numChannels' <- (#peek IplImage, nChannels) ptr
       depth' <- Depth <$> (#peek IplImage, depth) ptr
       dataOrder' <- (#peek IplImage, dataOrder) ptr
       origin' <- (#peek IplImage, origin) ptr
@@ -207,7 +183,7 @@ instance Storable HIplImage where
       imageData' <- (#peek IplImage, imageData) ptr >>= newForeignPtr_
       widthStep' <- (#peek IplImage, widthStep) ptr
       imageDataOrigin' <- (#peek IplImage, imageDataOrigin) ptr >>= newForeignPtr_
-      return $ HIplImage nSize' nChannels' depth' dataOrder' origin' 
+      return $ HIplImage numChannels' depth' dataOrder' origin' 
                          width' height' imageSize' imageData' widthStep' 
                          imageDataOrigin'
 

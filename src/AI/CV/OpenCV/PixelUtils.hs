@@ -53,7 +53,7 @@ isolateChannel ch img =
                             | otherwise = do VM.unsafeWrite v p (get p3)
                                              go (x+1) (p+1) (p3+3) y
                     go 0 0 ch 0
-    where numCh = nChannels img
+    where numCh = numChannels img
           w = width img
           h = height img
           margin = widthStep img - (w  * 3)
@@ -62,7 +62,7 @@ isolateChannel ch img =
 
 -- |Convert an 'HIplImage' \'s pixel data to a 'V.Vector' of monochromatic bytes.
 toMono :: HIplImage -> V.Vector Word8
-toMono img = if nChannels img == 1 then dropAlpha w pix 
+toMono img = if numChannels img == 1 then dropAlpha w pix 
              else runST $ do v <- VM.new (w*h)
                              let go !x !p !p3 !y
                                      | y >= h = VG.unsafeFreeze v
