@@ -1,0 +1,84 @@
+-- |Constants for color conversion
+module AI.CV.OpenCV.ColorConversion where
+import Foreign.C.Types (CInt)
+
+#include <opencv/cv.h>
+
+newtype ColorConversion = ColorConversion { colorConv :: CInt }
+
+-- Note: See Util/ColorConversion.rkt for a Racket script to convert
+-- the C #defines to the below hsc2hs code.
+#{enum ColorConversion, ColorConversion
+  , cv_BGR2BGRA = CV_BGR2BGRA
+  , cv_RGB2RGBA = CV_RGB2RGBA
+  , cv_BGRA2BGR = CV_BGRA2BGR
+  , cv_RGBA2RGB = CV_RGBA2RGB
+  , cv_BGR2RGBA = CV_BGR2RGBA
+  , cv_RGB2BGRA = CV_RGB2BGRA
+  , cv_RGBA2BGR = CV_RGBA2BGR
+  , cv_BGRA2RGB = CV_BGRA2RGB
+  , cv_BGR2RGB = CV_BGR2RGB
+  , cv_RGB2BGR = CV_RGB2BGR
+  , cv_BGRA2RGBA = CV_BGRA2RGBA
+  , cv_RGBA2BGRA = CV_RGBA2BGRA
+  , cv_BGR2GRAY = CV_BGR2GRAY
+  , cv_RGB2GRAY = CV_RGB2GRAY
+  , cv_GRAY2BGR = CV_GRAY2BGR
+  , cv_GRAY2RGB = CV_GRAY2RGB
+  , cv_GRAY2BGRA = CV_GRAY2BGRA
+  , cv_GRAY2RGBA = CV_GRAY2RGBA
+  , cv_BGRA2GRAY = CV_BGRA2GRAY
+  , cv_RGBA2GRAY = CV_RGBA2GRAY
+  , cv_BGR2BGR565 = CV_BGR2BGR565
+  , cv_RGB2BGR565 = CV_RGB2BGR565
+  , cv_BGR5652BGR = CV_BGR5652BGR
+  , cv_BGR5652RGB = CV_BGR5652RGB
+  , cv_BGRA2BGR565 = CV_BGRA2BGR565
+  , cv_RGBA2BGR565 = CV_RGBA2BGR565
+  , cv_BGR5652BGRA = CV_BGR5652BGRA
+  , cv_BGR5652RGBA = CV_BGR5652RGBA
+  , cv_GRAY2BGR565 = CV_GRAY2BGR565
+  , cv_BGR5652GRAY = CV_BGR5652GRAY
+  , cv_BGR2BGR555 = CV_BGR2BGR555
+  , cv_RGB2BGR555 = CV_RGB2BGR555
+  , cv_BGR5552BGR = CV_BGR5552BGR
+  , cv_BGR5552RGB = CV_BGR5552RGB
+  , cv_BGRA2BGR555 = CV_BGRA2BGR555
+  , cv_RGBA2BGR555 = CV_RGBA2BGR555
+  , cv_BGR5552BGRA = CV_BGR5552BGRA
+  , cv_BGR5552RGBA = CV_BGR5552RGBA
+  , cv_GRAY2BGR555 = CV_GRAY2BGR555
+  , cv_BGR5552GRAY = CV_BGR5552GRAY
+  , cv_BGR2XYZ = CV_BGR2XYZ
+  , cv_RGB2XYZ = CV_RGB2XYZ
+  , cv_XYZ2BGR = CV_XYZ2BGR
+  , cv_XYZ2RGB = CV_XYZ2RGB
+  , cv_BGR2YCrCb = CV_BGR2YCrCb
+  , cv_RGB2YCrCb = CV_RGB2YCrCb
+  , cv_YCrCb2BGR = CV_YCrCb2BGR
+  , cv_YCrCb2RGB = CV_YCrCb2RGB
+  , cv_BGR2HSV = CV_BGR2HSV
+  , cv_RGB2HSV = CV_RGB2HSV
+  , cv_BGR2Lab = CV_BGR2Lab
+  , cv_RGB2Lab = CV_RGB2Lab
+  , cv_BayerBG2BGR = CV_BayerBG2BGR
+  , cv_BayerGB2BGR = CV_BayerGB2BGR
+  , cv_BayerRG2BGR = CV_BayerRG2BGR
+  , cv_BayerGR2BGR = CV_BayerGR2BGR
+  , cv_BayerBG2RGB = CV_BayerBG2RGB
+  , cv_BayerGB2RGB = CV_BayerGB2RGB
+  , cv_BayerRG2RGB = CV_BayerRG2RGB
+  , cv_BayerGR2RGB = CV_BayerGR2RGB
+  , cv_BGR2Luv = CV_BGR2Luv
+  , cv_RGB2Luv = CV_RGB2Luv
+  , cv_BGR2HLS = CV_BGR2HLS
+  , cv_RGB2HLS = CV_RGB2HLS
+  , cv_HSV2BGR = CV_HSV2BGR
+  , cv_HSV2RGB = CV_HSV2RGB
+  , cv_Lab2BGR = CV_Lab2BGR
+  , cv_Lab2RGB = CV_Lab2RGB
+  , cv_Luv2BGR = CV_Luv2BGR
+  , cv_Luv2RGB = CV_Luv2RGB
+  , cv_HLS2BGR = CV_HLS2BGR
+  , cv_HLS2RGB = CV_HLS2RGB
+  }
