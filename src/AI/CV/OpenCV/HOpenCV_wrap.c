@@ -133,6 +133,14 @@ void c_cvRectangle(CvArr *img, int x, int y, int width, int height)
                 CV_RGB(255,0,0), 3 , 8, 0);
 }
 
+void c_cvLine(CvArr *img, int x1, int y1, int x2, int y2, double r, double g, 
+              double b, int thickness, int lineType, int shift)
+{
+    cvLine(img, cvPoint(x1,y1), cvPoint(x2,y2), CV_RGB(r,g,b), thickness, 
+           lineType, shift);
+}
+
+
 /****************************************************************************/
 
 CvSeq *c_cvHaarDetectObjects( const CvArr* image,

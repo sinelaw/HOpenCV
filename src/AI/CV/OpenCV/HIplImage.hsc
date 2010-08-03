@@ -1,13 +1,14 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 module AI.CV.OpenCV.HIplImage where
 import AI.CV.OpenCV.CxCore (IplImage,Depth(..),iplDepth8u)
+import AI.CV.OpenCV.HighGui (cvLoadImage, cvSaveImage, LoadColor)
 import Control.Applicative ((<$>))
 import qualified Data.Vector.Storable as V
 import Data.Word (Word8, Word16)
 import Foreign.C.Types
 import Foreign.ForeignPtr
 import Foreign.Marshal.Alloc (alloca, finalizerFree)
-import Foreign.Marshal.Array (mallocArray)
+import Foreign.Marshal.Array (mallocArray, copyArray)
 import Foreign.Ptr
 import Foreign.Storable
 import System.IO.Unsafe
@@ -78,6 +79,15 @@ pixels16 img = V.unsafeFromForeignPtr ptr 0 (imageSize img)
 fromPtr :: Ptr IplImage -> IO HIplImage
 fromPtr = peek . castPtr
 
+-- |Load an 'HIplImage' from an image file on disk. The first argument
+-- is the name of the file to load. The second argument determines
+-- the desired color format of the image.
+fromFile :: String -> LoadColor -> IO HIplImage
+fromFile fileName col = fromPtr =<< cvLoadImage fileName col
+
+toFile :: String -> HIplImage -> IO ()
+toFile fileName img = withHIplImage img $ \ptr -> cvSaveImage fileName ptr
+
 -- |Prepare an 8-bit-per-pixel 'HIplImage' of the given width, height,
 -- and number of color channels with an allocated pixel buffer.
 mkHIplImage :: Int -> Int -> Int -> IO HIplImage
@@ -102,6 +112,22 @@ compatibleImage img =
           sz = imageSize img
           stride = widthStep img
 
+-- |Create an exact duplicate of the given HIplImage. This allocates a
+-- fresh array to store the copied pixels.
+duplicateImage :: HIplImage -> IO HIplImage
+duplicateImage img =
+    do ptr <- mallocArray sz
+       withForeignPtr (imageData img) $ 
+           \src -> copyArray ptr src sz
+       fptr <- newForeignPtr finalizerFree ptr
+       return $ HIplImage nc d 0 0 w h sz fptr stride fptr
+    where w = width img
+          h = height img
+          nc = numChannels img
+          d = depth img
+          sz = imageSize img
+          stride = widthStep img
+
 -- |Construct an 'HIplImage' from a width, a height, and a 'V.Vector'
 -- of 8-bit pixel values. The new 'HIplImage' \'s pixel data is shared
 -- with the supplied 'V.Vector'.
@@ -121,6 +147,15 @@ fromPixels w h pix = unsafePerformIO $
 -- underlying the given 'HIplImage'.
 withHIplImage :: HIplImage -> (Ptr IplImage -> IO a) -> IO a
 withHIplImage img f = alloca $ \p -> poke p img >> f (castPtr p)
+
+-- |Provides the supplied function with a 'Ptr' to the 'IplImage'
+-- underlying a new 'HIplImage' that is an exact duplicate of the
+-- given 'HIplImage'.
+withDuplicateImage :: HIplImage -> (Ptr IplImage -> IO a) -> HIplImage
+withDuplicateImage img1 f = unsafePerformIO $
+                            do img2 <- duplicateImage img1
+                               _ <- withHIplImage img2 f
+                               return img2
 
 -- |Provides the supplied function with a 'Ptr' to the 'IplImage'
 -- underlying a new 'HIplImage' of the same dimensions as the given

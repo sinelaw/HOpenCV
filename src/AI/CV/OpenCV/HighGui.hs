@@ -19,6 +19,27 @@ foreign import ccall unsafe "highgui.h cvConvertImage"
 cvConvertImage :: (IplArrayType a, IplArrayType a1) => Ptr a -> Ptr a1 -> CInt -> IO ()
 cvConvertImage src dst flags = c_cvConvertImage (fromArr src) (fromArr dst) flags
 
+-- |Determine the color model of an image loaded from a file.
+data LoadColor = LoadColor     -- ^Force a 3-channel color image
+               | LoadGray      -- ^Force a grayscale image
+               | LoadUnchanged -- ^Load the image as is
+                 deriving Enum
+
+foreign import ccall unsafe "highgui.h cvLoadImage"
+  c_cvLoadImage :: CString -> CInt -> IO (Ptr IplImage)
+
+cvLoadImage :: String -> LoadColor -> IO (Ptr IplImage)
+cvLoadImage fileName col = withCString fileName $ 
+                           \str -> c_cvLoadImage str col'
+    where col' = fromIntegral $ fromEnum col
+
+foreign import ccall unsafe "highgui.h cvSaveImage"
+  c_cvSaveImage :: CString -> Ptr CvArr -> IO ()
+
+cvSaveImage :: IplArrayType a => String -> Ptr a -> IO ()
+cvSaveImage fileName img = withCString fileName $
+                           \str -> c_cvSaveImage str (fromArr img)
+
 ------------------------------------------------
 -- Capturing
 data CvCapture

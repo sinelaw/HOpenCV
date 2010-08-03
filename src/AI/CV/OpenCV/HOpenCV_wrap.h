@@ -27,6 +27,9 @@ int seq_total(const CvSeq *seq);
 
 void c_cvRectangle(CvArr *img, int x, int y, int width, int height);
 
+void c_cvLine(CvArr *img, int x1, int y1, int x2, int y2, double r, double g, 
+              double b, int thickness, int lineType, int shift);
+
 
 CvSeq *c_cvHaarDetectObjects( const CvArr* image,
                               CvHaarClassifierCascade* cascade,
