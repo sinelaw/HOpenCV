@@ -1,14 +1,13 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 module AI.CV.OpenCV.HIplImage where
 import AI.CV.OpenCV.CxCore (IplImage,Depth(..),iplDepth8u)
-import AI.CV.OpenCV.CV (cvErode, cvDilate)
 import Control.Applicative ((<$>))
 import qualified Data.Vector.Storable as V
 import Data.Word (Word8, Word16)
 import Foreign.C.Types
 import Foreign.ForeignPtr
 import Foreign.Marshal.Alloc (alloca, finalizerFree)
-import Foreign.Marshal.Array (mallocArray, copyArray)
+import Foreign.Marshal.Array (mallocArray)
 import Foreign.Ptr
 import Foreign.Storable
 import System.IO.Unsafe
@@ -45,30 +44,16 @@ IplImage;
 
 -- |A Haskell data structure representing the information OpenCV uses
 -- from an 'IplImage' struct.
-data HIplImage = HIplImage { numChannels       :: Int
+data HIplImage = HIplImage { numChannels     :: Int
                            , depth           :: Depth
                            , dataOrder       :: Int
                            , origin          :: Int
                            , width           :: Int
                            , height          :: Int
---                         , roi             :: Ptr ()
-                           , imageSize       :: Int 
+                           , imageSize       :: Int
                            , imageData       :: ForeignPtr Word8
                            , widthStep       :: Int
                            , imageDataOrigin :: ForeignPtr Word8 }
-
--- |Return a 'V.Vector' containing a copy of the pixels that make up
--- the 8-bit-per-pixel 'HIplImage'.
-pixelsCopy :: HIplImage -> IO (V.Vector Word8)
-pixelsCopy img = do dst <- mallocArray sz
-                    withForeignPtr src $ \src' -> copyArray dst src' sz
-                    fptr <- newForeignPtr finalizerFree dst
-                    return $ V.unsafeFromForeignPtr fptr 0 sz
-    where sz = imageSize img
-          src = case depth img of
-                  Depth 8 -> imageData img
-                  x -> error $ "Pixel depth must be 8, "++show x++
-                               " is not supported"
 
 -- |Return a 'V.Vector' containing the pixels that make up an
 -- 8-bit-per-pixel 'HIplImage'. This does not copy the underlying
@@ -79,7 +64,6 @@ pixels img = V.unsafeFromForeignPtr ptr 0 (imageSize img)
                   Depth 8 -> imageData img
                   x -> error $ "Pixel depth must be 8, "++show x++
                                " is not supported"
-
 
 -- |Return a 'V.Vector' containing the pixels that make up the
 -- 16-bit-per-pixel 'HIplImage'.
@@ -97,27 +81,24 @@ fromPtr = peek . castPtr
 -- |Prepare an 8-bit-per-pixel 'HIplImage' of the given width, height,
 -- and number of color channels with an allocated pixel buffer.
 mkHIplImage :: Int -> Int -> Int -> IO HIplImage
-mkHIplImage w h numChan = do buffer <- mallocArray numBytes
-                             ptr <- newForeignPtr finalizerFree buffer
-                             return $ HIplImage numChan
-                                                iplDepth8u 0 0 w h
-                                                numBytes
-                                                ptr
-                                                (w*numChan)
-                                                ptr
-    where numBytes = w * h * numChan
+mkHIplImage w h numChan = 
+    do ptr <- mallocArray numBytes >>= newForeignPtr finalizerFree
+       return $ HIplImage numChan iplDepth8u 0 0 w h numBytes ptr stride ptr
+    where numBytes = stride * h
+          stride = w * numChan
 
 -- |Allocate a new 'HIplImage' with the same dimensions, number of
 -- color channels, and color depth as an existing HIplImage. The pixel
 -- data of the original 'HIplImage' is not copied.
 compatibleImage :: HIplImage -> IO HIplImage
 compatibleImage img = 
-    do ptr <- newForeignPtr finalizerFree =<< mallocArray sz
-       return $ HIplImage nc d 0 0 w h sz ptr stride ptr
+    do ptr <- mallocArray sz >>= newForeignPtr finalizerFree
+       return $ HIplImage nc d order 0 w h sz ptr stride ptr
     where w = width img
           h = height img
           nc = numChannels img
           d = depth img
+          order = dataOrder img
           sz = imageSize img
           stride = widthStep img
 
@@ -130,16 +111,25 @@ fromPixels w h pix = unsafePerformIO $
                          \p -> do fp <- newForeignPtr_ p
                                   return $ HIplImage nc iplDepth8u 0 0 w' h'
                                                      sz fp stride fp
-    where sz = V.length pix
-          nc = if sz == w'*h' then 1 else 3
-          stride = w' * nc
+    where nc = if V.length pix == w' * h' then 1 else 3
           w' = fromIntegral w
           h' = fromIntegral h
+          sz = w' * h' * nc
+          stride = w' * nc
 
 -- |Provides the supplied function with a 'Ptr' to the 'IplImage'
 -- underlying the given 'HIplImage'.
 withHIplImage :: HIplImage -> (Ptr IplImage -> IO a) -> IO a
 withHIplImage img f = alloca $ \p -> poke p img >> f (castPtr p)
+
+-- |Provides the supplied function with a 'Ptr' to the 'IplImage'
+-- underlying a new 'HIplImage' of the same dimensions as the given
+-- 'HIplImage'.
+withCompatibleImage :: HIplImage -> (Ptr IplImage -> IO a) -> HIplImage
+withCompatibleImage img1 f = unsafePerformIO $ 
+                             do img2 <- compatibleImage img1
+                                _ <- withHIplImage img2 f
+                                return img2
 
 -- |An 'HIplImage' in Haskell is isomorphic with OpenCV's 'IplImage'
 -- structure type. They share the same binary representation through
@@ -171,7 +161,7 @@ instance Storable HIplImage where
       withForeignPtr (imageData himg) $ \p -> (#poke IplImage, imageData) ptr p
       (#poke IplImage, widthStep) ptr (widthStep himg)
       withForeignPtr (imageDataOrigin himg) $ 
-         \p ->(#poke IplImage, imageDataOrigin) ptr p
+        \p ->(#poke IplImage, imageDataOrigin) ptr p
     peek ptr = do
       numChannels' <- (#peek IplImage, nChannels) ptr
       depth' <- Depth <$> (#peek IplImage, depth) ptr
@@ -182,10 +172,12 @@ instance Storable HIplImage where
       imageSize' <- (#peek IplImage, imageSize) ptr
       imageData' <- (#peek IplImage, imageData) ptr >>= newForeignPtr_
       widthStep' <- (#peek IplImage, widthStep) ptr
-      imageDataOrigin' <- (#peek IplImage, imageDataOrigin) ptr >>= newForeignPtr_
+      imageDataOrigin' <- (#peek IplImage, imageDataOrigin) ptr >>= 
+                          newForeignPtr_
       return $ HIplImage numChannels' depth' dataOrder' origin' 
                          width' height' imageSize' imageData' widthStep' 
                          imageDataOrigin'
+
 
 
 

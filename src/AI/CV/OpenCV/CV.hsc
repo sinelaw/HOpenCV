@@ -2,7 +2,7 @@
 -- |Support for features from the OpenCV Image Filtering library.
 module AI.CV.OpenCV.CV 
     ( InterpolationMethod(..),
-      cvCanny, cvResize, cvDilate, cvErode, cvPyrDown,
+      cvCanny, cvResize, cvDilate, cvErode, cvPyrDown, cvHoughLines2, 
       CvHaarClassifierCascade, HaarDetectFlag,
       cvHaarFlagNone, cvHaarDoCannyPruning, 
       cvHaarScaleImage, cvHaarFindBiggestObject, cvHaarDoRoughSearch,
@@ -58,6 +58,15 @@ foreign import ccall unsafe "opencv/cv.h cvErode"
 -- the number of erosion iterations to perform.
 cvErode :: (IplArrayType i1, IplArrayType i2) => Ptr i1 -> Ptr i2 -> CInt -> IO ()
 cvErode src dst iter = c_erode (fromArr src) (fromArr dst) nullPtr iter
+
+foreign import ccall unsafe "opencv/cv.h cvHoughLines2"
+        c_cvHoughLines2 :: Ptr CvArr -> Ptr CvMemStorage -> CInt -> CDouble -> CDouble -> CInt -> CDouble -> CDouble -> IO (Ptr (CvSeq a))
+
+cvHoughLines2 :: IplArrayType i => Ptr i -> Ptr CvMemStorage -> CInt -> Double -> Double -> Int -> Double -> Double -> IO (Ptr (CvSeq a))
+cvHoughLines2 img storage method rho theta threshold param1 param2 = 
+    c_cvHoughLines2 (fromArr img) storage method (realToFrac rho) 
+                    (realToFrac theta) (fromIntegral threshold) 
+                    (realToFrac param1) (realToFrac param2)
 
 foreign import ccall unsafe "opencv/cv.h cvCvtColor"
   c_cvCvtColor :: Ptr CvArr -> Ptr CvArr -> CInt -> IO ()

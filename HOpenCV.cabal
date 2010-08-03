@@ -28,6 +28,7 @@ library
       AI.CV.OpenCV.HighGui
       AI.CV.OpenCV.Types
       AI.CV.OpenCV.HIplImage
+      AI.CV.OpenCV.HCV
       AI.CV.OpenCV.PixelUtils
       AI.CV.OpenCV.ColorConversion
    c-sources:
