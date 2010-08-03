@@ -76,8 +76,9 @@ foreign import ccall unsafe "opencv/cv.h cvCvtColor"
 -- first and the same depth, but it's number of color channels may be
 -- different and must be compatible with the given 'ColorConversion'
 -- code.
-cvCvtColor :: Ptr CvArr -> Ptr CvArr -> ColorConversion -> IO ()
-cvCvtColor src dst code = c_cvCvtColor src dst (colorConv code)
+cvCvtColor :: (IplArrayType a, IplArrayType b) => 
+              Ptr a -> Ptr b -> ColorConversion -> IO ()
+cvCvtColor src dst code = c_cvCvtColor (fromArr src) (fromArr dst) (colorConv code)
 
 foreign import ccall unsafe "opencv/cv.h cvPyrDown"
   c_cvPyrDown :: Ptr CvArr -> Ptr CvArr -> CInt -> IO ()

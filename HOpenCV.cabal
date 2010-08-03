@@ -28,7 +28,7 @@ library
       AI.CV.OpenCV.HighGui
       AI.CV.OpenCV.Types
       AI.CV.OpenCV.HIplImage
-      AI.CV.OpenCV.HCV
+      AI.CV.OpenCV.HighCV
       AI.CV.OpenCV.PixelUtils
       AI.CV.OpenCV.ColorConversion
    c-sources:
@@ -39,7 +39,7 @@ library
                   allocated-processor >= 0.0.1, 
                   vector-space,
                   vector >= 0.6.0.2 && < 0.7
-   ghc-options: -Wall -fno-warn-type-defaults
+   ghc-options: -Wall -fno-warn-type-defaults -fno-warn-name-shadowing
 
 executable test-hopencv
   c-sources:

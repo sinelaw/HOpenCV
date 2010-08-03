@@ -1,6 +1,7 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 module AI.CV.OpenCV.HIplImage where
-import AI.CV.OpenCV.CxCore (IplImage,Depth(..),iplDepth8u)
+import AI.CV.OpenCV.CxCore (IplImage,Depth(..),iplDepth8u,createImageF,
+                            CvSize(..))
 import AI.CV.OpenCV.HighGui (cvLoadImage, cvSaveImage, LoadColor)
 import Control.Applicative ((<$>))
 import qualified Data.Vector.Storable as V
@@ -92,6 +93,11 @@ toFile fileName img = withHIplImage img $ \ptr -> cvSaveImage fileName ptr
 -- and number of color channels with an allocated pixel buffer.
 mkHIplImage :: Int -> Int -> Int -> IO HIplImage
 mkHIplImage w h numChan = 
+--     do fp <- createImageF (CvSize w' h') numChan' iplDepth8u
+--        withForeignPtr fp $ \p -> peek (castPtr p)
+--     where w' = fromIntegral w
+--           h' = fromIntegral h
+--           numChan' = fromIntegral numChan
     do ptr <- mallocArray numBytes >>= newForeignPtr finalizerFree
        return $ HIplImage numChan iplDepth8u 0 0 w h numBytes ptr stride ptr
     where numBytes = stride * h
@@ -128,6 +134,7 @@ duplicateImage img =
           sz = imageSize img
           stride = widthStep img
 
+{-# NOINLINE fromPixels #-}
 -- |Construct an 'HIplImage' from a width, a height, and a 'V.Vector'
 -- of 8-bit pixel values. The new 'HIplImage' \'s pixel data is shared
 -- with the supplied 'V.Vector'.
@@ -148,6 +155,7 @@ fromPixels w h pix = unsafePerformIO $
 withHIplImage :: HIplImage -> (Ptr IplImage -> IO a) -> IO a
 withHIplImage img f = alloca $ \p -> poke p img >> f (castPtr p)
 
+{-# NOINLINE withDuplicateImage #-}
 -- |Provides the supplied function with a 'Ptr' to the 'IplImage'
 -- underlying a new 'HIplImage' that is an exact duplicate of the
 -- given 'HIplImage'.
@@ -157,6 +165,7 @@ withDuplicateImage img1 f = unsafePerformIO $
                                _ <- withHIplImage img2 f
                                return img2
 
+{-# NOINLINE withCompatibleImage #-}
 -- |Provides the supplied function with a 'Ptr' to the 'IplImage'
 -- underlying a new 'HIplImage' of the same dimensions as the given
 -- 'HIplImage'.

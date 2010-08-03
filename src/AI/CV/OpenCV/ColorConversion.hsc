@@ -4,10 +4,10 @@ import Foreign.C.Types (CInt)
 
 #include <opencv/cv.h>
 
-newtype ColorConversion = ColorConversion { colorConv :: CInt }
+newtype ColorConversion = ColorConversion { colorConv :: CInt } deriving Eq
 
--- Note: See Util/ColorConversion.rkt for a Racket script to convert
--- the C #defines to the below hsc2hs code.
+-- Note: See Util/ColorConversion.hs for a script to convert the C
+-- #defines to the below hsc2hs code.
 #{enum ColorConversion, ColorConversion
   , cv_BGR2BGRA = CV_BGR2BGRA
   , cv_RGB2RGBA = CV_RGB2RGBA
