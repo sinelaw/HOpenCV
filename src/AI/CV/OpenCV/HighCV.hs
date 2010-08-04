@@ -1,7 +1,7 @@
-{-# LANGUAGE ExistentialQuantification, Rank2Types, BangPatterns #-}
--- |High-level Haskell bindings to OpenCV operations. Some of
--- these operations are fusable under composition. For example,
--- @dilate 8 . erode 8@ will allocate one new image rather than two.
+-- |High-level Haskell bindings to OpenCV operations. Some of these
+-- operations will be performed in-place under composition. For
+-- example, @dilate 8 . erode 8@ will allocate one new image rather
+-- than two.
 module AI.CV.OpenCV.HighCV (erode, dilate, houghStandard, houghProbabilistic, 
                             LineType(..), RGB, drawLines, convertColor) 
     where
@@ -9,66 +9,62 @@ import AI.CV.OpenCV.ColorConversion
 import AI.CV.OpenCV.CxCore
 import AI.CV.OpenCV.CV
 import AI.CV.OpenCV.HIplImage
-import Control.Monad.ST (ST, runST, unsafeIOToST)
+import Control.Monad.ST (runST, unsafeIOToST)
 import Foreign.Ptr
 import Foreign.Storable
-
-newtype ImageProc = ImageProc { unProc :: HIplImage -> forall s. ST s HIplImage }
-
-runProc :: ImageProc -> HIplImage -> HIplImage
-runProc x img = runST $ unProc x img
+import Unsafe.Coerce
 
 -- |Erode an 'HIplImage' with a 3x3 structuring element for the
 -- specified number of iterations.
-erode :: Int -> HIplImage -> HIplImage
-erode n = runProc . ImageProc $ \img -> unsafeIOToST $
-              withHIplImage img (\src -> return . withCompatibleImage img $
-                                         \dst -> cvErode src dst n')
+erode :: Int -> HIplImage a -> HIplImage FreshImage
+erode n img = runST $
+              unsafeIOToST . withHIplImage img $
+              \src -> return . withCompatibleImage img $
+                      \dst -> cvErode src dst n'
     where n' = fromIntegral n
 
 -- |Dilate an 'HIplImage' with a 3x3 structuring element for the
 -- specified number of iterations.
-dilate :: Int -> HIplImage -> HIplImage
-dilate n = runProc . ImageProc $ \img -> unsafeIOToST $
-               withHIplImage img (\src -> return . withCompatibleImage img $
-                                          \dst -> cvDilate src dst n')
+dilate :: Int -> HIplImage a -> HIplImage FreshImage
+dilate n img = runST $ 
+               unsafeIOToST . withHIplImage img $
+               \src -> return . withCompatibleImage img $
+                       \dst -> cvDilate src dst n'
     where n' = fromIntegral n
 
 -- |Unsafe in-place erosion. This is a destructive update of the given
 -- image and is only used by the fusion rewrite rules when there is
 -- no way to observe the input image.
-unsafeErode :: Int -> HIplImage -> HIplImage
-unsafeErode n img = runST $ unsafeIOToST $ 
-                    withHIplImage img (\src -> cvErode src src n') >> 
-                    return img
+unsafeErode :: Int -> HIplImage a -> HIplImage FreshImage
+unsafeErode n img = runST $ 
+                    unsafeIOToST $
+                        withHIplImage img (\src -> cvErode src src n') >> 
+                        return (unsafeCoerce img)
     where n' = fromIntegral n
 
 -- |Unsafe in-place dilation. This is a destructive update of the
 -- given image and is only used by the fusion rewrite rules when
 -- there is no way to observe the input image.
-unsafeDilate :: Int -> HIplImage -> HIplImage
-unsafeDilate n = runProc . ImageProc $ \img -> unsafeIOToST $
-                     withHIplImage img (\src -> cvDilate src src n') >> 
-                     return img
+unsafeDilate :: Int -> HIplImage a -> HIplImage FreshImage
+unsafeDilate n img = runST $ 
+                     unsafeIOToST $
+                         withHIplImage img (\src -> cvDilate src src n') >> 
+                         return (unsafeCoerce img)
     where n' = fromIntegral n
 
--- Perform destructive in-place updates when such a change is safe.
-
--- FIXME: These are not correct. Note that if the function f is, for
--- example, the identity function, then we clobber the existing
--- HIplImage. There needs to be a constraint that f is a function that
--- allocates a fresh HIplImage. Perhaps this can be indicated with a
--- type if all other HIplImage operations are implemented on a type
--- class, then functions that generate new images can return an
--- instance of that class that indicates a fresh image.
+-- Perform destructive in-place updates when such a change is
+-- safe. Safety is indicated by the phantom type tag annotating
+-- HIplImage. If we have a function yielding an HIplImage FreshImage,
+-- then we can clobber it. That is the *only* time these in-place
+-- operations are known to be safe.
 
 {-# RULES 
-"erode-in-place"  forall n f. erode n . f = unsafeErode n . f
-"dilate-in-place" forall n f. dilate n . f = unsafeDilate n . f
+"erode-in-place"  forall n (f::a->HIplImage FreshImage). erode n . f = unsafeErode n . f
+"dilate-in-place" forall n (f::a->HIplImage FreshImage). dilate n . f = unsafeDilate n . f
   #-}
 
 -- |Line detection in a binary image using a standard Hough transform.
-houghStandard :: Double -> Double -> Int -> HIplImage -> [((Int, Int),(Int,Int))]
+houghStandard :: Double -> Double -> Int -> HIplImage a -> [((Int, Int),(Int,Int))]
 houghStandard rho theta threshold img = runST $ unsafeIOToST $
     do storage <- cvCreateMemStorage (min 0 (fromIntegral threshold))
        cvSeq <- withHIplImage img $ 
@@ -94,7 +90,7 @@ houghStandard rho theta threshold img = runST $ unsafeIOToST $
 
 -- |Line detection in a binary image using a probabilistic Hough transform.
 houghProbabilistic :: Double -> Double -> Int -> Double -> Double -> 
-                      HIplImage -> [((Int, Int),(Int,Int))]
+                      HIplImage a -> [((Int, Int),(Int,Int))]
 houghProbabilistic rho theta threshold minLength maxGap img = 
     runST $ unsafeIOToST $
     do storage <- cvCreateMemStorage (min 0 (fromIntegral threshold))
@@ -131,8 +127,8 @@ lineTypeEnum AALine    = 16
 -- |Draw each line, defined by its endpoints, on a duplicate of the
 -- given 'HIplImage' using the specified RGB color, line thickness,
 -- and aliasing style. This function is fusible under composition.
-drawLines :: RGB -> Int -> LineType -> [((Int,Int),(Int,Int))] -> HIplImage -> 
-             HIplImage
+drawLines :: RGB -> Int -> LineType -> [((Int,Int),(Int,Int))] -> 
+             HIplImage a -> HIplImage FreshImage
 drawLines col thick lineType lines img = 
     withDuplicateImage img $ \ptr -> mapM_ (draw ptr) lines
     where draw ptr (pt1, pt2) = cvLine ptr pt1 pt2 col thick lineType'
@@ -140,27 +136,26 @@ drawLines col thick lineType lines img =
 
 -- |Unsafe in-place line drawing.
 unsafeDrawLines :: RGB -> Int -> LineType -> [((Int,Int),(Int,Int))] -> 
-                   HIplImage -> HIplImage
+                   HIplImage a -> HIplImage FreshImage
 unsafeDrawLines col thick lineType lines img = 
     runST $ unsafeIOToST $
-    withHIplImage img $ \ptr -> mapM_ (draw ptr) lines >> return img
+    withHIplImage img $ \ptr -> mapM_ (draw ptr) lines >> return (unsafeCoerce img)
     where draw ptr (pt1,pt2) = cvLine ptr pt1 pt2 col thick lineType'
           lineType' = lineTypeEnum lineType
-          
 
 {-# RULES
-  "draw-lines-in-place" forall c t lt lns f. 
+  "draw-lines-in-place" forall c t lt lns (f::a->HIplImage FreshImage). 
   drawLines c t lt lns . f = unsafeDrawLines c t lt lns . f
   #-}
 
 -- |Convert the color model of an image.
-convertColor :: ColorConversion -> HIplImage -> HIplImage
+convertColor :: ColorConversion -> HIplImage a -> HIplImage FreshImage
 convertColor cc img = runST $ unsafeIOToST $ 
-                      withHIplImage img $
-                      \src -> do dst <- mkHIplImage w h nc
-                                 withHIplImage dst $
-                                   \dst' -> cvCvtColor src dst' cc
-                                 return dst
+                       withHIplImage img $
+                       \src -> do dst <- mkHIplImage w h nc
+                                  withHIplImage dst $
+                                    \dst' -> cvCvtColor src dst' cc
+                                  return dst
     where w = width img
           h = height img
           destChannels = [(cv_RGB2BGR, 3), (cv_BGR2GRAY, 1), (cv_GRAY2BGR, 3)]

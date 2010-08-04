@@ -22,7 +22,7 @@ rgbIndices width' stride numElems = V.fromList $ concatMap row rowStarts
 
 -- |Convert an 'HIplImage' \'s pixel data from BGR triplets in padded rows
 -- to tightly packed rows of RGB pixels.
-toRGB :: HIplImage -> V.Vector Word8
+toRGB :: HIplImage a -> V.Vector Word8
 toRGB img = V.backpermute (pixels img) $
             rgbIndices (width img) (widthStep img) (imageSize img)
 
@@ -30,7 +30,7 @@ toRGB img = V.backpermute (pixels img) $
 -- rows to tightly packed rows of RGB pixels using the given
 -- 'V.Vector' of indices. The index 'Vector' will typically be the
 -- result of a previous call to 'rgbIndices'.
-toRGB' :: HIplImage -> V.Vector Int -> V.Vector Word8
+toRGB' :: HIplImage a -> V.Vector Int -> V.Vector Word8
 toRGB' img inds = V.backpermute (pixels img) inds
 
 -- |Drop any pixels beyond real image data on each row.
@@ -41,7 +41,7 @@ dropAlpha w = V.ifilter (\i _ -> (i `rem` rowLength) < realWidth)
 
 -- |Return a Vector of bytes of a single color channel from a
 -- tri-chromatic image. The desired channel must be one of 0, 1, or 2.
-isolateChannel :: Int -> HIplImage -> V.Vector Word8
+isolateChannel :: Int -> HIplImage a -> V.Vector Word8
 isolateChannel ch img = 
     if ch >= 3 || numCh /= 3
     then error $ "Invalid channel "++show ch++" for image with "++show numCh++
@@ -61,7 +61,7 @@ isolateChannel ch img =
           get = V.unsafeIndex pix
 
 -- |Convert an 'HIplImage' \'s pixel data to a 'V.Vector' of monochromatic bytes.
-toMono :: HIplImage -> V.Vector Word8
+toMono :: HIplImage a -> V.Vector Word8
 toMono img = if numChannels img == 1 then dropAlpha w pix 
              else runST $ do v <- VM.new (w*h)
                              let go !x !p !p3 !y
