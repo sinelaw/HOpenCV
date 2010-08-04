@@ -1,8 +1,9 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls #-}
 module AI.CV.OpenCV.HIplImage 
     ( HIplImage, FreshImage, numChannels, width, height, imageSize, widthStep, 
-      pixels, pixels16, fromPtr, fromFile, toFile, fromPixels, withHIplImage, 
-      withCompatibleImage, withDuplicateImage, mkHIplImage )
+      pixels, pixelsCopy, pixels16, fromPtr, fromFile, toFile, fromPixels, 
+      fromPixelsCopy, withHIplImage, withCompatibleImage, withDuplicateImage, 
+      mkHIplImage )
     where
 import AI.CV.OpenCV.CxCore (IplImage,Depth(..),iplDepth8u)
 import AI.CV.OpenCV.HighGui (cvLoadImage, cvSaveImage, LoadColor)
@@ -13,7 +14,7 @@ import Data.Word (Word8, Word16)
 import Foreign.C.Types
 import Foreign.ForeignPtr
 import Foreign.Marshal.Alloc (alloca)
-import Foreign.Marshal.Array (copyArray)
+import Foreign.Marshal.Utils (copyBytes)
 import Foreign.Ptr
 import Foreign.Storable
 import Unsafe.Coerce
@@ -76,6 +77,20 @@ pixels img = V.unsafeFromForeignPtr ptr 0 (imageSize img)
                   x -> error $ "Pixel depth must be 8, "++show x++
                                " is not supported"
 
+doST :: IO a -> a
+doST x = runST (unsafeIOToST x)
+
+-- |Return a 'V.Vector' containing the pixels that make up an
+-- 8-bit-per-pixel 'HIplImage'. This makes a copy of the underlying
+-- pixel data.
+pixelsCopy :: HIplImage a -> V.Vector Word8
+pixelsCopy img = doST $ do ptr <- mallocForeignPtrBytes len
+                           withForeignPtr ptr $
+                              \dst -> withForeignPtr (imageData img) $
+                                        \src -> copyBytes dst src len
+                           return $ V.unsafeFromForeignPtr ptr 0 (imageSize img)
+    where len = imageSize img
+
 -- |Return a 'V.Vector' containing the pixels that make up the
 -- 16-bit-per-pixel 'HIplImage'.
 pixels16 :: HIplImage a -> V.Vector Word16
@@ -133,7 +148,7 @@ duplicateImage :: HIplImage a -> IO (HIplImage FreshImage)
 duplicateImage img =
     do fptr <- mallocForeignPtrArray sz
        withForeignPtr (imageData img) $ 
-           \src -> withForeignPtr fptr $ \dst -> copyArray dst src sz
+           \src -> withForeignPtr fptr $ \dst -> copyBytes dst src sz
        return $ HIplImage nc d 0 0 w h sz fptr stride
     where w = width img
           h = height img
@@ -157,6 +172,24 @@ fromPixels w h pix = if fromIntegral len == sz
           (fp,len) = case V.unsafeToForeignPtr (V.force pix) of
                          (fp,0,len) -> (fp,len)
                          _ -> error "fromPixels non-zero offset"
+
+-- |Construct a fresh 'HIplImage' from a width, a height, and a
+-- 'V.Vector' of 8-bit pixel values.
+fromPixelsCopy :: Integral a => a -> a -> V.Vector Word8 -> HIplImage FreshImage
+fromPixelsCopy w h pix = 
+    doST $ do fp <- copyData
+              return $ HIplImage nc iplDepth8u 0 0 w' h' sz fp stride
+    where nc = if V.length pix == w' * h' then 1 else 3
+          w' = fromIntegral w
+          h' = fromIntegral h
+          sz = w' * h' * nc
+          stride = w' * nc
+          copyData = let (vfp,offset,len) = V.unsafeToForeignPtr pix
+                     in do fp <- mallocForeignPtrBytes len
+                           withForeignPtr vfp $
+                             \src -> withForeignPtr fp $
+                                       \dst -> copyBytes dst src len
+                           return fp
 
 -- |Provides the supplied function with a 'Ptr' to the 'IplImage'
 -- underlying the given 'HIplImage'.

@@ -3,7 +3,9 @@
 -- example, @dilate 8 . erode 8@ will allocate one new image rather
 -- than two.
 module AI.CV.OpenCV.HighCV (erode, dilate, houghStandard, houghProbabilistic, 
-                            LineType(..), RGB, drawLines, convertColor) 
+                            LineType(..), RGB, drawLines, convertColor, 
+                            HIplImage, width, height, numChannels, pixels, 
+                            fromPixels, fromFile, toFile) 
     where
 import AI.CV.OpenCV.ColorConversion
 import AI.CV.OpenCV.CxCore
