@@ -1,18 +1,17 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 module AI.CV.OpenCV.HIplImage where
-import AI.CV.OpenCV.CxCore (IplImage,Depth(..),iplDepth8u,createImageF,
-                            CvSize(..))
+import AI.CV.OpenCV.CxCore (IplImage,Depth(..),iplDepth8u)
 import AI.CV.OpenCV.HighGui (cvLoadImage, cvSaveImage, LoadColor)
 import Control.Applicative ((<$>))
+import Control.Monad.ST (runST, unsafeIOToST)
 import qualified Data.Vector.Storable as V
 import Data.Word (Word8, Word16)
 import Foreign.C.Types
 import Foreign.ForeignPtr
-import Foreign.Marshal.Alloc (alloca, finalizerFree)
-import Foreign.Marshal.Array (mallocArray, copyArray)
+import Foreign.Marshal.Alloc (alloca)
+import Foreign.Marshal.Array (copyArray)
 import Foreign.Ptr
 import Foreign.Storable
-import System.IO.Unsafe
 
 #include <opencv/cxtypes.h>
 {-
@@ -93,12 +92,12 @@ toFile fileName img = withHIplImage img $ \ptr -> cvSaveImage fileName ptr
 -- and number of color channels with an allocated pixel buffer.
 mkHIplImage :: Int -> Int -> Int -> IO HIplImage
 mkHIplImage w h numChan = 
---     do fp <- createImageF (CvSize w' h') numChan' iplDepth8u
---        withForeignPtr fp $ \p -> peek (castPtr p)
---     where w' = fromIntegral w
---           h' = fromIntegral h
---           numChan' = fromIntegral numChan
-    do ptr <- mallocArray numBytes >>= newForeignPtr finalizerFree
+    -- do fp <- createImageF (CvSize w' h') numChan' iplDepth8u
+    --    withForeignPtr fp $ \p -> peek (castPtr p)
+    -- where w' = fromIntegral w
+    --       h' = fromIntegral h
+    --       numChan' = fromIntegral numChan
+    do ptr <- mallocForeignPtrArray numBytes
        return $ HIplImage numChan iplDepth8u 0 0 w h numBytes ptr stride ptr
     where numBytes = stride * h
           stride = w * numChan
@@ -108,7 +107,7 @@ mkHIplImage w h numChan =
 -- data of the original 'HIplImage' is not copied.
 compatibleImage :: HIplImage -> IO HIplImage
 compatibleImage img = 
-    do ptr <- mallocArray sz >>= newForeignPtr finalizerFree
+    do ptr <- mallocForeignPtrArray sz
        return $ HIplImage nc d order 0 w h sz ptr stride ptr
     where w = width img
           h = height img
@@ -122,10 +121,9 @@ compatibleImage img =
 -- fresh array to store the copied pixels.
 duplicateImage :: HIplImage -> IO HIplImage
 duplicateImage img =
-    do ptr <- mallocArray sz
+    do fptr <- mallocForeignPtrArray sz
        withForeignPtr (imageData img) $ 
-           \src -> copyArray ptr src sz
-       fptr <- newForeignPtr finalizerFree ptr
+           \src -> withForeignPtr fptr $ \dst -> copyArray dst src sz
        return $ HIplImage nc d 0 0 w h sz fptr stride fptr
     where w = width img
           h = height img
@@ -134,43 +132,73 @@ duplicateImage img =
           sz = imageSize img
           stride = widthStep img
 
-{-# NOINLINE fromPixels #-}
 -- |Construct an 'HIplImage' from a width, a height, and a 'V.Vector'
 -- of 8-bit pixel values. The new 'HIplImage' \'s pixel data is shared
 -- with the supplied 'V.Vector'.
 fromPixels :: Integral a => a -> a -> V.Vector Word8 -> HIplImage
-fromPixels w h pix = unsafePerformIO $ 
-                     V.unsafeWith pix $
-                         \p -> do fp <- newForeignPtr_ p
-                                  return $ HIplImage nc iplDepth8u 0 0 w' h'
-                                                     sz fp stride fp
+-- fromPixels w h pix = runST $ unsafeIOToST $ 
+--                      V.unsafeWith pix $
+--                          \p -> do fp <- newForeignPtr_ p
+--                                   return $ HIplImage nc iplDepth8u 0 0 w' h'
+--                                                      sz fp stride fp
+fromPixels w h pix = if fromIntegral len == sz 
+                     then HIplImage nc iplDepth8u 0 0 w' h' sz fp stride fp
+                     else error "Length disagreement"
     where nc = if V.length pix == w' * h' then 1 else 3
           w' = fromIntegral w
           h' = fromIntegral h
           sz = w' * h' * nc
           stride = w' * nc
+          (fp,len) = case V.unsafeToForeignPtr (V.force pix) of
+                         (fp,0,len) -> (fp,len)
+                         _ -> error "fromPixels non-zero offset"
 
 -- |Provides the supplied function with a 'Ptr' to the 'IplImage'
 -- underlying the given 'HIplImage'.
 withHIplImage :: HIplImage -> (Ptr IplImage -> IO a) -> IO a
-withHIplImage img f = alloca $ \p -> poke p img >> f (castPtr p)
+--withHIplImage img f = alloca $ \p -> poke p img >> f (castPtr p)
+withHIplImage img f = alloca $ 
+                      \p -> withForeignPtr (imageData img) 
+                                           (\hp -> pokeIpl img p hp >>
+                                                   f (castPtr p))
 
-{-# NOINLINE withDuplicateImage #-}
+-- Poke a 'Ptr' 'HIplImage' with a specific imageData 'Ptr' that is
+-- currently valid. This is solely an auxiliary function to
+-- 'withHIplImage'.
+pokeIpl :: HIplImage -> Ptr HIplImage -> Ptr Word8 -> IO ()
+pokeIpl himg ptr hp =
+    do (#poke IplImage, nSize) ptr ((#size IplImage)::Int)
+       (#poke IplImage, ID) ptr (0::Int)
+       (#poke IplImage, nChannels) ptr (numChannels himg)
+       (#poke IplImage, depth) ptr (unDepth (depth himg))
+       (#poke IplImage, dataOrder) ptr (dataOrder himg)
+       (#poke IplImage, origin) ptr (origin himg)
+       (#poke IplImage, align) ptr (4::Int)
+       (#poke IplImage, width) ptr (width himg)
+       (#poke IplImage, height) ptr (height himg)
+       (#poke IplImage, roi) ptr nullPtr
+       (#poke IplImage, maskROI) ptr nullPtr
+       (#poke IplImage, imageId) ptr nullPtr
+       (#poke IplImage, tileInfo) ptr nullPtr
+       (#poke IplImage, imageSize) ptr (imageSize himg)
+       (#poke IplImage, imageData) ptr hp
+       (#poke IplImage, widthStep) ptr (widthStep himg)
+       (#poke IplImage, imageDataOrigin) ptr hp
+
 -- |Provides the supplied function with a 'Ptr' to the 'IplImage'
 -- underlying a new 'HIplImage' that is an exact duplicate of the
 -- given 'HIplImage'.
 withDuplicateImage :: HIplImage -> (Ptr IplImage -> IO a) -> HIplImage
-withDuplicateImage img1 f = unsafePerformIO $
+withDuplicateImage img1 f = runST $ unsafeIOToST $
                             do img2 <- duplicateImage img1
                                _ <- withHIplImage img2 f
                                return img2
 
-{-# NOINLINE withCompatibleImage #-}
 -- |Provides the supplied function with a 'Ptr' to the 'IplImage'
 -- underlying a new 'HIplImage' of the same dimensions as the given
 -- 'HIplImage'.
 withCompatibleImage :: HIplImage -> (Ptr IplImage -> IO a) -> HIplImage
-withCompatibleImage img1 f = unsafePerformIO $ 
+withCompatibleImage img1 f = runST $ unsafeIOToST $
                              do img2 <- compatibleImage img1
                                 _ <- withHIplImage img2 f
                                 return img2
@@ -188,24 +216,25 @@ withCompatibleImage img1 f = unsafePerformIO $
 instance Storable HIplImage where
     sizeOf _ = (#size IplImage)
     alignment _ = alignment (undefined :: CDouble)
-    poke ptr himg = do
-      (#poke IplImage, nSize) ptr ((#size IplImage)::Int)
-      (#poke IplImage, ID) ptr (0::Int)
-      (#poke IplImage, nChannels) ptr (numChannels himg)
-      (#poke IplImage, depth) ptr (unDepth (depth himg))
-      (#poke IplImage, dataOrder) ptr (dataOrder himg)
-      (#poke IplImage, origin) ptr (origin himg)
-      (#poke IplImage, width) ptr (width himg)
-      (#poke IplImage, height) ptr (height himg)
-      (#poke IplImage, roi) ptr nullPtr
-      (#poke IplImage, maskROI) ptr nullPtr
-      (#poke IplImage, imageId) ptr nullPtr
-      (#poke IplImage, tileInfo) ptr nullPtr
-      (#poke IplImage, imageSize) ptr (imageSize himg)
-      withForeignPtr (imageData himg) $ \p -> (#poke IplImage, imageData) ptr p
-      (#poke IplImage, widthStep) ptr (widthStep himg)
-      withForeignPtr (imageDataOrigin himg) $ 
-        \p ->(#poke IplImage, imageDataOrigin) ptr p
+    poke = error "Poking a Ptr HIplImage is unsafe."
+    -- poke ptr himg = do
+    --   (#poke IplImage, nSize) ptr ((#size IplImage)::Int)
+    --   (#poke IplImage, ID) ptr (0::Int)
+    --   (#poke IplImage, nChannels) ptr (numChannels himg)
+    --   (#poke IplImage, depth) ptr (unDepth (depth himg))
+    --   (#poke IplImage, dataOrder) ptr (dataOrder himg)
+    --   (#poke IplImage, origin) ptr (origin himg)
+    --   (#poke IplImage, width) ptr (width himg)
+    --   (#poke IplImage, height) ptr (height himg)
+    --   (#poke IplImage, roi) ptr nullPtr
+    --   (#poke IplImage, maskROI) ptr nullPtr
+    --   (#poke IplImage, imageId) ptr nullPtr
+    --   (#poke IplImage, tileInfo) ptr nullPtr
+    --   (#poke IplImage, imageSize) ptr (imageSize himg)
+    --   withForeignPtr (imageData himg) $ \p -> (#poke IplImage, imageData) ptr p
+    --   (#poke IplImage, widthStep) ptr (widthStep himg)
+    --   withForeignPtr (imageDataOrigin himg) $ 
+    --     \p ->(#poke IplImage, imageDataOrigin) ptr p
     peek ptr = do
       numChannels' <- (#peek IplImage, nChannels) ptr
       depth' <- Depth <$> (#peek IplImage, depth) ptr

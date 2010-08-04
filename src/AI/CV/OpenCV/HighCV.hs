@@ -1,51 +1,54 @@
+{-# LANGUAGE ExistentialQuantification, Rank2Types, BangPatterns #-}
 -- |High-level Haskell bindings to OpenCV operations. Some of
 -- these operations are fusable under composition. For example,
 -- @dilate 8 . erode 8@ will allocate one new image rather than two.
 module AI.CV.OpenCV.HighCV (erode, dilate, houghStandard, houghProbabilistic, 
-                            LineType(..), RGB, drawLines, convertColor) 
+                            LineType(..), RGB, drawLines, convertColor,
+                           unsafeDrawLines) 
     where
 import AI.CV.OpenCV.ColorConversion
 import AI.CV.OpenCV.CxCore
 import AI.CV.OpenCV.CV
 import AI.CV.OpenCV.HIplImage
+import Control.Monad.ST (ST, runST, unsafeIOToST)
 import Foreign.Ptr
 import Foreign.Storable
-import System.IO.Unsafe
 
-{-# NOINLINE erode #-}
+newtype ImageProc = ImageProc { unProc :: HIplImage -> forall s. ST s HIplImage }
+
+runProc :: ImageProc -> HIplImage -> HIplImage
+runProc x img = runST $ unProc x img
+
 -- |Erode an 'HIplImage' with a 3x3 structuring element for the
 -- specified number of iterations.
 erode :: Int -> HIplImage -> HIplImage
-erode n img = unsafePerformIO $
+erode n = runProc . ImageProc $ \img -> unsafeIOToST $
               withHIplImage img (\src -> return . withCompatibleImage img $
                                          \dst -> cvErode src dst n')
     where n' = fromIntegral n
 
-{-# NOINLINE dilate #-}
 -- |Dilate an 'HIplImage' with a 3x3 structuring element for the
 -- specified number of iterations.
 dilate :: Int -> HIplImage -> HIplImage
-dilate n img = unsafePerformIO $
+dilate n = runProc . ImageProc $ \img -> unsafeIOToST $
                withHIplImage img (\src -> return . withCompatibleImage img $
                                           \dst -> cvDilate src dst n')
     where n' = fromIntegral n
 
-{-# NOINLINE unsafeErode #-}
 -- |Unsafe in-place erosion. This is a destructive update of the given
 -- image and is only used by the fusion rewrite rules when there is
 -- no way to observe the input image.
 unsafeErode :: Int -> HIplImage -> HIplImage
-unsafeErode n img = unsafePerformIO $ 
+unsafeErode n img = runST $ unsafeIOToST $ 
                     withHIplImage img (\src -> cvErode src src n') >> 
                     return img
     where n' = fromIntegral n
 
-{-# NOINLINE unsafeDilate #-}
 -- |Unsafe in-place dilation. This is a destructive update of the
 -- given image and is only used by the fusion rewrite rules when
 -- there is no way to observe the input image.
 unsafeDilate :: Int -> HIplImage -> HIplImage
-unsafeDilate n img = unsafePerformIO $
+unsafeDilate n = runProc . ImageProc $ \img -> unsafeIOToST $
                      withHIplImage img (\src -> cvDilate src src n') >> 
                      return img
     where n' = fromIntegral n
@@ -56,10 +59,9 @@ unsafeDilate n img = unsafePerformIO $
 "dilate-in-place" forall n f. dilate n . f = unsafeDilate n . f
   #-}
 
-{-# NOINLINE houghStandard #-}
 -- |Line detection in a binary image using a standard Hough transform.
 houghStandard :: Double -> Double -> Int -> HIplImage -> [((Int, Int),(Int,Int))]
-houghStandard rho theta threshold img = unsafePerformIO $
+houghStandard rho theta threshold img = runST $ unsafeIOToST $
     do storage <- cvCreateMemStorage (min 0 (fromIntegral threshold))
        cvSeq <- withHIplImage img $ 
                 \p -> cvHoughLines2 p storage 0 rho theta threshold 0 0
@@ -82,28 +84,27 @@ houghStandard rho theta threshold img = unsafePerformIO $
           clampX x = max 0 (min (truncate x) (width img - 1))
           clampY y = max 0 (min (truncate y) (height img - 1))
 
-{-# NOINLINE houghProbabilistic #-}
 -- |Line detection in a binary image using a probabilistic Hough transform.
 houghProbabilistic :: Double -> Double -> Int -> Double -> Double -> 
                       HIplImage -> [((Int, Int),(Int,Int))]
 houghProbabilistic rho theta threshold minLength maxGap img = 
-    unsafePerformIO $ do storage <- cvCreateMemStorage (min 0 (fromIntegral threshold))
-                         cvSeq <- withHIplImage img $
-                                  \p -> cvHoughLines2 p storage 1 rho theta 
-                                                      threshold minLength 
-                                                      maxGap
-                         hlines <- mapM (\p1 -> do x1 <- peek p1
-                                                   let p2 = plusPtr p1 step
-                                                       p3 = plusPtr p2 step
-                                                       p4 = plusPtr p3 step
-                                                   y1 <- peek p2
-                                                   x2 <- peek p3
-                                                   y2 <- peek p4
-                                                   return ((x1,y1),(x2,y2)))
-                                         =<< seqToPList cvSeq
-                         cvReleaseMemStorage storage
-                         return hlines
-        where step = sizeOf (undefined::Int)
+    runST $ unsafeIOToST $
+    do storage <- cvCreateMemStorage (min 0 (fromIntegral threshold))
+       cvSeq <- withHIplImage img $
+                \p -> cvHoughLines2 p storage 1 rho theta threshold minLength 
+                                    maxGap
+       hlines <- mapM (\p1 -> do x1 <- peek p1
+                                 let p2 = plusPtr p1 step
+                                     p3 = plusPtr p2 step
+                                     p4 = plusPtr p3 step
+                                 y1 <- peek p2
+                                 x2 <- peek p3
+                                 y2 <- peek p4
+                                 return ((x1,y1),(x2,y2)))
+                      =<< seqToPList cvSeq
+       cvReleaseMemStorage storage
+       return hlines
+    where step = sizeOf (undefined::Int)
 
 -- |Type of line to draw.
 data LineType = EightConn -- ^8-connected line
@@ -129,25 +130,24 @@ drawLines col thick lineType lines img =
     where draw ptr (pt1, pt2) = cvLine ptr pt1 pt2 col thick lineType'
           lineType' = lineTypeEnum lineType
 
-{-# NOINLINE unsafeDrawLines #-}
 -- |Unsafe in-place line drawing.
 unsafeDrawLines :: RGB -> Int -> LineType -> [((Int,Int),(Int,Int))] -> 
                    HIplImage -> HIplImage
 unsafeDrawLines col thick lineType lines img = 
-    unsafePerformIO $
+    runST $ unsafeIOToST $
     withHIplImage img $ \ptr -> mapM_ (draw ptr) lines >> return img
-    where lineType' = lineTypeEnum lineType
-          draw ptr (pt1,pt2) = cvLine ptr pt1 pt2 col thick lineType'
+    where draw ptr (pt1,pt2) = cvLine ptr pt1 pt2 col thick lineType'
+          lineType' = lineTypeEnum lineType
+          
 
 {-# RULES
   "draw-lines-in-place" forall c t lt lns f. 
   drawLines c t lt lns . f = unsafeDrawLines c t lt lns . f
   #-}
 
-{-# NOINLINE convertColor #-}
 -- |Convert the color model of an image.
 convertColor :: ColorConversion -> HIplImage -> HIplImage
-convertColor cc img = unsafePerformIO $ 
+convertColor cc img = runST $ unsafeIOToST $ 
                       withHIplImage img $
                       \src -> do dst <- mkHIplImage w h nc
                                  withHIplImage dst $

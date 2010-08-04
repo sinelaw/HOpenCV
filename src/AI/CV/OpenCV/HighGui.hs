@@ -33,12 +33,15 @@ cvLoadImage fileName col = withCString fileName $
                            \str -> c_cvLoadImage str col'
     where col' = fromIntegral $ fromEnum col
 
-foreign import ccall unsafe "highgui.h cvSaveImage"
-  c_cvSaveImage :: CString -> Ptr CvArr -> IO ()
+foreign import ccall unsafe "HOpenCV_wrap.h debug_print_image_header"
+  c_debug_ipl :: Ptr IplImage -> IO ()
+
+foreign import ccall safe "highgui.h cvSaveImage"
+  c_cvSaveImage :: CString -> Ptr CvArr -> Ptr Int -> IO ()
 
 cvSaveImage :: IplArrayType a => String -> Ptr a -> IO ()
 cvSaveImage fileName img = withCString fileName $
-                           \str -> c_cvSaveImage str (fromArr img)
+                           \str -> c_cvSaveImage str (fromArr img) nullPtr
 
 ------------------------------------------------
 -- Capturing

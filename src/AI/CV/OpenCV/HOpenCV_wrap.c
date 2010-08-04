@@ -18,10 +18,13 @@ void debug_print_image_header(IplImage *image)
            "\twidth: %d\n"
            "\theight: %d\n"
            "\timageSize: %d\n"
-           "\twidthStep: %d\n",
+           "\timageData: %x\n"
+           "\twidthStep: %d\n"
+           "\timageDataOrigin: %x\n",
            image->nSize, image->ID, image->nChannels, image->alphaChannel,
            image->depth, image->dataOrder, image->origin, image->align,
-           image->width, image->height, image->imageSize, image->widthStep);
+           image->width, image->height, image->imageSize, (int)image->imageData, 
+           image->widthStep, (int)image->imageDataOrigin);
 }
 
 /****************************************************************************/
