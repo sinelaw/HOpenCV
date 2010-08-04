@@ -48,6 +48,10 @@ typedef struct _IplImage
 IplImage;
 -}
 
+-- |Type annotation indicating that an 'HIplImage' is freshly
+-- allocated. This is used to drive the allocation fusion mechanism
+-- that may perform in-place updates when an operation is composed
+-- with a function that returns a fresh image.
 data FreshImage
 
 -- |A Haskell data structure representing the information OpenCV uses
