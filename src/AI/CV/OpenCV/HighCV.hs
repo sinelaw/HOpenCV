@@ -3,8 +3,7 @@
 -- these operations are fusable under composition. For example,
 -- @dilate 8 . erode 8@ will allocate one new image rather than two.
 module AI.CV.OpenCV.HighCV (erode, dilate, houghStandard, houghProbabilistic, 
-                            LineType(..), RGB, drawLines, convertColor,
-                           unsafeDrawLines) 
+                            LineType(..), RGB, drawLines, convertColor) 
     where
 import AI.CV.OpenCV.ColorConversion
 import AI.CV.OpenCV.CxCore
@@ -54,6 +53,15 @@ unsafeDilate n = runProc . ImageProc $ \img -> unsafeIOToST $
     where n' = fromIntegral n
 
 -- Perform destructive in-place updates when such a change is safe.
+
+-- FIXME: These are not correct. Note that if the function f is, for
+-- example, the identity function, then we clobber the existing
+-- HIplImage. There needs to be a constraint that f is a function that
+-- allocates a fresh HIplImage. Perhaps this can be indicated with a
+-- type if all other HIplImage operations are implemented on a type
+-- class, then functions that generate new images can return an
+-- instance of that class that indicates a fresh image.
+
 {-# RULES 
 "erode-in-place"  forall n f. erode n . f = unsafeErode n . f
 "dilate-in-place" forall n f. dilate n . f = unsafeDilate n . f
