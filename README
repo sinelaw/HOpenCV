@@ -1,15 +1,16 @@
 HOpenCV
 -------
 
-OpenCV bindings for Haskell (rather low-level)
+OpenCV 2.1 bindings for Haskell.
 
-For a functional wrapping of this library, see cv-combinators
+- Image color channel count and color depth are statically checked.
 
+- A functional interface is provided through the HighCV module.
 
-TODO:
------
+- When operations are directly composed, they will be performed
+  in-place where possible as the intermediate images are not
+  observable.
 
-* Embed the depth and number of channels of images in their type using a typeclass
-  This will make things a little safer (e.g. prevent us calling cvCanny with color images in most cases)
+NOTE: Only a small part of OpenCV is currently wrapped.
 
 
