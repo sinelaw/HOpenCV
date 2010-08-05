@@ -5,7 +5,7 @@
 module AI.CV.OpenCV.HighCV (erode, dilate, houghStandard, houghProbabilistic, 
                             LineType(..), RGB, drawLines, convertColor, 
                             HIplImage, width, height, numChannels, pixels, 
-                            fromPixels, fromFile, toFile) 
+                            fromPixels, fromFile, toFile, findContours) 
     where
 import AI.CV.OpenCV.ColorConversion
 import AI.CV.OpenCV.CxCore
@@ -165,3 +165,8 @@ convertColor cc img = runST $ unsafeIOToST $
                  Just n -> n
                  Nothing -> error $ "Unfamiliar color conversion. "++
                                     "Contact maintainer."
+
+-- |Find the 'CvContour's in an image.
+findContours :: HIplImage a -> [CvContour]
+findContours img = withDuplicateImage' img $
+                     \src -> cvFindContours src CV_RETR_CCOMP CV_CHAIN_APPROX_SIMPLE

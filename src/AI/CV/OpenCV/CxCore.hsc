@@ -90,7 +90,7 @@ instance VectorSpace CvRect where
 
 ------------------------------------------------------
 -- |A 'CvContour' has a bounding 'CvRect' and a color.
-data CvContour = CvContour CvRect Int
+data CvContour = CvContour CvRect Int deriving (Show, Eq)
 
 instance Storable CvContour where
     sizeOf _ = (#size CvContour)

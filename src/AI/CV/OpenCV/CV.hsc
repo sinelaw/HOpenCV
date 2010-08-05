@@ -7,12 +7,12 @@ module AI.CV.OpenCV.CV
       cvHaarFlagNone, cvHaarDoCannyPruning, 
       cvHaarScaleImage, cvHaarFindBiggestObject, cvHaarDoRoughSearch,
       combineHaarFlags, cvHaarDetectObjects,
-      cvCvtColor, cvFindContours
+      cvCvtColor, cvFindContours, ContourMethod(..), ContourMode(..)
     ) where
 
 import Foreign.C.Types
 import Foreign.Marshal.Alloc (alloca)
-import Foreign.Storable (poke)
+import Foreign.Storable (poke, peek, peekByteOff)
 import Foreign.Ptr
 import Data.Bits
 import AI.CV.OpenCV.CxCore
@@ -87,7 +87,7 @@ foreign import ccall unsafe "HOpenCV_wrap.h c_cvFindContours"
   c_cvFindContours :: Ptr CvArr -> Ptr CvMemStorage -> Ptr (Ptr (CvSeq a)) -> Int -> Int -> Int -> Int -> Int -> IO Int
 
 -- |Contour extraction mode.
-data ContourMode = CV_RETR_EXTERNAL -- ^retrives only the extreme
+data ContourMode = CV_RETR_EXTERNAL -- ^retrieves only the extreme
                                     -- outer contours
 
                  | CV_RETR_LIST     -- ^retrieves all of the contours
@@ -132,7 +132,7 @@ data ContourMethod = CV_CHAIN_APPROX_NONE
                      deriving Enum
 
 -- |The function retrieves 'CvContour's from the binary image using the
--- algorithm Suzuki85 . The contours are a useful tool for shape
+-- algorithm Suzuki85. The contours are a useful tool for shape
 -- analysis and object detection and recognition.
 cvFindContours :: IplArrayType a => Ptr a -> ContourMode -> ContourMethod -> IO [CvContour]
 cvFindContours img mode method = 
@@ -152,9 +152,25 @@ cvFindContours img mode method =
                           poke (cseq'::Ptr (Ptr CInt)) cseq >>
                           c_cvFindContours (fromArr img) storage (castPtr cseq')
                                            header mode' method' 0 0
-                  seqToList (castPtr cseq)
+                  putStrLn $ "Found "++show _n++" contours"
+                  followContourList (castPtr cseq)
        cvReleaseMemStorage storage
        return cs
+
+-- FIXME: This is wrong. We're actually getting an array of arrays of
+-- Points. Check the cvDrawContours function to see how to interpret
+-- the result of c_cvFindContours.
+followContourList :: Ptr (CvSeq CvContour) -> IO [CvContour]
+followContourList = go []
+    where go acc p = if p == nullPtr
+                     then return $ reverse acc
+                     else do putStrLn "Getting element 1"
+                             n <- seqNumElems p
+                             putStrLn $ "Initial seq has "++show n++" elems"
+                             x <- peek =<< cvGetSeqElem p 1
+                             putStrLn $ "Found " ++ show x
+                             p' <- (#peek CvSeq, h_next) p
+                             go (x:acc) p'
 
 foreign import ccall unsafe "opencv/cv.h cvPyrDown"
   c_cvPyrDown :: Ptr CvArr -> Ptr CvArr -> CInt -> IO ()

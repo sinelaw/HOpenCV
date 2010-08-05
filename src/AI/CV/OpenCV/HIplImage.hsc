@@ -3,7 +3,7 @@ module AI.CV.OpenCV.HIplImage
     ( HIplImage, FreshImage, numChannels, width, height, imageSize, widthStep, 
       pixels, pixelsCopy, pixels16, fromPtr, fromFile, toFile, fromPixels, 
       fromPixelsCopy, withHIplImage, withCompatibleImage, withDuplicateImage, 
-      mkHIplImage )
+      mkHIplImage, withDuplicateImage')
     where
 import AI.CV.OpenCV.CxCore (IplImage,Depth(..),iplDepth8u)
 import AI.CV.OpenCV.HighGui (cvLoadImage, cvSaveImage, LoadColor)
@@ -188,7 +188,8 @@ fromPixelsCopy w h pix =
                      in do fp <- mallocForeignPtrBytes len
                            withForeignPtr vfp $
                              \src -> withForeignPtr fp $
-                                       \dst -> copyBytes dst src len
+                                       \dst -> let src' = plusPtr src offset
+                                               in copyBytes dst src' len
                            return fp
 
 -- |Provides the supplied function with a 'Ptr' to the 'IplImage'
@@ -225,12 +226,21 @@ pokeIpl himg ptr hp =
 
 -- |Provides the supplied function with a 'Ptr' to the 'IplImage'
 -- underlying a new 'HIplImage' that is an exact duplicate of the
--- given 'HIplImage'.
+-- given 'HIplImage'. Returns the duplicate 'HIplImage' after
+-- performing the given action
 withDuplicateImage :: HIplImage a -> (Ptr IplImage -> IO b) -> HIplImage FreshImage
 withDuplicateImage img1 f = runST $ unsafeIOToST $
                             do img2 <- duplicateImage img1
                                _ <- withHIplImage img2 f
                                return img2
+
+-- |Provides the supplied function with a 'Ptr' to an 'IplImage' that
+-- is a duplicate of the given 'HIplImage'. Returns the result of the
+-- given 'IO' action.
+withDuplicateImage' :: HIplImage a -> (Ptr IplImage -> IO b) -> b
+withDuplicateImage' img1 f = runST $ unsafeIOToST $
+                             do img2 <- duplicateImage img1
+                                withHIplImage img2 f
 
 -- |Provides the supplied function with a 'Ptr' to the 'IplImage'
 -- underlying a new 'HIplImage' of the same dimensions as the given
