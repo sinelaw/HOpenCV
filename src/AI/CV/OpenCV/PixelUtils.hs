@@ -6,7 +6,7 @@
 module AI.CV.OpenCV.PixelUtils where
 import AI.CV.OpenCV.HIplImage
 import Control.Monad.ST (runST)
-import Data.Word (Word8)
+import Data.Vector.Storable (Storable)
 import qualified Data.Vector.Storable as V
 import qualified Data.Vector.Storable.Mutable as VM
 import qualified Data.Vector.Generic as VG
@@ -22,7 +22,7 @@ rgbIndices width' stride numElems = V.fromList $ concatMap row rowStarts
 
 -- |Convert an 'HIplImage' \'s pixel data from BGR triplets in padded rows
 -- to tightly packed rows of RGB pixels.
-toRGB :: HIplImage a -> V.Vector Word8
+toRGB :: Storable d => HIplImage a TriChromatic d -> V.Vector d
 toRGB img = V.backpermute (pixels img) $
             rgbIndices (width img) (widthStep img) (imageSize img)
 
@@ -30,7 +30,7 @@ toRGB img = V.backpermute (pixels img) $
 -- rows to tightly packed rows of RGB pixels using the given
 -- 'V.Vector' of indices. The index 'Vector' will typically be the
 -- result of a previous call to 'rgbIndices'.
-toRGB' :: HIplImage a -> V.Vector Int -> V.Vector Word8
+toRGB' :: Storable d => HIplImage a TriChromatic d -> V.Vector Int -> V.Vector d
 toRGB' img inds = V.backpermute (pixels img) inds
 
 -- |Drop any pixels beyond real image data on each row.
@@ -41,11 +41,10 @@ dropAlpha w = V.ifilter (\i _ -> (i `rem` rowLength) < realWidth)
 
 -- |Return a Vector of bytes of a single color channel from a
 -- tri-chromatic image. The desired channel must be one of 0, 1, or 2.
-isolateChannel :: Int -> HIplImage a -> V.Vector Word8
+isolateChannel :: Storable d => Int -> HIplImage a TriChromatic d -> V.Vector d
 isolateChannel ch img = 
-    if ch >= 3 || numCh /= 3
-    then error $ "Invalid channel "++show ch++" for image with "++show numCh++
-                 " color channels"
+    if ch < 0 || ch >= 3
+    then error $ "Invalid channel "++show ch++" for trichromatic image"
     else runST $ do v <- VM.new (w*h)
                     let go !x !p !p3 !y
                             | y >= h = VG.unsafeFreeze v
@@ -53,16 +52,16 @@ isolateChannel ch img =
                             | otherwise = do VM.unsafeWrite v p (get p3)
                                              go (x+1) (p+1) (p3+3) y
                     go 0 0 ch 0
-    where numCh = numChannels img
-          w = width img
+    where w = width img
           h = height img
           margin = widthStep img - (w  * 3)
           pix = pixels img
           get = V.unsafeIndex pix
 
 -- |Convert an 'HIplImage' \'s pixel data to a 'V.Vector' of monochromatic bytes.
-toMono :: HIplImage a -> V.Vector Word8
-toMono img = if numChannels img == 1 then dropAlpha w pix 
+toMono :: (HasChannels c, Storable d, Integral d) => 
+          HIplImage a c d -> V.Vector d
+toMono img = if imgChannels img == 1 then dropAlpha w pix 
              else runST $ do v <- VM.new (w*h)
                              let go !x !p !p3 !y
                                      | y >= h = VG.unsafeFreeze v
@@ -75,9 +74,8 @@ toMono img = if numChannels img == 1 then dropAlpha w pix
           h = height img
           margin = widthStep img - (w * 3)
           pix = pixels img
-          get :: Int -> Int
           get = fromIntegral . V.unsafeIndex pix
           getAvg i = avg (get i) (get (i+1)) (get (i+2))
-          avg :: Int -> Int -> Int -> Word8
           avg b g r = fromIntegral $ (b + g + r) `div` 3
+          
 

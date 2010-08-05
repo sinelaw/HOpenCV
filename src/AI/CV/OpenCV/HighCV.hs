@@ -3,41 +3,48 @@
 -- example, @dilate 8 . erode 8@ will allocate one new image rather
 -- than two.
 module AI.CV.OpenCV.HighCV (erode, dilate, houghStandard, houghProbabilistic, 
-                            LineType(..), RGB, drawLines, convertColor, 
-                            HIplImage, width, height, numChannels, pixels, 
-                            fromPixels, fromFile, toFile, findContours) 
+                            LineType(..), RGB, drawLines, HIplImage, width, 
+                            height, pixels, fromGrayPixels, fromColorPixels, 
+                            fromFileGray, fromFileColor, toFile, findContours, 
+                            convertGrayToRGB, convertGrayToBGR, fromPtr, 
+                            convertRGBToGray, convertBGRToGray, isColor, isMono, 
+                            fromPixels, fromPixelsCopy)
     where
 import AI.CV.OpenCV.ColorConversion
 import AI.CV.OpenCV.CxCore
 import AI.CV.OpenCV.CV
 import AI.CV.OpenCV.HIplImage
 import Control.Monad.ST (runST, unsafeIOToST)
+import Data.Word (Word8)
 import Foreign.Ptr
 import Foreign.Storable
 import Unsafe.Coerce
 
 -- |Erode an 'HIplImage' with a 3x3 structuring element for the
 -- specified number of iterations.
-erode :: Int -> HIplImage a -> HIplImage FreshImage
+erode :: (HasChannels c, HasDepth d, Storable d) =>
+         Int -> HIplImage a c d -> HIplImage FreshImage c d
 erode n img = runST $
               unsafeIOToST . withHIplImage img $
-              \src -> return . withCompatibleImage img $
+              \src -> return . fst . withCompatibleImage img $
                       \dst -> cvErode src dst n'
     where n' = fromIntegral n
 
 -- |Dilate an 'HIplImage' with a 3x3 structuring element for the
 -- specified number of iterations.
-dilate :: Int -> HIplImage a -> HIplImage FreshImage
+dilate :: (HasChannels c, HasDepth d, Storable d) =>
+          Int -> HIplImage a c d -> HIplImage FreshImage c d
 dilate n img = runST $ 
                unsafeIOToST . withHIplImage img $
-               \src -> return . withCompatibleImage img $
+               \src -> return . fst . withCompatibleImage img $
                        \dst -> cvDilate src dst n'
     where n' = fromIntegral n
 
 -- |Unsafe in-place erosion. This is a destructive update of the given
 -- image and is only used by the fusion rewrite rules when there is
 -- no way to observe the input image.
-unsafeErode :: Int -> HIplImage a -> HIplImage FreshImage
+unsafeErode :: (HasChannels c, HasDepth d, Storable d) =>
+               Int -> HIplImage a c d -> HIplImage FreshImage c d
 unsafeErode n img = runST $ 
                     unsafeIOToST $
                         withHIplImage img (\src -> cvErode src src n') >> 
@@ -47,7 +54,8 @@ unsafeErode n img = runST $
 -- |Unsafe in-place dilation. This is a destructive update of the
 -- given image and is only used by the fusion rewrite rules when
 -- there is no way to observe the input image.
-unsafeDilate :: Int -> HIplImage a -> HIplImage FreshImage
+unsafeDilate :: (HasChannels c, HasDepth d, Storable d) =>
+                Int -> HIplImage a c d-> HIplImage FreshImage c d
 unsafeDilate n img = runST $ 
                      unsafeIOToST $
                          withHIplImage img (\src -> cvDilate src src n') >> 
@@ -61,12 +69,13 @@ unsafeDilate n img = runST $
 -- operations are known to be safe.
 
 {-# RULES 
-"erode-in-place"  forall n (f::a->HIplImage FreshImage). erode n . f = unsafeErode n . f
-"dilate-in-place" forall n (f::a->HIplImage FreshImage). dilate n . f = unsafeDilate n . f
+"erode-in-place"  forall n (f::a -> HIplImage FreshImage c d). erode n . f = unsafeErode n . f
+"dilate-in-place" forall n (f::a -> HIplImage FreshImage c d). dilate n . f = unsafeDilate n . f
   #-}
 
 -- |Line detection in a binary image using a standard Hough transform.
-houghStandard :: Double -> Double -> Int -> HIplImage a -> [((Int, Int),(Int,Int))]
+houghStandard :: Double -> Double -> Int -> HIplImage a MonoChromatic Word8 -> 
+                 [((Int, Int),(Int,Int))]
 houghStandard rho theta threshold img = runST $ unsafeIOToST $
     do storage <- cvCreateMemStorage (min 0 (fromIntegral threshold))
        cvSeq <- withHIplImage img $ 
@@ -92,13 +101,13 @@ houghStandard rho theta threshold img = runST $ unsafeIOToST $
 
 -- |Line detection in a binary image using a probabilistic Hough transform.
 houghProbabilistic :: Double -> Double -> Int -> Double -> Double -> 
-                      HIplImage a -> [((Int, Int),(Int,Int))]
+                      HIplImage a MonoChromatic Word8 -> [((Int, Int),(Int,Int))]
 houghProbabilistic rho theta threshold minLength maxGap img = 
     runST $ unsafeIOToST $
     do storage <- cvCreateMemStorage (min 0 (fromIntegral threshold))
-       cvSeq <- withHIplImage img $
-                \p -> cvHoughLines2 p storage 1 rho theta threshold minLength 
-                                    maxGap
+       let cvSeq = snd $ withDuplicateImage img $
+                     \p -> cvHoughLines2 p storage 1 rho theta threshold
+                                         minLength maxGap
        hlines <- mapM (\p1 -> do x1 <- peek p1
                                  let p2 = plusPtr p1 step
                                      p3 = plusPtr p2 step
@@ -129,16 +138,18 @@ lineTypeEnum AALine    = 16
 -- |Draw each line, defined by its endpoints, on a duplicate of the
 -- given 'HIplImage' using the specified RGB color, line thickness,
 -- and aliasing style. This function is fusible under composition.
-drawLines :: RGB -> Int -> LineType -> [((Int,Int),(Int,Int))] -> 
-             HIplImage a -> HIplImage FreshImage
+drawLines :: (HasChannels c, HasDepth d, Storable d) =>
+             RGB -> Int -> LineType -> [((Int,Int),(Int,Int))] -> 
+             HIplImage a c d -> HIplImage FreshImage c d
 drawLines col thick lineType lines img = 
-    withDuplicateImage img $ \ptr -> mapM_ (draw ptr) lines
+    fst $ withDuplicateImage img $ \ptr -> mapM_ (draw ptr) lines
     where draw ptr (pt1, pt2) = cvLine ptr pt1 pt2 col thick lineType'
           lineType' = lineTypeEnum lineType
 
 -- |Unsafe in-place line drawing.
-unsafeDrawLines :: RGB -> Int -> LineType -> [((Int,Int),(Int,Int))] -> 
-                   HIplImage a -> HIplImage FreshImage
+unsafeDrawLines :: (HasChannels c, HasDepth d, Storable d) =>
+                   RGB -> Int -> LineType -> [((Int,Int),(Int,Int))] -> 
+                   HIplImage a c d -> HIplImage FreshImage c d
 unsafeDrawLines col thick lineType lines img = 
     runST $ unsafeIOToST $
     withHIplImage img $ \ptr -> mapM_ (draw ptr) lines >> return (unsafeCoerce img)
@@ -146,27 +157,44 @@ unsafeDrawLines col thick lineType lines img =
           lineType' = lineTypeEnum lineType
 
 {-# RULES
-  "draw-lines-in-place" forall c t lt lns (f::a->HIplImage FreshImage). 
+  "draw-lines-in-place" forall c t lt lns (f::a -> HIplImage FreshImage c d). 
   drawLines c t lt lns . f = unsafeDrawLines c t lt lns . f
   #-}
 
 -- |Convert the color model of an image.
-convertColor :: ColorConversion -> HIplImage a -> HIplImage FreshImage
+convertGrayToRGB :: (HasDepth d, Storable d) =>
+                    HIplImage a MonoChromatic d -> HIplImage FreshImage TriChromatic d
+convertGrayToRGB = convertColor cv_GRAY2RGB
+
+convertGrayToBGR :: (HasDepth d, Storable d) =>
+                    HIplImage a MonoChromatic d -> HIplImage FreshImage TriChromatic d
+convertGrayToBGR = convertColor cv_GRAY2BGR
+
+convertBGRToGray :: (HasDepth d, Storable d) =>
+                    HIplImage a TriChromatic d -> HIplImage FreshImage MonoChromatic d
+convertBGRToGray = convertColor cv_BGR2GRAY
+
+convertRGBToGray :: (HasDepth d, Storable d) =>
+                    HIplImage a TriChromatic d -> HIplImage FreshImage MonoChromatic d
+convertRGBToGray = convertBGRToGray
+
+convertColor :: (HasChannels c1, HasChannels c2, HasDepth d, Storable d) =>
+                ColorConversion -> HIplImage a c1 d -> HIplImage FreshImage c2 d
 convertColor cc img = runST $ unsafeIOToST $ 
-                       withHIplImage img $
-                       \src -> do dst <- mkHIplImage w h nc
-                                  withHIplImage dst $
-                                    \dst' -> cvCvtColor src dst' cc
-                                  return dst
+                      withHIplImage img $
+                        \src -> do dst <- mkHIplImage w h
+                                   withHIplImage dst $
+                                     \dst' -> cvCvtColor src dst' cc
+                                   return dst
     where w = width img
           h = height img
-          destChannels = [(cv_RGB2BGR, 3), (cv_BGR2GRAY, 1), (cv_GRAY2BGR, 3)]
-          nc = case lookup cc destChannels of
-                 Just n -> n
-                 Nothing -> error $ "Unfamiliar color conversion. "++
-                                    "Contact maintainer."
+          -- destChannels = [(cv_RGB2BGR, 3), (cv_BGR2GRAY, 1), (cv_GRAY2BGR, 3)]
+          -- nc = case lookup cc destChannels of
+          --        Just n -> n
+          --        Nothing -> error $ "Unfamiliar color conversion. "++
+          --                           "Contact maintainer."
 
 -- |Find the 'CvContour's in an image.
-findContours :: HIplImage a -> [CvContour]
-findContours img = withDuplicateImage' img $
+findContours :: HIplImage a MonoChromatic Word8 -> [CvContour]
+findContours img = snd $ withDuplicateImage img $
                      \src -> cvFindContours src CV_RETR_CCOMP CV_CHAIN_APPROX_SIMPLE
