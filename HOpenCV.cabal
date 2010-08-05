@@ -28,6 +28,7 @@ library
       AI.CV.OpenCV.HighGui
       AI.CV.OpenCV.Types
       AI.CV.OpenCV.HIplImage
+      AI.CV.OpenCV.HIplUtils
       AI.CV.OpenCV.HighCV
       AI.CV.OpenCV.PixelUtils
       AI.CV.OpenCV.ColorConversion
@@ -35,6 +36,7 @@ library
       src/AI/CV/OpenCV/HOpenCV_wrap.c
    hs-Source-Dirs: src
    extra-libraries: cxcore,cv,highgui
+   other-modules: AI.CV.OpenCV.HighColorConv
    build-depends: base >=4 && <5, 
                   allocated-processor >= 0.0.1, 
                   vector-space,

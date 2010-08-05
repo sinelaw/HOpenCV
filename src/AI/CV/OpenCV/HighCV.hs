@@ -6,14 +6,13 @@ module AI.CV.OpenCV.HighCV (erode, dilate, houghStandard, houghProbabilistic,
                             LineType(..), RGB, drawLines, HIplImage, width, 
                             height, pixels, fromGrayPixels, fromColorPixels, 
                             fromFileGray, fromFileColor, toFile, findContours, 
-                            convertGrayToRGB, convertGrayToBGR, fromPtr, 
-                            convertRGBToGray, convertBGRToGray, isColor, isMono, 
-                            fromPixels, fromPixelsCopy)
+                            fromPtr, isColor, isMono, fromPixels, 
+                            fromPixelsCopy, module AI.CV.OpenCV.HighColorConv)
     where
-import AI.CV.OpenCV.ColorConversion
 import AI.CV.OpenCV.CxCore
 import AI.CV.OpenCV.CV
-import AI.CV.OpenCV.HIplImage
+import AI.CV.OpenCV.HighColorConv
+import AI.CV.OpenCV.HIplUtils
 import Control.Monad.ST (runST, unsafeIOToST)
 import Data.Word (Word8)
 import Foreign.Ptr
@@ -160,39 +159,6 @@ unsafeDrawLines col thick lineType lines img =
   "draw-lines-in-place" forall c t lt lns (f::a -> HIplImage FreshImage c d). 
   drawLines c t lt lns . f = unsafeDrawLines c t lt lns . f
   #-}
-
--- |Convert the color model of an image.
-convertGrayToRGB :: (HasDepth d, Storable d) =>
-                    HIplImage a MonoChromatic d -> HIplImage FreshImage TriChromatic d
-convertGrayToRGB = convertColor cv_GRAY2RGB
-
-convertGrayToBGR :: (HasDepth d, Storable d) =>
-                    HIplImage a MonoChromatic d -> HIplImage FreshImage TriChromatic d
-convertGrayToBGR = convertColor cv_GRAY2BGR
-
-convertBGRToGray :: (HasDepth d, Storable d) =>
-                    HIplImage a TriChromatic d -> HIplImage FreshImage MonoChromatic d
-convertBGRToGray = convertColor cv_BGR2GRAY
-
-convertRGBToGray :: (HasDepth d, Storable d) =>
-                    HIplImage a TriChromatic d -> HIplImage FreshImage MonoChromatic d
-convertRGBToGray = convertBGRToGray
-
-convertColor :: (HasChannels c1, HasChannels c2, HasDepth d, Storable d) =>
-                ColorConversion -> HIplImage a c1 d -> HIplImage FreshImage c2 d
-convertColor cc img = runST $ unsafeIOToST $ 
-                      withHIplImage img $
-                        \src -> do dst <- mkHIplImage w h
-                                   withHIplImage dst $
-                                     \dst' -> cvCvtColor src dst' cc
-                                   return dst
-    where w = width img
-          h = height img
-          -- destChannels = [(cv_RGB2BGR, 3), (cv_BGR2GRAY, 1), (cv_GRAY2BGR, 3)]
-          -- nc = case lookup cc destChannels of
-          --        Just n -> n
-          --        Nothing -> error $ "Unfamiliar color conversion. "++
-          --                           "Contact maintainer."
 
 -- |Find the 'CvContour's in an image.
 findContours :: HIplImage a MonoChromatic Word8 -> [CvContour]

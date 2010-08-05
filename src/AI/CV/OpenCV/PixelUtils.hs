@@ -5,6 +5,7 @@
 -- and to drop the unused packing bytes.
 module AI.CV.OpenCV.PixelUtils where
 import AI.CV.OpenCV.HIplImage
+import AI.CV.OpenCV.HIplUtils
 import Control.Monad.ST (runST)
 import Data.Vector.Storable (Storable)
 import qualified Data.Vector.Storable as V
