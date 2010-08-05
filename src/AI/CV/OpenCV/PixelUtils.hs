@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns, ScopedTypeVariables #-}
 -- |Images obtained from OpenCV usually have the components of color
 -- pixels arranged in BGR order and pad image rows with unused
 -- bytes. This module provides mechanisms to re-order pixels to RGB
@@ -25,6 +25,7 @@ rgbIndices width' stride numElems = V.fromList $ concatMap row rowStarts
 toRGB :: Storable d => HIplImage a TriChromatic d -> V.Vector d
 toRGB img = V.backpermute (pixels img) $
             rgbIndices (width img) (widthStep img) (imageSize img)
+{-# INLINE toRGB #-}
 
 -- |Convert an 'HIplImage' \'s pixel data from BGR triplets in padded
 -- rows to tightly packed rows of RGB pixels using the given
@@ -32,12 +33,14 @@ toRGB img = V.backpermute (pixels img) $
 -- result of a previous call to 'rgbIndices'.
 toRGB' :: Storable d => HIplImage a TriChromatic d -> V.Vector Int -> V.Vector d
 toRGB' img inds = V.backpermute (pixels img) inds
+{-# INLINE toRGB' #-}
 
 -- |Drop any pixels beyond real image data on each row.
 dropAlpha :: V.Storable a => Int -> V.Vector a -> V.Vector a
 dropAlpha w = V.ifilter (\i _ -> (i `rem` rowLength) < realWidth)
     where rowLength = w * 4
           realWidth = w * 3
+{-# INLINE dropAlpha #-}
 
 -- |Return a Vector of bytes of a single color channel from a
 -- tri-chromatic image. The desired channel must be one of 0, 1, or 2.
@@ -57,9 +60,10 @@ isolateChannel ch img =
           margin = widthStep img - (w  * 3)
           pix = pixels img
           get = V.unsafeIndex pix
+{-# INLINE isolateChannel #-}
 
 -- |Convert an 'HIplImage' \'s pixel data to a 'V.Vector' of monochromatic bytes.
-toMono :: (HasChannels c, Storable d, Integral d) => 
+toMono :: forall a c d. (HasChannels c, HasDepth d, Storable d, Integral d) => 
           HIplImage a c d -> V.Vector d
 toMono img = if imgChannels img == 1 then dropAlpha w pix 
              else runST $ do v <- VM.new (w*h)
@@ -76,6 +80,7 @@ toMono img = if imgChannels img == 1 then dropAlpha w pix
           pix = pixels img
           get = fromIntegral . V.unsafeIndex pix
           getAvg i = avg (get i) (get (i+1)) (get (i+2))
+          avg :: Int -> Int -> Int -> d
           avg b g r = fromIntegral $ (b + g + r) `div` 3
-          
+{-# INLINE toMono #-}          
 

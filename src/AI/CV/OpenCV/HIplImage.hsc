@@ -110,6 +110,9 @@ isColor = id
 isMono :: HIplImage a MonoChromatic d -> HIplImage a MonoChromatic d
 isMono = id
 
+{-# INLINE isMono #-}
+{-# INLINE isColor #-}
+
 imgChannels :: forall a c d. HasChannels c => HIplImage a c d -> Int
 imgChannels _ = numChannels (undefined::c)
 
