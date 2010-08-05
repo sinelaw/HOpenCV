@@ -7,10 +7,12 @@ module AI.CV.OpenCV.CV
       cvHaarFlagNone, cvHaarDoCannyPruning, 
       cvHaarScaleImage, cvHaarFindBiggestObject, cvHaarDoRoughSearch,
       combineHaarFlags, cvHaarDetectObjects,
-      cvCvtColor
+      cvCvtColor, cvFindContours
     ) where
 
 import Foreign.C.Types
+import Foreign.Marshal.Alloc (alloca)
+import Foreign.Storable (poke)
 import Foreign.Ptr
 import Data.Bits
 import AI.CV.OpenCV.CxCore
@@ -79,6 +81,80 @@ foreign import ccall unsafe "opencv/cv.h cvCvtColor"
 cvCvtColor :: (IplArrayType a, IplArrayType b) => 
               Ptr a -> Ptr b -> ColorConversion -> IO ()
 cvCvtColor src dst code = c_cvCvtColor (fromArr src) (fromArr dst) (colorConv code)
+
+
+foreign import ccall unsafe "HOpenCV_wrap.h c_cvFindContours"
+  c_cvFindContours :: Ptr CvArr -> Ptr CvMemStorage -> Ptr (Ptr (CvSeq a)) -> Int -> Int -> Int -> Int -> Int -> IO Int
+
+-- |Contour extraction mode.
+data ContourMode = CV_RETR_EXTERNAL -- ^retrives only the extreme
+                                    -- outer contours
+
+                 | CV_RETR_LIST     -- ^retrieves all of the contours
+                                    -- and puts them in the list
+
+                 | CV_RETR_CCOMP    -- ^retrieves all of the contours
+                                    -- and organizes them into a
+                                    -- two-level hierarchy: on the top
+                                    -- level are the external
+                                    -- boundaries of the components,
+                                    -- on the second level are the
+                                    -- boundaries of the holes
+
+                 | CV_RETR_TREE     -- ^retrieves all of the contours
+                                    -- and reconstructs the full
+                                    -- hierarchy of nested contours
+                   deriving (Enum, Eq)
+
+data ContourMethod = CV_CHAIN_APPROX_NONE      
+                   -- ^translates all of the points from the chain
+                   -- code into points
+
+                   | CV_CHAIN_APPROX_SIMPLE    
+                   -- ^compresses horizontal, vertical, and diagonal
+                   -- segments and leaves only their end points
+
+                   | CV_CHAIN_APPROX_TC89_L1   
+                   -- ^applies one of the flavors of the Teh-Chin
+                   -- chain approximation algorithm
+
+                   | CV_CHAIN_APPROX_TC89_KCOS
+                   -- ^applies one of the flavors of the Teh-Chin
+                   -- chain approximation algorithm
+
+                   | CV_LINK_RUNS
+                   -- ^uses a completely different contour retrieval
+                   -- algorithm by linking horizontal segments of
+                   -- 1's. Only the CV_RETR_LIST retrieval mode can be
+                   -- used with this method.  
+
+                   -- | CV_CHAIN_CODE -- changes returned sequence type
+                     deriving Enum
+
+-- |The function retrieves 'CvContour's from the binary image using the
+-- algorithm Suzuki85 . The contours are a useful tool for shape
+-- analysis and object detection and recognition.
+cvFindContours :: IplArrayType a => Ptr a -> ContourMode -> ContourMethod -> IO [CvContour]
+cvFindContours img mode method = 
+    do storage <- cvCreateMemStorage 0
+       let header = case method of
+                      --CV_CHAIN_CODE -> (#size CvChain)
+                      _ -> (#size CvContour)
+           mode' = fromEnum mode
+           method' = case method of 
+                       CV_LINK_RUNS -> if mode == CV_RETR_LIST
+                                       then fromEnum method
+                                       else error $ "CV_LINK_RUNS can only be "++
+                                                    "used with CV_RETR_LIST"
+                       _ -> fromEnum method
+       cs <- alloca $ \cseq ->
+               do _n <- alloca $ \cseq' ->
+                          poke (cseq'::Ptr (Ptr CInt)) cseq >>
+                          c_cvFindContours (fromArr img) storage (castPtr cseq')
+                                           header mode' method' 0 0
+                  seqToList (castPtr cseq)
+       cvReleaseMemStorage storage
+       return cs
 
 foreign import ccall unsafe "opencv/cv.h cvPyrDown"
   c_cvPyrDown :: Ptr CvArr -> Ptr CvArr -> CInt -> IO ()

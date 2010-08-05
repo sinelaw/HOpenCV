@@ -143,6 +143,15 @@ void c_cvLine(CvArr *img, int x1, int y1, int x2, int y2, double r, double g,
            lineType, shift);
 }
 
+int c_cvFindContours(CvArr *img, CvMemStorage *storage, CvSeq** first_contour, 
+                     int header_size, int mode, int method, int offset_x, 
+                     int offset_y)
+{
+    return cvFindContours(img, storage, first_contour, header_size, mode, 
+                          method, cvPoint(offset_x,offset_y));
+}
+
+
 
 /****************************************************************************/
 

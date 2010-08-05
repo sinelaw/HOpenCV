@@ -89,6 +89,21 @@ instance VectorSpace CvRect where
   a *^ r = liftCvRect (a*) r
 
 ------------------------------------------------------
+-- |A 'CvContour' has a bounding 'CvRect' and a color.
+data CvContour = CvContour CvRect Int
+
+instance Storable CvContour where
+    sizeOf _ = (#size CvContour)
+    alignment _ = alignment (undefined::CDouble)
+    peek ptr = do
+      rect <- (#peek CvContour, rect) ptr
+      color <- (#peek CvContour, color) ptr
+      return $ CvContour rect color
+    poke ptr (CvContour r c) = do
+      (#poke CvContour, rect) ptr r
+      (#poke CvContour, color) ptr c
+
+------------------------------------------------------
 class IplArrayType a
 
 data CvArr

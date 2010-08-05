@@ -30,6 +30,10 @@ void c_cvRectangle(CvArr *img, int x, int y, int width, int height);
 void c_cvLine(CvArr *img, int x1, int y1, int x2, int y2, double r, double g, 
               double b, int thickness, int lineType, int shift);
 
+int c_cvFindContours(CvArr *img, CvMemStorage *storage, CvSeq** first_contour, 
+                     int header_size, int mode, int method, int offset_x, 
+                     int offset_y);
+
 
 CvSeq *c_cvHaarDetectObjects( const CvArr* image,
                               CvHaarClassifierCascade* cascade,
