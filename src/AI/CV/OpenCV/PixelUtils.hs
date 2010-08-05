@@ -36,12 +36,37 @@ toRGB' :: Storable d => HIplImage a TriChromatic d -> V.Vector Int -> V.Vector d
 toRGB' img inds = V.backpermute (pixels img) inds
 {-# INLINE toRGB' #-}
 
--- |Drop any pixels beyond real image data on each row.
-dropAlpha :: V.Storable a => Int -> V.Vector a -> V.Vector a
-dropAlpha w = V.ifilter (\i _ -> (i `rem` rowLength) < realWidth)
-    where rowLength = w * 4
-          realWidth = w * 3
-{-# INLINE dropAlpha #-}
+-- |OpenCV often stores color images with rows that are four times the
+-- width (which aligns rows nicely, and can accommodate RGBA
+-- pixels). For network transmission, it can be advantageous to strip
+-- out that extra data. This function returns a fresh 'V.Vector' of
+-- pixel data that excludes these unused bytes. If the original image
+-- data is already packed, it is returned as a 'V.Vector' without
+-- copying.
+packPixels :: (HasChannels c, HasDepth d, Storable d) => 
+              HIplImage a c d -> V.Vector d
+packPixels img = 
+    if w' == stride 
+    then pixels img
+    else runST $ do v <- VM.new (w*h*nc)
+                    let sliceSrc x = V.unsafeSlice x w' pix
+                        sliceDst x = VM.unsafeSlice x w' v
+                        go !y !pSrc !pDst
+                            | y < h = let s1 = sliceSrc pSrc
+                                          s2 = sliceDst pDst
+                                          pSrc' = pSrc + stride
+                                          pDst' = pDst + w'
+                                      in do V.unsafeCopy s2 s1
+                                            go (y+1) pSrc' pDst'
+                            | otherwise = VG.unsafeFreeze v
+                    go 0 0 0
+    where w = width img
+          h = height img
+          nc = imgChannels img
+          w' = w * nc
+          stride = widthStep img
+          pix = pixels img
+{-# INLINE packPixels #-}
 
 -- |Return a Vector of bytes of a single color channel from a
 -- tri-chromatic image. The desired channel must be one of 0, 1, or 2.
@@ -66,7 +91,7 @@ isolateChannel ch img =
 -- |Convert an 'HIplImage' \'s pixel data to a 'V.Vector' of monochromatic bytes.
 toMono :: forall a c d. (HasChannels c, HasDepth d, Storable d, Integral d) => 
           HIplImage a c d -> V.Vector d
-toMono img = if imgChannels img == 1 then dropAlpha w pix 
+toMono img = if imgChannels img == 1 then packPixels img
              else runST $ do v <- VM.new (w*h)
                              let go !x !p !p3 !y
                                      | y >= h = VG.unsafeFreeze v

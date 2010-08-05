@@ -1,5 +1,8 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, ScopedTypeVariables, GADTs #-}
-module AI.CV.OpenCV.HIplImage where
+module AI.CV.OpenCV.HIplImage 
+    ( FreshImage, TriChromatic, MonoChromatic, HasChannels(..), HasDepth, 
+      HIplImage(..), width, height, imageData, imageSize, widthStep, 
+      mkHIplImage, withHIplImage ) where
 import AI.CV.OpenCV.CxCore (IplImage,Depth(..),iplDepth8u, iplDepth16u)
 import AI.CV.OpenCV.CV (cvCvtColor)
 import AI.CV.OpenCV.ColorConversion (cv_GRAY2BGR, cv_BGR2GRAY)
