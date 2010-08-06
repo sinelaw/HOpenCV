@@ -1,4 +1,4 @@
-{-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls #-}
+{-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, ScopedTypeVariables #-}
 -- |Support for features from the OpenCV Image Filtering library.
 module AI.CV.OpenCV.CV 
     ( InterpolationMethod(..),
@@ -7,12 +7,14 @@ module AI.CV.OpenCV.CV
       cvHaarFlagNone, cvHaarDoCannyPruning, 
       cvHaarScaleImage, cvHaarFindBiggestObject, cvHaarDoRoughSearch,
       combineHaarFlags, cvHaarDetectObjects,
-      cvCvtColor, cvFindContours, ContourMethod(..), ContourMode(..)
+      cvCvtColor, cvFindContours, ContourMethod(..), ContourMode(..),
+      cvSampleLine, Connectivity(..)
     ) where
 
 import Foreign.C.Types
-import Foreign.Marshal.Alloc (alloca)
-import Foreign.Storable (poke, peek, peekByteOff)
+import Foreign.Marshal.Alloc (alloca, allocaBytes)
+import Foreign.Marshal.Array (peekArray)
+import Foreign.Storable (poke, peek, peekByteOff, Storable(..))
 import Foreign.Ptr
 import Data.Bits
 import AI.CV.OpenCV.CxCore
@@ -72,6 +74,30 @@ cvHoughLines2 img storage method rho theta threshold param1 param2 =
 
 foreign import ccall unsafe "opencv/cv.h cvCvtColor"
   c_cvCvtColor :: Ptr CvArr -> Ptr CvArr -> CInt -> IO ()
+
+foreign import ccall unsafe "opencv/cv.h cvSampleLine"
+  c_cvSampleLine :: Ptr CvArr -> CInt -> CInt -> CInt -> CInt -> Ptr a -> 
+                    CInt -> IO CInt
+
+-- |Line connectivity used for sampling.
+data Connectivity = Four | Eight
+
+-- |Read all of the image points lying on the line between pt1 and
+-- pt2, including the end points. Takes an image, two points, and the
+-- line connectivity; returns all the pixel values along that line.
+cvSampleLine :: forall a b. (IplArrayType a, Storable b) => 
+                Ptr a -> (Int,Int) -> (Int,Int) -> Connectivity -> IO [b]
+cvSampleLine img (x1,y1) (x2,y2) c = 
+    do nc <- getNumChannels (castPtr img)
+       allocaBytes (sz'*nc) $ 
+         \buffer -> do n <- c_cvSampleLine (fromArr img) (fi x1) (fi y1) 
+                                           (fi x2) (fi y2) buffer c'
+                       peekArray ((fromIntegral n)*nc) buffer
+  where fi = fromIntegral
+        (sz,c') = case c of
+                    Four -> (abs (x2 - x1) + abs (y2 - y1) + 1, 4)
+                    Eight -> (max (abs (x2 - x1) + 1) (abs (y2 - y1) + 1), 8)
+        sz' = sizeOf (undefined::b) * sz
 
 -- |Convert the color of the first 'IplImage', storing the result in
 -- the second. The second image must have the same dimensions as the

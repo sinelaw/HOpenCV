@@ -6,8 +6,9 @@ module AI.CV.OpenCV.HighCV (erode, dilate, houghStandard, houghProbabilistic,
                             LineType(..), RGB, drawLines, HIplImage, width, 
                             height, pixels, fromGrayPixels, fromColorPixels, 
                             fromFileGray, fromFileColor, toFile, findContours, 
-                            fromPtr, isColor, isMono, fromPixels, 
-                            fromPixelsCopy, module AI.CV.OpenCV.HighColorConv)
+                            fromPtr, isColor, isMono, fromPixels, sampleLine,
+                            Connectivity(..), fromPixelsCopy, 
+                            module AI.CV.OpenCV.HighColorConv)
     where
 import AI.CV.OpenCV.CxCore
 import AI.CV.OpenCV.CV
@@ -71,6 +72,15 @@ unsafeDilate n img = runST $
 "erode-in-place"  forall n (f::a -> HIplImage FreshImage c d). erode n . f = unsafeErode n . f
 "dilate-in-place" forall n (f::a -> HIplImage FreshImage c d). dilate n . f = unsafeDilate n . f
   #-}
+
+-- |Extract all the pixel values from an image along a line, including
+-- the end points. Takes two points, the line connectivity to use when
+-- sampling, and an image; returns the list of pixel values.
+sampleLine :: (HasChannels c, HasDepth d, Storable d) =>
+              (Int, Int) -> (Int, Int) -> Connectivity -> HIplImage a c d -> [d]
+sampleLine pt1 pt2 conn img = runST $ unsafeIOToST $ 
+                              withHIplImage img $ 
+                                \p -> cvSampleLine p pt1 pt2 conn
 
 -- |Line detection in a binary image using a standard Hough transform.
 houghStandard :: Double -> Double -> Int -> HIplImage a MonoChromatic Word8 -> 
