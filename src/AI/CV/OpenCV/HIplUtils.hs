@@ -18,6 +18,7 @@ import Foreign.ForeignPtr
 import Foreign.Marshal.Utils (copyBytes)
 import Foreign.Ptr
 import Foreign.Storable
+import System.Directory (doesFileExist)
 import Unsafe.Coerce
 
 -- |This is a way to let the type checker know that you belieave an
@@ -61,11 +62,16 @@ fromPtr :: (HasChannels c, HasDepth d, Storable d) =>
            Ptr IplImage -> IO (HIplImage () c d)
 fromPtr = peek . castPtr
 
+-- Ensure that a file exists.
+checkFile :: FilePath -> IO ()
+checkFile f = do e <- doesFileExist f
+                 if e then return () else error $ "Can't find "++f
+
 -- |Load an 'HIplImage' from an 8-bit image file on disk. The returned
 -- image will have three color channels.
 fromFileColor :: String -> IO (HIplImage FreshImage TriChromatic Word8)
---fromFileColor fileName = unsafeCoerce . fromPtr =<< cvLoadImage fileName LoadColor 
-fromFileColor fileName = do ptr <- cvLoadImage fileName LoadColor
+fromFileColor fileName = do checkFile fileName
+                            ptr <- cvLoadImage fileName LoadColor
                             img <- fromPtr ptr :: IO (HIplImage () TriChromatic Word8)
                             return $ unsafeCoerce img
 
@@ -73,7 +79,8 @@ fromFileColor fileName = do ptr <- cvLoadImage fileName LoadColor
 -- image will have a single color channel.
 fromFileGray :: String -> IO (HIplImage FreshImage MonoChromatic Word8)
 --fromFileGray fileName = unsafeCoerce . fromPtr =<< cvLoadImage fileName LoadGray
-fromFileGray fileName = do ptr <- cvLoadImage fileName LoadGray
+fromFileGray fileName = do checkFile fileName
+                           ptr <- cvLoadImage fileName LoadGray
                            img <- fromPtr ptr :: IO (HIplImage () MonoChromatic Word8)
                            return $ unsafeCoerce img
 
