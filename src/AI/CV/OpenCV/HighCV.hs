@@ -7,7 +7,7 @@ module AI.CV.OpenCV.HighCV (erode, dilate, houghStandard, houghProbabilistic,
                             height, pixels, fromGrayPixels, fromColorPixels, 
                             fromFileGray, fromFileColor, toFile, findContours, 
                             fromPtr, isColor, isMono, fromPixels, sampleLine,
-                            Connectivity(..), fromPixelsCopy, 
+                            Connectivity(..), fromPixelsCopy, cannyEdges,
                             module AI.CV.OpenCV.HighColorConv)
     where
 import AI.CV.OpenCV.CxCore
@@ -169,6 +169,18 @@ unsafeDrawLines col thick lineType lines img =
   "draw-lines-in-place" forall c t lt lns (f::a -> HIplImage FreshImage c d). 
   drawLines c t lt lns . f = unsafeDrawLines c t lt lns . f
   #-}
+
+-- |Find edges using the Canny algorithm. The smallest value between
+-- threshold1 and threshold2 is used for edge linking, the largest
+-- value is used to find the initial segments of strong edges. The
+-- third parameter is the aperture parameter for the Sobel operator.
+cannyEdges :: (HasDepth d, Storable d) =>
+              Double -> Double -> Int -> HIplImage a MonoChromatic d -> 
+              HIplImage FreshImage MonoChromatic d
+cannyEdges threshold1 threshold2 aperture img = 
+    fst . withCompatibleImage img $ \dst -> 
+        withHIplImage img $ \src -> 
+            cvCanny src dst threshold1 threshold2 aperture
 
 -- |Find the 'CvContour's in an image.
 findContours :: HIplImage a MonoChromatic Word8 -> [CvContour]

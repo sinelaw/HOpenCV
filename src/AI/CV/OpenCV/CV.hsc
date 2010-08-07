@@ -27,10 +27,10 @@ foreign import ccall unsafe "opencv/cv.h cvCanny"
 
 -- Canny 
 cvCanny :: (IplArrayType i1, IplArrayType i2) =>
-           Ptr i1 -> Ptr i2 -> CDouble -> CDouble -> CInt -> IO ()
+           Ptr i1 -> Ptr i2 -> Double -> Double -> Int -> IO ()
 cvCanny src dst threshold1 threshold2 apertureSize = 
   c_cvCanny (fromArr src) (fromArr dst) (realToFrac threshold1) 
-            (realToFrac threshold2) apertureSize
+            (realToFrac threshold2) (fromIntegral apertureSize)
 
 
 data InterpolationMethod = CV_INTER_NN 
