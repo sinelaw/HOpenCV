@@ -2,12 +2,14 @@
 module AI.CV.OpenCV.HIplImage 
     ( FreshImage, TriChromatic, MonoChromatic, HasChannels(..), HasDepth, 
       HIplImage(..), width, height, imageData, imageSize, widthStep, 
-      mkHIplImage, withHIplImage ) where
-import AI.CV.OpenCV.CxCore (IplImage,Depth(..),iplDepth8u, iplDepth16u)
+      mkHIplImage, withHIplImage, bytesPerPixel) where
+import AI.CV.OpenCV.CxCore (IplImage,Depth(..),iplDepth8u, iplDepth16u,
+                            iplDepth32f, iplDepth64f)
 import AI.CV.OpenCV.CV (cvCvtColor)
 import AI.CV.OpenCV.ColorConversion (cv_GRAY2BGR, cv_BGR2GRAY)
 import Control.Applicative ((<$>))
 import Control.Monad (when)
+import Data.Bits (complement, (.&.))
 import Data.Word (Word8, Word16)
 import Foreign.C.Types
 import Foreign.ForeignPtr
@@ -65,9 +67,12 @@ instance HasChannels TriChromatic where numChannels _ = 3
 instance HasChannels MonoChromatic where numChannels _ = 1
 instance HasDepth Word8 where depth _ = iplDepth8u
 instance HasDepth Word16 where depth _ = iplDepth16u
+instance HasDepth Float where depth _ = iplDepth32f
+instance HasDepth Double where depth _ = iplDepth64f
 
-bytesPerPixel :: Depth -> Int
-bytesPerPixel = (`div` 8) . fromIntegral . unDepth
+bytesPerPixel :: HasDepth d => d -> Int
+bytesPerPixel = (`div` 8) . fromIntegral . unSign . unDepth . depth
+    where unSign = (complement #{const IPL_DEPTH_SIGN} .&.)
 
 -- |A Haskell data structure representing the information OpenCV uses
 -- from an 'IplImage' struct. It includes the pixel origin, image
@@ -95,9 +100,9 @@ mkHIplImage :: forall c d. (HasChannels c, HasDepth d, Storable d) =>
 mkHIplImage w h = 
     do ptr <- mallocForeignPtrArray numBytes
        return $ HIplImage 0 w h numBytes ptr stride
-    where numBytes = stride * h * bpp
-          bpp = bytesPerPixel (depth (undefined::d))
-          stride = w * (numChannels (undefined::c) :: Int)
+    where numBytes = stride * h
+          bpp = bytesPerPixel (undefined::d)
+          stride = w * (numChannels (undefined::c) :: Int) * bpp
 
 -- |Provides the supplied function with a 'Ptr' to the 'IplImage'
 -- underlying the given 'HIplImage'.

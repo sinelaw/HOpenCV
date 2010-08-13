@@ -33,6 +33,7 @@ library
       AI.CV.OpenCV.PixelUtils
       AI.CV.OpenCV.ColorConversion
       AI.CV.OpenCV.HighColorConv
+      AI.CV.OpenCV.Motion
    c-sources:
       src/AI/CV/OpenCV/HOpenCV_wrap.c
    hs-Source-Dirs: src

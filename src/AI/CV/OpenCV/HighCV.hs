@@ -8,15 +8,19 @@ module AI.CV.OpenCV.HighCV (erode, dilate, houghStandard, houghProbabilistic,
                             fromFileGray, fromFileColor, toFile, findContours, 
                             fromPtr, isColor, isMono, fromPixels, sampleLine,
                             Connectivity(..), fromPixelsCopy, cannyEdges,
+                            createFileCapture, resize, InterpolationMethod(..),
+                            MonoChromatic, TriChromatic, FreshImage,
                             module AI.CV.OpenCV.HighColorConv)
     where
 import AI.CV.OpenCV.CxCore
 import AI.CV.OpenCV.CV
 import AI.CV.OpenCV.HighColorConv
+import AI.CV.OpenCV.HighGui (createFileCaptureF, cvQueryFrame)
 import AI.CV.OpenCV.HIplUtils
 import Control.Monad.ST (runST, unsafeIOToST)
 import Data.Word (Word8)
 import Foreign.Ptr
+import Foreign.ForeignPtr (withForeignPtr)
 import Foreign.Storable
 import Unsafe.Coerce
 
@@ -186,3 +190,24 @@ cannyEdges threshold1 threshold2 aperture img =
 findContours :: HIplImage a MonoChromatic Word8 -> [CvContour]
 findContours img = snd $ withDuplicateImage img $
                      \src -> cvFindContours src CV_RETR_CCOMP CV_CHAIN_APPROX_SIMPLE
+
+-- |Open a capture stream from a movie file. The action returned may
+-- be used to query for the next available frame.
+createFileCapture :: (HasChannels c, HasDepth d, Storable d) =>
+                     FilePath -> IO (IO (HIplImage () c d))
+createFileCapture fname = do capture <- createFileCaptureF fname
+                             return (withForeignPtr capture $ 
+                                     (>>= fromPtr) . cvQueryFrame)
+
+-- |Resize the supplied 'HIplImage' to the given width and height using
+-- the supplied 'InterpolationMethod'.
+resize :: (HasChannels c, HasDepth d, Storable d) => 
+          InterpolationMethod -> Int -> Int -> HIplImage a c d -> 
+          HIplImage FreshImage c d
+resize method w h img = 
+    runST $ unsafeIOToST $
+    do img' <- mkHIplImage w h
+       _ <- withHIplImage img $ \src ->
+              withHIplImage img' $ \dst ->
+                cvResize src dst method
+       return img'

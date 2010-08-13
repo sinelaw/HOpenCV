@@ -38,10 +38,11 @@ imgChannels :: forall a c d. HasChannels c => HIplImage a c d -> Int
 imgChannels _ = numChannels (undefined::c)
 
 -- |Return a 'V.Vector' containing the pixels that make up an
--- 8-bit-per-pixel 'HIplImage'. This does not copy the underlying
--- data!
-pixels :: Storable d => HIplImage a c d -> V.Vector d
-pixels img = V.unsafeFromForeignPtr (imageData img) 0 (imageSize img)
+-- 'HIplImage'. This does not copy the underlying data!
+pixels :: forall a c d. (HasDepth d, Storable d) => 
+          HIplImage a c d -> V.Vector d
+pixels img = V.unsafeFromForeignPtr (imageData img) 0 n
+    where n = imageSize img `div` bytesPerPixel (undefined::d)
 
 doST :: IO a -> a
 doST x = runST (unsafeIOToST x)

@@ -23,7 +23,7 @@ rgbIndices width' stride numElems = V.fromList $ concatMap row rowStarts
 
 -- |Convert an 'HIplImage' \'s pixel data from BGR triplets in padded rows
 -- to tightly packed rows of RGB pixels.
-toRGB :: Storable d => HIplImage a TriChromatic d -> V.Vector d
+toRGB :: (HasDepth d, Storable d) => HIplImage a TriChromatic d -> V.Vector d
 toRGB img = V.backpermute (pixels img) $
             rgbIndices (width img) (widthStep img) (imageSize img)
 {-# INLINE toRGB #-}
@@ -32,7 +32,8 @@ toRGB img = V.backpermute (pixels img) $
 -- rows to tightly packed rows of RGB pixels using the given
 -- 'V.Vector' of indices. The index 'Vector' will typically be the
 -- result of a previous call to 'rgbIndices'.
-toRGB' :: Storable d => HIplImage a TriChromatic d -> V.Vector Int -> V.Vector d
+toRGB' :: (HasDepth d, Storable d) => 
+          HIplImage a TriChromatic d -> V.Vector Int -> V.Vector d
 toRGB' img inds = V.backpermute (pixels img) inds
 {-# INLINE toRGB' #-}
 
@@ -70,7 +71,8 @@ packPixels img =
 
 -- |Return a Vector of bytes of a single color channel from a
 -- tri-chromatic image. The desired channel must be one of 0, 1, or 2.
-isolateChannel :: Storable d => Int -> HIplImage a TriChromatic d -> V.Vector d
+isolateChannel :: (HasDepth d, Storable d) => 
+                  Int -> HIplImage a TriChromatic d -> V.Vector d
 isolateChannel ch img = 
     if ch < 0 || ch >= 3
     then error $ "Invalid channel "++show ch++" for trichromatic image"

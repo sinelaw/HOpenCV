@@ -72,7 +72,8 @@ foreign import ccall unsafe "HOpenCV_wrap.h &release_capture"
 createCameraCaptureF :: CInt -> IO (ForeignPtr CvCapture)
 createCameraCaptureF = (createForeignPtr cp_release_capture) . cvCreateCameraCapture
 
-
+createFileCaptureF :: String -> IO (ForeignPtr CvCapture)
+createFileCaptureF = (createForeignPtr cp_release_capture) . cvCreateFileCapture
 
 foreign import ccall unsafe "highgui.h cvQueryFrame"
   c_cvQueryFrame :: Ptr CvCapture -> IO (Ptr IplImage)
