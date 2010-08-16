@@ -17,6 +17,7 @@ import AI.CV.OpenCV.CV
 import AI.CV.OpenCV.HighColorConv
 import AI.CV.OpenCV.HighGui (createFileCaptureF, cvQueryFrame)
 import AI.CV.OpenCV.HIplUtils
+import AI.CV.OpenCV.Contours
 import Control.Monad.ST (runST, unsafeIOToST)
 import Data.Word (Word8)
 import Foreign.Ptr
