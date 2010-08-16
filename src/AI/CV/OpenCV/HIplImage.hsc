@@ -1,8 +1,8 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, ScopedTypeVariables, GADTs #-}
 module AI.CV.OpenCV.HIplImage 
-    ( FreshImage, TriChromatic, MonoChromatic, HasChannels(..), HasDepth, 
+    ( FreshImage, TriChromatic, MonoChromatic, HasChannels(..), HasDepth(..), 
       HIplImage(..), width, height, imageData, imageSize, widthStep, 
-      mkHIplImage, withHIplImage, bytesPerPixel) where
+      mkHIplImage, withHIplImage, bytesPerPixel, ByteOrFloat) where
 import AI.CV.OpenCV.CxCore (IplImage,Depth(..),iplDepth8u, iplDepth16u,
                             iplDepth32f, iplDepth64f)
 import AI.CV.OpenCV.CV (cvCvtColor)
@@ -61,14 +61,32 @@ class HasChannels a where
     numChannels :: a -> Int
 
 class HasDepth a where
-    depth :: a -> Depth
+    depth    :: a -> Depth
+    toDouble :: a -> Double
+    fromDouble :: Double -> a
 
 instance HasChannels TriChromatic where numChannels _ = 3
 instance HasChannels MonoChromatic where numChannels _ = 1
-instance HasDepth Word8 where depth _ = iplDepth8u
-instance HasDepth Word16 where depth _ = iplDepth16u
-instance HasDepth Float where depth _ = iplDepth32f
-instance HasDepth Double where depth _ = iplDepth64f
+instance HasDepth Word8 where 
+    depth _ = iplDepth8u
+    toDouble = fromIntegral
+    fromDouble = round
+instance HasDepth Word16 where 
+    depth _ = iplDepth16u
+    toDouble = fromIntegral
+    fromDouble = round
+instance HasDepth Float where 
+    depth _ = iplDepth32f
+    toDouble = realToFrac
+    fromDouble = realToFrac
+instance HasDepth Double where 
+    depth _ = iplDepth64f
+    toDouble = id
+    fromDouble = id
+
+class ByteOrFloat a where
+instance ByteOrFloat Word8 where
+instance ByteOrFloat Float where
 
 bytesPerPixel :: HasDepth d => d -> Int
 bytesPerPixel = (`div` 8) . fromIntegral . unSign . unDepth . depth

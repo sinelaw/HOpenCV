@@ -35,6 +35,8 @@ library
       AI.CV.OpenCV.HighColorConv
       AI.CV.OpenCV.Motion
       AI.CV.OpenCV.Contours
+      AI.CV.OpenCV.Threshold
+      AI.CV.OpenCV.ArrayOps
    c-sources:
       src/AI/CV/OpenCV/HOpenCV_wrap.c
    hs-Source-Dirs: src

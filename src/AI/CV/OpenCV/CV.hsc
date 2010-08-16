@@ -108,8 +108,6 @@ cvCvtColor :: (IplArrayType a, IplArrayType b) =>
               Ptr a -> Ptr b -> ColorConversion -> IO ()
 cvCvtColor src dst code = c_cvCvtColor (fromArr src) (fromArr dst) (colorConv code)
 
-
-
 foreign import ccall unsafe "opencv/cv.h cvPyrDown"
   c_cvPyrDown :: Ptr CvArr -> Ptr CvArr -> CInt -> IO ()
 
