@@ -79,7 +79,8 @@ foreign import ccall unsafe "highgui.h cvQueryFrame"
   c_cvQueryFrame :: Ptr CvCapture -> IO (Ptr IplImage)
 
 cvQueryFrame :: Ptr CvCapture -> IO (Ptr IplImage)
-cvQueryFrame cap = errorName "Failed to query frame from camera" . checkPtr $ c_cvQueryFrame cap
+cvQueryFrame cap = errorName "Failed to query frame from capture device" . 
+                   checkPtr $ c_cvQueryFrame cap
 
 -------------------------------------------------
 -- Windows
