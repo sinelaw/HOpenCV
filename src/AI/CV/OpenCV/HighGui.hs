@@ -52,28 +52,29 @@ foreign import ccall unsafe "highgui.h cvCreateCameraCapture"
   c_cvCreateCameraCapture :: CInt -> IO (Ptr CvCapture)
                           
 cvCreateCameraCapture :: CInt -> IO (Ptr CvCapture)
-cvCreateCameraCapture x = errorName "Failed to create camera" . checkPtr $ c_cvCreateCameraCapture . fromIntegral $ x
+cvCreateCameraCapture = errorName "Failed to create camera" . checkPtr . 
+                        c_cvCreateCameraCapture . fromIntegral
   
 foreign import ccall unsafe "highgui.h cvCreateFileCapture"
   c_cvCreateFileCapture :: CString -> IO (Ptr CvCapture)
                           
 cvCreateFileCapture :: String -> IO (Ptr CvCapture)
-cvCreateFileCapture filename = err' . checkPtr $ withCString filename f
+cvCreateFileCapture filename = err' . checkPtr $ 
+                               withCString filename c_cvCreateFileCapture
     where err' = errorName $ "Failed to capture from file: '" ++ filename ++ "'"
-          f filenameC = c_cvCreateFileCapture filenameC
   
 
 foreign import ccall unsafe "HOpenCV_wrap.h release_capture"
   release_capture  :: Ptr CvCapture -> IO ()
 
 foreign import ccall unsafe "HOpenCV_wrap.h &release_capture"
-  cp_release_capture  :: FunPtr (Ptr CvCapture -> IO () )
+  cp_release_capture  :: FunPtr (Ptr CvCapture -> IO ())
  
 createCameraCaptureF :: CInt -> IO (ForeignPtr CvCapture)
-createCameraCaptureF = (createForeignPtr cp_release_capture) . cvCreateCameraCapture
+createCameraCaptureF = createForeignPtr cp_release_capture . cvCreateCameraCapture
 
 createFileCaptureF :: String -> IO (ForeignPtr CvCapture)
-createFileCaptureF = (createForeignPtr cp_release_capture) . cvCreateFileCapture
+createFileCaptureF = createForeignPtr cp_release_capture . cvCreateFileCapture
 
 foreign import ccall unsafe "highgui.h cvQueryFrame"
   c_cvQueryFrame :: Ptr CvCapture -> IO (Ptr IplImage)
