@@ -119,7 +119,7 @@ duplicateImage img@(HIplImage _ _ _ _ _ _ ) =
           stride = widthStep img
 
 -- |Construct an 'HIplImage' from a width, a height, and a 'V.Vector'
--- of 8-bit pixel values. The new 'HIplImage' \'s pixel data is
+-- of pixel values. The new 'HIplImage' \'s pixel data is
 -- shared with the supplied 'V.Vector'.
 fromPixels :: forall a c d. 
               (HasChannels c, Integral a, HasDepth d, Storable d) =>

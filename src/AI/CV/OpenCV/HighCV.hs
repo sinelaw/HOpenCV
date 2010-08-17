@@ -187,6 +187,20 @@ cannyEdges threshold1 threshold2 aperture img =
         withHIplImage img $ \src -> 
             cvCanny src dst threshold1 threshold2 aperture
 
+unsafeCanny :: (HasDepth d, Storable d) =>
+               Double -> Double -> Int -> HIplImage FreshImage MonoChromatic d -> 
+               HIplImage FreshImage MonoChromatic d
+unsafeCanny threshold1 threshold2 aperture img = 
+    runST $ unsafeIOToST $
+    withHIplImage img $ \src -> 
+        cvCanny src src threshold1 threshold2 aperture >> return img
+
+{-# RULES
+    "canny-in-place" 
+    forall t1 t2 a (g::a->HIplImage FreshImage MonoChromatic d).
+    cannyEdges t1 t2 a . g = unsafeCanny t1 t2 a . g
+  #-}
+
 -- |Find the 'CvContour's in an image.
 findContours :: HIplImage a MonoChromatic Word8 -> [CvContour]
 findContours img = snd $ withDuplicateImage img $
