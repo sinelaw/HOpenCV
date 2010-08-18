@@ -15,7 +15,7 @@ module AI.CV.OpenCV.HighCV (erode, dilate, houghStandard, houghProbabilistic,
 import AI.CV.OpenCV.CxCore
 import AI.CV.OpenCV.CV
 import AI.CV.OpenCV.HighColorConv
-import AI.CV.OpenCV.HighGui (createFileCaptureF, cvQueryFrame)
+import AI.CV.OpenCV.HighGui (createFileCaptureF, cvQueryFrame2)
 import AI.CV.OpenCV.HIplUtils
 import AI.CV.OpenCV.Contours
 import Control.Monad.ST (runST, unsafeIOToST)
@@ -212,7 +212,7 @@ createFileCapture :: (HasChannels c, HasDepth d, Storable d) =>
                      FilePath -> IO (IO (HIplImage () c d))
 createFileCapture fname = do capture <- createFileCaptureF fname
                              return (withForeignPtr capture $ 
-                                     (>>= fromPtr) . cvQueryFrame)
+                                     (>>= fromPtr) . cvQueryFrame2)
 
 -- |Resize the supplied 'HIplImage' to the given width and height using
 -- the supplied 'InterpolationMethod'.

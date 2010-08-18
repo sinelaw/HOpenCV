@@ -62,8 +62,19 @@ cvCreateFileCapture :: String -> IO (Ptr CvCapture)
 cvCreateFileCapture filename = err' . checkPtr $ 
                                withCString filename c_cvCreateFileCapture
     where err' = errorName $ "Failed to capture from file: '" ++ filename ++ "'"
-  
 
+foreign import ccall unsafe "highgui.h cvSetCaptureProperty"
+  c_cvSetCaptureProperty :: Ptr CvCapture -> CInt -> CDouble -> IO ()
+
+resetCapturePos :: Ptr CvCapture -> IO ()
+resetCapturePos cap = c_cvSetCaptureProperty cap 0 0
+
+cvQueryFrame2 :: Ptr CvCapture -> IO (Ptr IplImage)
+cvQueryFrame2 cap = do frame <- c_cvQueryFrame cap
+                       if frame == nullPtr
+                          then resetCapturePos cap >> cvQueryFrame cap
+                          else return frame
+  
 foreign import ccall unsafe "HOpenCV_wrap.h release_capture"
   release_capture  :: Ptr CvCapture -> IO ()
 
