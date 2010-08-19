@@ -37,6 +37,7 @@ library
       AI.CV.OpenCV.Contours
       AI.CV.OpenCV.Threshold
       AI.CV.OpenCV.ArrayOps
+      AI.CV.OpenCV.Filtering
    c-sources:
       src/AI/CV/OpenCV/HOpenCV_wrap.c
    hs-Source-Dirs: src
