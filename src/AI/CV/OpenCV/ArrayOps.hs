@@ -1,5 +1,5 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
-module AI.CV.OpenCV.ArrayOps (subRS, subRSVec, absDiff) where
+module AI.CV.OpenCV.ArrayOps (subRS, subRSVec, absDiff, convertScale) where
 import Foreign.C.Types (CDouble)
 import Foreign.Ptr (Ptr, castPtr, nullPtr)
 import Foreign.Storable (Storable)
@@ -95,3 +95,27 @@ unsafeAbsDiff src1 src2 = unsafePerformIO $
   forall m1 (g::a -> HIplImage FreshImage c d). 
   absDiff m1 . g = unsafeAbsDiff m1 . g
   #-}
+
+foreign import ccall unsafe "opencv/cxcore.h cvConvertScale"
+  c_cvConvertScale :: Ptr CvArr -> Ptr CvArr -> CDouble -> CDouble -> IO ()
+
+-- |Converts one array to another with optional affine
+-- transformation. Each element of the source array is multiplied by
+-- the @scale@ factor and added to the @shift@ value before being
+-- converted to the destination type with rounding and saturation. All
+-- the channels of multi-channel arrays are processed
+-- independentally. Parameters are @scale@, @shift@, and the source
+-- 'HIplImage'.
+convertScale :: (HasChannels c, HasDepth d1, HasDepth d2, 
+                 Storable d1, Storable d2) =>
+                Double -> Double -> HIplImage a c d1 -> 
+                HIplImage FreshImage c d2
+convertScale scale shift src = unsafePerformIO $
+                               do dst <- mkHIplImage (width src) (height src)
+                                  withHIplImage src $ \src' ->
+                                    withHIplImage dst $ \dst' ->
+                                      c_cvConvertScale (castPtr src') 
+                                                       (castPtr dst') 
+                                                       (realToFrac scale) 
+                                                       (realToFrac shift)
+                                  return dst

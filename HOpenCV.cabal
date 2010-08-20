@@ -38,6 +38,7 @@ library
       AI.CV.OpenCV.Threshold
       AI.CV.OpenCV.ArrayOps
       AI.CV.OpenCV.Filtering
+      AI.CV.OpenCV.FeatureDetection
    c-sources:
       src/AI/CV/OpenCV/HOpenCV_wrap.c
    hs-Source-Dirs: src
