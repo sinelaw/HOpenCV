@@ -1,10 +1,13 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
-module AI.CV.OpenCV.ArrayOps (subRS, subRSVec, absDiff, convertScale) where
+-- |Array operations.
+module AI.CV.OpenCV.ArrayOps (subRS, subRSVec, absDiff, convertScale, 
+                              cvAnd, cvAndMask) where
+import Data.Word (Word8)
 import Foreign.C.Types (CDouble)
 import Foreign.Ptr (Ptr, castPtr, nullPtr)
 import Foreign.Storable (Storable)
 import System.IO.Unsafe (unsafePerformIO)
-import AI.CV.OpenCV.CxCore (CvArr)
+import AI.CV.OpenCV.CxCore (CvArr, IplImage)
 import AI.CV.OpenCV.HIplUtils
 
 foreign import ccall unsafe "opencv/cxcore.h cvSubRS"
@@ -119,3 +122,60 @@ convertScale scale shift src = unsafePerformIO $
                                                        (realToFrac scale) 
                                                        (realToFrac shift)
                                   return dst
+
+foreign import ccall unsafe "opencv/cxcore.h cvAnd"
+  c_cvAnd :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> IO ()
+
+cvAndAux :: Ptr IplImage -> Ptr IplImage -> Ptr IplImage -> Ptr IplImage -> IO ()
+cvAndAux src1 src2 dst mask = c_cvAnd (castPtr src1) (castPtr src2)
+                                      (castPtr dst) (castPtr mask)
+
+-- |Calculate the per-element bitwise conjunction of two arrays. The
+-- mask specifies the elements of the result that will be computed via
+-- the conjunction, and those that will simply be copied from the
+-- third parameter 'HIplImage' (i.e. the second source array)
+cvAndMask :: (HasChannels c, HasDepth d, Storable d) => 
+             HIplImage q MonoChromatic Word8 -> HIplImage a c d ->  
+             HIplImage b c d -> HIplImage FreshImage c d
+cvAndMask mask src1 src2 = unsafePerformIO $
+                        withHIplImage src1 $ \src1' ->
+                          withHIplImage src2 $ \src2' ->
+                            return . fst. withDuplicateImage src2 $ \dst ->
+                              withHIplImage mask $ \mask' ->
+                                cvAndAux src1' src2' dst mask'
+
+-- |Calculates the per-element bitwise conjunction of two arrays.
+cvAnd :: (HasChannels c, HasDepth d, Storable d) => 
+          HIplImage a c d -> HIplImage b c d ->  HIplImage FreshImage c d
+cvAnd src1 src2 = unsafePerformIO $
+                  withHIplImage src1 $ \src1' ->
+                    withHIplImage src2 $ \src2' ->
+                      return . fst . withCompatibleImage src1 $ \dst ->
+                        cvAndAux src1' src2' dst nullPtr
+                                
+
+unsafeAnd :: (HasChannels c, HasDepth d, Storable d) => 
+             HIplImage a c d -> HIplImage FreshImage c d ->  
+             HIplImage FreshImage c d
+unsafeAnd src1 src2 = unsafePerformIO $
+                      withHIplImage src1 $ \src1' ->
+                        withHIplImage src2 $ \src2' ->
+                          cvAndAux src1' src2' src2' nullPtr >> return src2
+
+unsafeAndMask :: (HasChannels c, HasDepth d, Storable d) => 
+                 HIplImage q MonoChromatic Word8 -> HIplImage a c d ->  
+                 HIplImage FreshImage c d -> HIplImage FreshImage c d
+unsafeAndMask mask src1 src2 = unsafePerformIO $
+                      withHIplImage src1 $ \src1' ->
+                        withHIplImage src2 $ \src2' ->
+                          withHIplImage mask $ \mask' ->
+                            cvAndAux src1' src2' src2' mask' >> return src2
+
+{-# RULES "cvAnd/in-place"
+    forall s (g :: a -> HIplImage FreshImage c d). cvAnd s . g = unsafeAnd s . g
+  #-}
+
+{-# RULES "cvAndMask/in-place"
+    forall m s (g :: a -> HIplImage FreshImage c d).
+    cvAndMask m s . g = unsafeAndMask m s . g 
+  #-}
