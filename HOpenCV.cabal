@@ -49,15 +49,3 @@ library
                   directory >= 1.0.1.0 && < 1.1,
                   vector >= 0.6.0.2 && < 0.7
    ghc-options: -Wall -fno-warn-type-defaults -fno-warn-name-shadowing
-
-executable test-hopencv
-  c-sources:
-     src/AI/CV/OpenCV/HOpenCV_wrap.c
-  hs-source-dirs:  src
-  Build-Depends: base >=4 && <5
-  main-is: Test.hs
-  Ghc-Options: -Wall -fno-warn-type-defaults
-  Ghc-Prof-Options:  -prof -auto-all 
-  extra-libraries: cxcore,cv,highgui
-  other-modules: AI.CV.OpenCV.CxCore, AI.CV.OpenCV.CV, AI.CV.OpenCV.HighGui, 
-                 AI.CV.OpenCV.Types AI.CV.OpenCV.ColorConversion
