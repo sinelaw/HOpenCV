@@ -2,7 +2,7 @@
 -- |Incomplete support for cvFindContours.
 module AI.CV.OpenCV.Contours (ContourMode(..), ContourMethod(..), 
                               cvFindContours, followContourList) where
-import AI.CV.OpenCV.CxCore
+import AI.CV.OpenCV.Core.CxCore
 import Foreign.C.Types (CInt)
 import Foreign.Ptr (Ptr, castPtr, nullPtr)
 import Foreign.Storable
@@ -55,8 +55,6 @@ data ContourMethod = CV_CHAIN_APPROX_NONE
                    -- algorithm by linking horizontal segments of
                    -- 1's. Only the CV_RETR_LIST retrieval mode can be
                    -- used with this method.  
-
-                   -- | CV_CHAIN_CODE -- changes returned sequence type
                      deriving Enum
 
 -- |The function retrieves 'CvContour's from the binary image using the

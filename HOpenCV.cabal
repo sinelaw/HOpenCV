@@ -1,11 +1,12 @@
 name: HOpenCV
 version: 0.1.2.2.1
 license: BSD3
-maintainer: Noam Lewis <jones.noamle@gmail.com>
-bug-reports: mailto:jones.noamle@gmail.com
+author: Noam Lewis <jones.noamle@gmail.com>
+maintainer: Anthony Cowley <acowley@gmail.com>
+stability: experimental
 category: AI, Graphics
 synopsis: A binding for the OpenCV computer vision library.
-Tested-With:   GHC == 6.12.1
+Tested-With:   GHC==6.12.1, GHC==6.12.3
 description:
    Limited bindings to OpenCV 2.1. (See: <http://opencv.willowgarage.com/wiki/Welcome>)
    .
@@ -13,26 +14,27 @@ description:
    .
    You must install OpenCV (development packages) prior to installing this package. Currently tested on Ubuntu Linux 10.04 and Mac OS 10.5 and 10.6.
    .
-   
+   /Usage/
+   .
+   The "AI.CV.OpenCV.HighCV" module exposes the most commonly used functionality. Other modules not in the @Core@ directory provide specific types of operations.
 build-type:         Simple
 cabal-version:      >= 1.2
-extra-source-files: src/AI/CV/OpenCV/HOpenCV_wrap.h
+extra-source-files: src/AI/CV/OpenCV/Core/HOpenCV_wrap.h
 source-repository head
   type: git
   location: git://github.com/acowley/HOpenCV.git
 
 library
    exposed-modules:
-      AI.CV.OpenCV.CV
-      AI.CV.OpenCV.CxCore
-      AI.CV.OpenCV.HighGui
-      AI.CV.OpenCV.Types
-      AI.CV.OpenCV.HIplImage
-      AI.CV.OpenCV.HIplUtils
+      AI.CV.OpenCV.Core.CV
+      AI.CV.OpenCV.Core.CxCore
+      AI.CV.OpenCV.Core.HighGui
+      AI.CV.OpenCV.Core.HIplImage
+      AI.CV.OpenCV.Core.HIplUtils
+      AI.CV.OpenCV.Core.ColorConversion
       AI.CV.OpenCV.HighCV
       AI.CV.OpenCV.PixelUtils
       AI.CV.OpenCV.ColorConversion
-      AI.CV.OpenCV.HighColorConv
       AI.CV.OpenCV.Motion
       AI.CV.OpenCV.Contours
       AI.CV.OpenCV.Threshold
@@ -40,7 +42,7 @@ library
       AI.CV.OpenCV.Filtering
       AI.CV.OpenCV.FeatureDetection
    c-sources:
-      src/AI/CV/OpenCV/HOpenCV_wrap.c
+      src/AI/CV/OpenCV/Core/HOpenCV_wrap.c
    hs-Source-Dirs: src
    extra-libraries: cxcore,cv,highgui
    build-depends: base >=4 && <5, 

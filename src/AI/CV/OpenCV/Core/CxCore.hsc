@@ -1,6 +1,6 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, TypeFamilies #-}
 
-module AI.CV.OpenCV.CxCore where
+module AI.CV.OpenCV.Core.CxCore where
 import Foreign.C.Types
 import Foreign.C.String
 import Foreign.ForeignPtr

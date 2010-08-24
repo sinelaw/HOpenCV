@@ -5,16 +5,16 @@ import Data.Word (Word8)
 import Foreign.C.Types (CInt)
 import Foreign.Ptr (Ptr)
 import System.IO.Unsafe
-import AI.CV.OpenCV.CxCore
-import AI.CV.OpenCV.HIplImage
+import AI.CV.OpenCV.Core.CxCore
+import AI.CV.OpenCV.Core.HIplImage
 
 foreign import ccall unsafe "opencv/cv.h cvCalcOpticalFlowBM"
   c_cvCalcOpticalFlowBM :: Ptr CvArr -> Ptr CvArr -> CInt -> CInt -> 
                            CInt -> CInt -> CInt -> CInt -> 
                            CInt -> Ptr CvArr -> Ptr CvArr -> IO ()
 
--- |Calculates the optical flow for two images by using the block
--- matching method. The third parameter is the width and height of
+-- |Calculates the optical flow between two images using the block
+-- matching method. The third parameter is the width and height of the
 -- blocks to be compared; the fourth parameter is the block coordinate
 -- increments; the fifth is the size of the scanned neighborhood in
 -- pixels around the block. The result is a pair of the horizontal and

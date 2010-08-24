@@ -12,8 +12,8 @@ import Foreign.C.Types (CDouble, CInt)
 import Foreign.Ptr (Ptr, castPtr)
 import Foreign.Storable (Storable)
 import System.IO.Unsafe (unsafePerformIO)
-import AI.CV.OpenCV.CxCore 
-import AI.CV.OpenCV.HIplUtils
+import AI.CV.OpenCV.Core.CxCore 
+import AI.CV.OpenCV.Core.HIplUtils
 
 data ThresholdType = ThreshBinary
                    | ThreshBinaryInv
@@ -80,13 +80,13 @@ unsafeCvThresholdOtsu maxValue tType = unsafeCvThreshold 0 maxValue tType'
     where otsu = 8
           tType' = tType .|. otsu
 
--- |Binary thresholding. Each pixel is mapped to zero or
--- @maxValue@. If @inverse@ is 'False', then pixels whose value is
--- greater than @threshold@ are mapped to @maxValue@; if @inverse@ is
--- 'True', then pixels whose value is less than or equal to
--- @threshold@ are mapped to @maxValue@.  Takes the source
--- 'HIplImage', the @threshold@ value, the @maxValue@ passing pixels
--- are mapped to, and the @inverse@ flag.
+-- |Binary thresholding. Parameters are the @threshold@ value, the
+-- @maxValue@ passing pixels are mapped to, an @inverse@ flag, and the
+-- source 'HIplImage'. Each pixel is mapped to zero or @maxValue@. If
+-- @inverse@ is 'False', then pixels whose value is greater than
+-- @threshold@ are mapped to @maxValue@; if @inverse@ is 'True', then
+-- pixels whose value is less than or equal to @threshold@ are mapped
+-- to @maxValue@.
 thresholdBinary :: (ByteOrFloat d, HasDepth d, Storable d) =>
                    d -> d -> Bool -> HIplImage a MonoChromatic d ->
                    HIplImage FreshImage MonoChromatic d
@@ -104,9 +104,10 @@ unsafeThreshBin th maxValue inverse = unsafeCvThreshold1 th maxValue tType
   thresholdBinary th mv f . g = unsafeThreshBin th mv f . g
   #-}
 
--- |Maps pixels that are greater than @threshold@ to the @threshold@
--- value; leaves all other pixels unchanged. Takes the source
--- 'HIplImage' and the @threshold@ value.
+-- |Truncation thresholding (i.e. clamping). Parameters are the
+-- @threshold@ value and the source 'HIplImage'. Maps pixels that are
+-- greater than @threshold@ to the @threshold@ value; leaves all other
+-- pixels unchanged.
 thresholdTruncate :: (ByteOrFloat d, HasDepth d, Storable d, Num d) => 
                      d -> HIplImage a MonoChromatic d ->
                      HIplImage FreshImage MonoChromatic d
@@ -124,8 +125,8 @@ unsafeThreshTrunc th = unsafeCvThreshold1 th 0 (fromEnum ThreshTrunc)
 
 -- |Maps pixels that are less than or equal to @threshold@ to zero;
 -- leaves all other pixels unchaged. If @inverse@ is 'True', the
--- operation's meaning is reversed. Takes the source 'HIplImage', the
--- @threshold@ value, and the @inverse@ flag.
+-- operation's meaning is reversed. Parameters the @threshold@ value,
+-- an @inverse@ flag, and the source 'HIplImage'.
 thresholdToZero :: (ByteOrFloat d, HasDepth d, Storable d, Num d) => 
                    d -> Bool -> HIplImage a MonoChromatic d ->
                    HIplImage FreshImage MonoChromatic d
@@ -145,8 +146,8 @@ unsafeThresholdToZero th inv = unsafeCvThreshold1 th 0 tType
 
 -- |Binary thresholding using Otsu's method to determine an optimal
 -- threshold value. The chosen value is returned along with the
--- thresholded image. Takes the source 'HIplImage' and the @maxValue@
--- to replace pixels that pass the threshold with.
+-- thresholded image. Takes the @maxValue@ to replace pixels that pass
+-- the threshold with and the source 'HIplImage'.
 thresholdBinaryOtsu :: Word8 -> Bool -> HIplImage a MonoChromatic Word8 ->
                        (HIplImage FreshImage MonoChromatic Word8, Word8)
 thresholdBinaryOtsu maxValue inverse = cvThresholdOtsu maxValue tType
@@ -181,8 +182,8 @@ unsafeTruncOtsu = unsafeCvThresholdOtsu 0 (fromEnum ThreshTrunc)
 
 -- |Maps pixels that are less than or equal to @threshold@ to zero;
 -- leaves all other pixels unchaged. If @inverse@ is 'True', the
--- operation's meaning is reversed. Takes the source 'HIplImage' and
--- the @inverse@ flag; the @threshold@ value is chosen using Otsu's
+-- operation's meaning is reversed. Takes an @inverse@ flag and the
+-- source 'HIplImage'; the @threshold@ value is chosen using Otsu's
 -- method and returned along with the thresholded image.
 thresholdToZeroOtsu :: Bool -> HIplImage a MonoChromatic Word8 -> 
                        (HIplImage FreshImage MonoChromatic Word8, Word8)

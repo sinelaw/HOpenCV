@@ -5,8 +5,8 @@ import Foreign.C.Types (CInt, CDouble)
 import Foreign.Ptr (Ptr, castPtr)
 import Foreign.Storable (Storable)
 import System.IO.Unsafe (unsafePerformIO)
-import AI.CV.OpenCV.CxCore
-import AI.CV.OpenCV.HIplUtils
+import AI.CV.OpenCV.Core.CxCore
+import AI.CV.OpenCV.Core.HIplUtils
 
 #include <opencv/cv.h>
 
@@ -30,8 +30,8 @@ cvGaussian = #{const CV_GAUSSIAN}
 -- 'HIplImage'. The kernel height will be set to the same value as the
 -- width, and the Gaussian standard deviation will be calculated from
 -- the kernel size. This function is the same as calling
--- @smoothGaussian' width Nothing Nothing@. This operation may be
--- performed in-place under composition.
+-- @smoothGaussian' width Nothing Nothing@. May be performed in-place
+-- under composition.
 smoothGaussian :: (ByteOrFloat d, HasDepth d, Storable d, HasChannels c) => 
                   Int -> HIplImage a c d -> HIplImage FreshImage c d
 smoothGaussian w = smoothGaussian' w Nothing Nothing
@@ -40,8 +40,8 @@ smoothGaussian w = smoothGaussian' w Nothing Nothing
 -- Gaussian kernel. Parameters are the kernel width, the kernel height
 -- (if 'Nothing', the height will be set to the same value as the
 -- width), the Gaussian standard deviation (if 'Nothing', it will be
--- calculated from the kernel size), and the source image. This
--- operation may be performed in-place under composition.
+-- calculated from the kernel size), and the source image. May be
+-- performed in-place under composition.
 smoothGaussian' :: (ByteOrFloat d, HasDepth d, Storable d, HasChannels c) => 
                    Int -> Maybe Int -> Maybe Double -> HIplImage a c d -> 
                    HIplImage FreshImage c d

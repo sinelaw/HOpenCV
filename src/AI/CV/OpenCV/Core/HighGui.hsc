@@ -1,11 +1,12 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls #-}
-module AI.CV.OpenCV.HighGui (cvLoadImage, LoadColor(..), cvSaveImage, 
-                             CvCapture, cvCreateCameraCapture, 
-                             createCameraCaptureF, createFileCaptureF,
-                             cvCreateFileCapture, setCapturePos, 
-                             CapturePos(..), cvQueryFrame,
-                             newWindow, delWindow, showImage, waitKey,
-                             cvConvertImage) where
+module AI.CV.OpenCV.Core.HighGui 
+    (cvLoadImage, LoadColor(..), cvSaveImage, 
+     CvCapture, cvCreateCameraCapture, 
+     createCameraCaptureF, createFileCaptureF,
+     cvCreateFileCapture, setCapturePos, 
+     CapturePos(..), cvQueryFrame,
+     newWindow, delWindow, showImage, waitKey,
+     cvConvertImage, c_debug_ipl) where
  
 import Foreign.ForeignPtrWrap
 import Foreign.C.Types
@@ -13,7 +14,7 @@ import Foreign.Ptr
 import Foreign.ForeignPtr
 import Foreign.C.String
  
-import AI.CV.OpenCV.CxCore
+import AI.CV.OpenCV.Core.CxCore
 
 #include <opencv/highgui.h>
 
@@ -57,7 +58,7 @@ data CvCapture
 foreign import ccall unsafe "highgui.h cvCreateCameraCapture"
   c_cvCreateCameraCapture :: CInt -> IO (Ptr CvCapture)
                           
-cvCreateCameraCapture :: CInt -> IO (Ptr CvCapture)
+cvCreateCameraCapture :: Int -> IO (Ptr CvCapture)
 cvCreateCameraCapture = errorName "Failed to create camera" . checkPtr . 
                         c_cvCreateCameraCapture . fromIntegral
   
@@ -89,13 +90,13 @@ posEnum (PosRatio r) = (#{const CV_CAP_PROP_POS_AVI_RATIO}, realToFrac r)
 setCapturePos :: Ptr CvCapture -> CapturePos -> IO ()
 setCapturePos cap pos = uncurry (c_cvSetCaptureProperty cap) $ posEnum pos
   
-foreign import ccall unsafe "HOpenCV_wrap.h release_capture"
-  release_capture  :: Ptr CvCapture -> IO ()
+-- foreign import ccall unsafe "HOpenCV_wrap.h release_capture"
+--   release_capture  :: Ptr CvCapture -> IO ()
 
 foreign import ccall unsafe "HOpenCV_wrap.h &release_capture"
   cp_release_capture  :: FunPtr (Ptr CvCapture -> IO ())
  
-createCameraCaptureF :: CInt -> IO (ForeignPtr CvCapture)
+createCameraCaptureF :: Int -> IO (ForeignPtr CvCapture)
 createCameraCaptureF = createForeignPtr cp_release_capture . cvCreateCameraCapture
 
 createFileCaptureF :: String -> IO (ForeignPtr CvCapture)

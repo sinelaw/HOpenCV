@@ -1,17 +1,18 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 -- |Functions for working with 'HIplImage's.
-module AI.CV.OpenCV.HIplUtils (isColor, isMono, imgChannels, withPixels, pixels,
-                               fromPtr, fromFileColor, fromFileGray, toFile, 
-                               compatibleImage, duplicateImage, fromPixels, 
-                               withImagePixels, fromGrayPixels, fromColorPixels,
-                               withDuplicateImage, withCompatibleImage, 
-                               HIplImage, mkHIplImage, width, height, 
-                               withHIplImage, FreshImage, MonoChromatic, 
-                               TriChromatic, HasChannels, HasDepth(..), 
-                               ByteOrFloat) where
-import AI.CV.OpenCV.CxCore (IplImage)
-import AI.CV.OpenCV.HighGui (cvLoadImage, cvSaveImage, LoadColor(..))
-import AI.CV.OpenCV.HIplImage
+module AI.CV.OpenCV.Core.HIplUtils 
+    (isColor, isMono, imgChannels, withPixels, pixels,
+     fromPtr, fromFileColor, fromFileGray, toFile, 
+     compatibleImage, duplicateImage, fromPixels, 
+     withImagePixels, fromGrayPixels, fromColorPixels,
+     withDuplicateImage, withCompatibleImage, 
+     HIplImage, mkHIplImage, width, height, 
+     withHIplImage, FreshImage, MonoChromatic, 
+     TriChromatic, HasChannels, HasDepth(..), 
+     ByteOrFloat) where
+import AI.CV.OpenCV.Core.CxCore (IplImage)
+import AI.CV.OpenCV.Core.HighGui (cvLoadImage, cvSaveImage, LoadColor(..))
+import AI.CV.OpenCV.Core.HIplImage
 import Control.Monad.ST (runST, unsafeIOToST)
 import qualified Data.Vector.Storable as V
 import Data.Word (Word8)
@@ -35,6 +36,8 @@ isMono = id
 {-# INLINE isMono #-}
 {-# INLINE isColor #-}
 
+-- |Return the number of color channels a 'HIplImage' has as a runtime
+-- value.
 imgChannels :: forall a c d. HasChannels c => HIplImage a c d -> Int
 imgChannels _ = numChannels (undefined::c)
 
@@ -49,9 +52,8 @@ withPixels img f = f $ V.unsafeFromForeignPtr (imageData img) 0 n
 doST :: IO a -> a
 doST x = runST (unsafeIOToST x)
 
--- |Return a 'V.Vector' containing the pixels that make up an
--- 8-bit-per-pixel 'HIplImage'. This makes a copy of the underlying
--- pixel data.
+-- |Return a 'V.Vector' containing a copy of the pixels that make up a
+-- 'HIplImage'.
 pixels :: Storable d => HIplImage a c d -> V.Vector d
 pixels img = doST $ do ptr <- mallocForeignPtrBytes len
                        withForeignPtr ptr $ \dst -> 
@@ -60,7 +62,7 @@ pixels img = doST $ do ptr <- mallocForeignPtrBytes len
                        return $ V.unsafeFromForeignPtr ptr 0 len
     where len = imageSize img
 
--- |Read an 'HIplImage' from a 'Ptr' 'IplImage'
+-- |Read a 'HIplImage' from a 'Ptr' 'IplImage'
 fromPtr :: (HasChannels c, HasDepth d, Storable d) => 
            Ptr IplImage -> IO (HIplImage () c d)
 fromPtr = peek . castPtr
@@ -70,25 +72,25 @@ checkFile :: FilePath -> IO ()
 checkFile f = do e <- doesFileExist f
                  if e then return () else error $ "Can't find "++f
 
--- |Load an 'HIplImage' from an 8-bit image file on disk. The returned
--- image will have three color channels.
-fromFileColor :: String -> IO (HIplImage FreshImage TriChromatic Word8)
+-- |Load a color 'HIplImage' from an 8-bit image file. If the image
+-- file is grayscale, it will be converted to color.
+fromFileColor :: FilePath -> IO (HIplImage FreshImage TriChromatic Word8)
 fromFileColor fileName = do checkFile fileName
                             ptr <- cvLoadImage fileName LoadColor
                             img <- fromPtr ptr :: IO (HIplImage () TriChromatic Word8)
                             return $ unsafeCoerce img
 
--- |Load an 'HIplImage' from an 8-bit image file on disk. The returned
--- image will have a single color channel.
-fromFileGray :: String -> IO (HIplImage FreshImage MonoChromatic Word8)
---fromFileGray fileName = unsafeCoerce . fromPtr =<< cvLoadImage fileName LoadGray
+-- |Load a grayscale 'HIplImage' from an 8-bit image file. If the
+-- image file is color, it will be converted to grayscale.
+fromFileGray :: FilePath -> IO (HIplImage FreshImage MonoChromatic Word8)
 fromFileGray fileName = do checkFile fileName
                            ptr <- cvLoadImage fileName LoadGray
                            img <- fromPtr ptr :: IO (HIplImage () MonoChromatic Word8)
                            return $ unsafeCoerce img
 
+-- |Save a 'HIplImage' to the specified file.
 toFile :: (HasChannels c, HasDepth d, Storable d) => 
-          String -> HIplImage a c d -> IO ()
+          FilePath -> HIplImage a c d -> IO ()
 toFile fileName img = withHIplImage img $ \ptr -> cvSaveImage fileName ptr
 
 
@@ -138,7 +140,7 @@ withImagePixels w h pix f = if fromIntegral len == sz
 {-# INLINE [0] withImagePixels #-}
 
 -- |Construct a fresh 'HIplImage' from a width, a height, and a
--- 'V.Vector' of 8-bit pixel values.
+-- 'V.Vector' of pixel values.
 fromPixels :: forall a c d. 
               (Integral a, HasChannels c, HasDepth d, Storable d) =>
               a -> a -> V.Vector d -> HIplImage FreshImage c d
@@ -158,15 +160,17 @@ fromPixels w h pix = doST $ do fp <- copyData
 {-# INLINE [0] fromPixels #-}
 
 -- |Helper function to explicitly type a vector of monochromatic pixel
--- data.
-fromGrayPixels :: Integral a => 
-                  a -> a -> V.Vector Word8 -> HIplImage FreshImage MonoChromatic Word8
+-- data. Parameters are the output image's width, height, and pixel
+-- content.
+fromGrayPixels :: (HasDepth d, Storable d, Integral a) => 
+                  a -> a -> V.Vector d -> HIplImage FreshImage MonoChromatic d
 fromGrayPixels w h = isMono . fromPixels w h
 
 -- |Helper function to explicitly type a vector of trichromatic pixel
--- data.
-fromColorPixels :: Integral a =>
-                   a -> a -> V.Vector Word8 -> HIplImage FreshImage TriChromatic Word8
+-- data. Parameters are the output image's width, height, and pixel
+-- content.
+fromColorPixels :: (HasDepth d, Storable d, Integral a) =>
+                   a -> a -> V.Vector d -> HIplImage FreshImage TriChromatic d
 fromColorPixels w h = isColor . fromPixels w h
 
 -- |Provides the supplied function with a 'Ptr' to the 'IplImage'

@@ -1,10 +1,10 @@
 -- |Type-safe color conversion functions. 
-module AI.CV.OpenCV.HighColorConv 
+module AI.CV.OpenCV.ColorConversion
     (convertGrayToRGB, convertGrayToBGR, 
      convertBGRToGray, convertRGBToGray) where
-import AI.CV.OpenCV.CV
-import AI.CV.OpenCV.HIplUtils
-import AI.CV.OpenCV.ColorConversion
+import AI.CV.OpenCV.Core.CV
+import AI.CV.OpenCV.Core.HIplUtils
+import AI.CV.OpenCV.Core.ColorConversion
 import Control.Monad.ST (runST, unsafeIOToST)
 import Foreign.Storable (Storable)
 

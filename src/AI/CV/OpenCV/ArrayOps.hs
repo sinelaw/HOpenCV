@@ -7,8 +7,8 @@ import Foreign.C.Types (CDouble)
 import Foreign.Ptr (Ptr, castPtr, nullPtr)
 import Foreign.Storable (Storable)
 import System.IO.Unsafe (unsafePerformIO)
-import AI.CV.OpenCV.CxCore (CvArr, IplImage)
-import AI.CV.OpenCV.HIplUtils
+import AI.CV.OpenCV.Core.CxCore (CvArr, IplImage)
+import AI.CV.OpenCV.Core.HIplUtils
 
 foreign import ccall unsafe "opencv/cxcore.h cvSubRS"
   c_cvSubRS :: Ptr CvArr -> CDouble -> CDouble -> CDouble -> CDouble -> 
@@ -130,10 +130,11 @@ cvAndAux :: Ptr IplImage -> Ptr IplImage -> Ptr IplImage -> Ptr IplImage -> IO (
 cvAndAux src1 src2 dst mask = c_cvAnd (castPtr src1) (castPtr src2)
                                       (castPtr dst) (castPtr mask)
 
--- |Calculate the per-element bitwise conjunction of two arrays. The
--- mask specifies the elements of the result that will be computed via
--- the conjunction, and those that will simply be copied from the
--- third parameter 'HIplImage' (i.e. the second source array)
+-- |Calculate the per-element bitwise conjunction of two
+-- arrays. Parameters are a mask and two source images. The mask
+-- specifies the elements of the result that will be computed via the
+-- conjunction, and those that will simply be copied from the third
+-- parameter.
 cvAndMask :: (HasChannels c, HasDepth d, Storable d) => 
              HIplImage q MonoChromatic Word8 -> HIplImage a c d ->  
              HIplImage b c d -> HIplImage FreshImage c d

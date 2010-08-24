@@ -6,20 +6,22 @@ module AI.CV.OpenCV.HighCV (erode, dilate, houghStandard, houghProbabilistic,
                             LineType(..), RGB, drawLines, HIplImage, width, 
                             height, pixels, withPixels, fromGrayPixels, 
                             fromColorPixels, fromFileGray, fromFileColor, 
-                            toFile, findContours, fromPtr, isColor, isMono, 
+                            toFile, fromPtr, isColor, isMono, 
                             withImagePixels, sampleLine, Connectivity(..), 
                             fromPixels, cannyEdges, createFileCapture, 
-                            resize, InterpolationMethod(..),
-                            MonoChromatic, TriChromatic, FreshImage,
-                            module AI.CV.OpenCV.HighColorConv)
+                            createCameraCapture, resize, 
+                            InterpolationMethod(..), MonoChromatic, 
+                            TriChromatic, FreshImage,
+                            module AI.CV.OpenCV.ColorConversion)
     where
-import AI.CV.OpenCV.CxCore
-import AI.CV.OpenCV.CV
-import AI.CV.OpenCV.HighColorConv
-import AI.CV.OpenCV.HighGui (createFileCaptureF, cvQueryFrame, setCapturePos, 
-                             CapturePos(PosFrames), CvCapture)
-import AI.CV.OpenCV.HIplUtils
-import AI.CV.OpenCV.Contours
+import AI.CV.OpenCV.Core.CxCore
+import AI.CV.OpenCV.Core.CV
+import AI.CV.OpenCV.Core.HighGui (createFileCaptureF, cvQueryFrame, 
+                                  setCapturePos, CapturePos(PosFrames), 
+                                  CvCapture, createCameraCaptureF)
+import AI.CV.OpenCV.Core.HIplUtils
+import AI.CV.OpenCV.ColorConversion
+--import AI.CV.OpenCV.Contours
 import Control.Monad.ST (runST, unsafeIOToST)
 import Data.Word (Word8)
 import Foreign.Ptr
@@ -48,8 +50,8 @@ dilate n img = runST $
     where n' = fromIntegral n
 
 -- |Unsafe in-place erosion. This is a destructive update of the given
--- image and is only used by the fusion rewrite rules when there is
--- no way to observe the input image.
+-- image and is only used by the rewrite rules when there is no way to
+-- observe the input image.
 unsafeErode :: (HasChannels c, HasDepth d, Storable d) =>
                Int -> HIplImage a c d -> HIplImage FreshImage c d
 unsafeErode n img = runST $ 
@@ -59,8 +61,8 @@ unsafeErode n img = runST $
     where n' = fromIntegral n
 
 -- |Unsafe in-place dilation. This is a destructive update of the
--- given image and is only used by the fusion rewrite rules when
--- there is no way to observe the input image.
+-- given image and is only used by the rewrite rules when there is no
+-- way to observe the input image.
 unsafeDilate :: (HasChannels c, HasDepth d, Storable d) =>
                 Int -> HIplImage a c d-> HIplImage FreshImage c d
 unsafeDilate n img = runST $ 
@@ -81,15 +83,19 @@ unsafeDilate n img = runST $
   #-}
 
 -- |Extract all the pixel values from an image along a line, including
--- the end points. Takes two points, the line connectivity to use when
--- sampling, and an image; returns the list of pixel values.
+-- the end points. Parameters are the two endpoints, the line
+-- connectivity to use when sampling, and an image; returns the list
+-- of pixel values.
 sampleLine :: (HasChannels c, HasDepth d, Storable d) =>
               (Int, Int) -> (Int, Int) -> Connectivity -> HIplImage a c d -> [d]
 sampleLine pt1 pt2 conn img = runST $ unsafeIOToST $ 
                               withHIplImage img $ 
                                 \p -> cvSampleLine p pt1 pt2 conn
 
--- |Line detection in a binary image using a standard Hough transform.
+-- |Line detection in a binary image using a standard Hough
+-- transform. Parameters are @rho@, the distance resolution in
+-- pixels; @theta@, the angle resolution in radians; @threshold@, the
+-- line classification accumulator threshold; and the input image.
 houghStandard :: Double -> Double -> Int -> HIplImage a MonoChromatic Word8 -> 
                  [((Int, Int),(Int,Int))]
 houghStandard rho theta threshold img = runST $ unsafeIOToST $
@@ -115,7 +121,10 @@ houghStandard rho theta threshold img = runST $ unsafeIOToST $
           clampX x = max 0 (min (truncate x) (width img - 1))
           clampY y = max 0 (min (truncate y) (height img - 1))
 
--- |Line detection in a binary image using a probabilistic Hough transform.
+-- |Line detection in a binary image using a probabilistic Hough
+-- transform. Parameters are @rho@, the distance resolution in pixels;
+-- @theta@, the angle resolution in radians; @threshold@, the line
+-- classification accumulator threshold; and the input image.
 houghProbabilistic :: Double -> Double -> Int -> Double -> Double -> 
                       HIplImage a MonoChromatic Word8 -> [((Int, Int),(Int,Int))]
 houghProbabilistic rho theta threshold minLength maxGap img = 
@@ -153,7 +162,7 @@ lineTypeEnum AALine    = 16
 
 -- |Draw each line, defined by its endpoints, on a duplicate of the
 -- given 'HIplImage' using the specified RGB color, line thickness,
--- and aliasing style. This function is fusible under composition.
+-- and aliasing style.
 drawLines :: (HasChannels c, HasDepth d, Storable d) =>
              RGB -> Int -> LineType -> [((Int,Int),(Int,Int))] -> 
              HIplImage a c d -> HIplImage FreshImage c d
@@ -178,9 +187,10 @@ unsafeDrawLines col thick lineType lines img =
   #-}
 
 -- |Find edges using the Canny algorithm. The smallest value between
--- threshold1 and threshold2 is used for edge linking, the largest
--- value is used to find the initial segments of strong edges. The
--- third parameter is the aperture parameter for the Sobel operator.
+-- threshold1 and threshold2 (the first two parameters, respectively)
+-- is used for edge linking, the largest value is used to find the
+-- initial segments of strong edges. The third parameter is the
+-- aperture parameter for the Sobel operator.
 cannyEdges :: (HasDepth d, Storable d) =>
               Double -> Double -> Int -> HIplImage a MonoChromatic d -> 
               HIplImage FreshImage MonoChromatic d
@@ -203,10 +213,12 @@ unsafeCanny threshold1 threshold2 aperture img =
     cannyEdges t1 t2 a . g = unsafeCanny t1 t2 a . g
   #-}
 
+{-
 -- |Find the 'CvContour's in an image.
 findContours :: HIplImage a MonoChromatic Word8 -> [CvContour]
 findContours img = snd $ withDuplicateImage img $
                      \src -> cvFindContours src CV_RETR_CCOMP CV_CHAIN_APPROX_SIMPLE
+-}
 
 -- |Raise an error if 'cvQueryFrame' returns 'Nothing'; otherwise
 -- returns a 'Ptr' 'IplImage'.
@@ -223,13 +235,24 @@ queryFrameLoop cap = do f <- cvQueryFrame cap
                                         queryError cap
                           Just f' -> return f'
 
--- |Open a capture stream from a movie file. The action returned may
+-- |Open a capture stream from a movie file. The returned action may
 -- be used to query for the next available frame.
 createFileCapture :: (HasChannels c, HasDepth d, Storable d) =>
                      FilePath -> IO (IO (HIplImage () c d))
 createFileCapture fname = do capture <- createFileCaptureF fname
                              return (withForeignPtr capture $ 
                                      (>>= fromPtr) . queryFrameLoop)
+
+-- |Open a capture stream from a connected camera. The parameter is
+-- the index of the camera to be used, or 'Nothing' if it does not
+-- matter what camera is used. The returned action may be used to
+-- query for the next available frame.
+createCameraCapture :: (HasChannels c, HasDepth d, Storable d) =>
+                       Maybe Int -> IO (IO (HIplImage () c d))
+createCameraCapture cam = do capture <- createCameraCaptureF cam'
+                             return (withForeignPtr capture $ 
+                                     (>>= fromPtr) . queryError)
+    where cam' = maybe (-1) id cam
 
 -- |Resize the supplied 'HIplImage' to the given width and height using
 -- the supplied 'InterpolationMethod'.

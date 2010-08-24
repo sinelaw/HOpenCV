@@ -5,8 +5,8 @@ import Foreign.C.Types (CInt, CDouble)
 import Foreign.Ptr (Ptr, castPtr)
 import Foreign.Storable (Storable)
 import System.IO.Unsafe (unsafePerformIO)
-import AI.CV.OpenCV.CxCore
-import AI.CV.OpenCV.HIplUtils
+import AI.CV.OpenCV.Core.CxCore
+import AI.CV.OpenCV.Core.HIplUtils
 
 foreign import ccall unsafe "opencv/cv.h cvCornerHarris"
   c_cvHarris :: Ptr CvArr -> Ptr CvArr -> CInt -> CInt -> CDouble -> IO ()

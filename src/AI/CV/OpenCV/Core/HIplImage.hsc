@@ -1,12 +1,12 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, ScopedTypeVariables, GADTs #-}
-module AI.CV.OpenCV.HIplImage 
+module AI.CV.OpenCV.Core.HIplImage 
     ( FreshImage, TriChromatic, MonoChromatic, HasChannels(..), HasDepth(..), 
       HIplImage(..), width, height, imageData, imageSize, widthStep, 
       mkHIplImage, withHIplImage, bytesPerPixel, ByteOrFloat) where
-import AI.CV.OpenCV.CxCore (IplImage,Depth(..),iplDepth8u, iplDepth16u,
-                            iplDepth32f, iplDepth64f)
-import AI.CV.OpenCV.CV (cvCvtColor)
-import AI.CV.OpenCV.ColorConversion (cv_GRAY2BGR, cv_BGR2GRAY)
+import AI.CV.OpenCV.Core.CxCore (IplImage,Depth(..),iplDepth8u, iplDepth16u,
+                                 iplDepth32f, iplDepth64f)
+import AI.CV.OpenCV.Core.CV (cvCvtColor)
+import AI.CV.OpenCV.Core.ColorConversion (cv_GRAY2BGR, cv_BGR2GRAY)
 import Control.Applicative ((<$>))
 import Control.Monad (when)
 import Data.Bits (complement, (.&.))
@@ -92,10 +92,13 @@ bytesPerPixel :: HasDepth d => d -> Int
 bytesPerPixel = (`div` 8) . fromIntegral . unSign . unDepth . depth
     where unSign = (complement #{const IPL_DEPTH_SIGN} .&.)
 
--- |A Haskell data structure representing the information OpenCV uses
--- from an 'IplImage' struct. It includes the pixel origin, image
--- width, image height, image size (number of bytes), a pointer to the
--- pixel data, and the row stride.
+-- |A data structure representing the information OpenCV uses from an
+-- 'IplImage' struct. It includes the pixel origin, image width, image
+-- height, image size (number of bytes), a pointer to the pixel data,
+-- and the row stride. Its type is parameterized by whether or not the
+-- backing pixel data is fresh (vs shared), the number of color
+-- channels (i.e. 'MonoChromatic' or 'TriChromatic'), and the pixel
+-- depth (e.g. 'Word8', 'Float').
 data HIplImage a c d where
     HIplImage :: (HasChannels c, HasDepth d, Storable d) => 
                  Int -> Int -> Int -> Int -> ForeignPtr d -> Int -> 
@@ -111,8 +114,8 @@ widthStep (HIplImage _ _ _ _ _ s) = s
 imageData :: HIplImage a c d -> ForeignPtr d
 imageData (HIplImage _ _ _ _ d _) = d
 
--- |Prepare an 8-bit-per-pixel 'HIplImage' of the given width, height,
--- and number of color channels with an allocated pixel buffer.
+-- |Prepare a 'HIplImage' of the given width and height. The pixel and
+-- color depths are gleaned from the type, and may often be inferred.
 mkHIplImage :: forall c d. (HasChannels c, HasDepth d, Storable d) => 
                Int -> Int -> IO (HIplImage FreshImage c d)
 mkHIplImage w h = 
