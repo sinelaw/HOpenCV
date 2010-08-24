@@ -137,22 +137,19 @@ cvAndAux src1 src2 dst mask = c_cvAnd (castPtr src1) (castPtr src2)
 cvAndMask :: (HasChannels c, HasDepth d, Storable d) => 
              HIplImage q MonoChromatic Word8 -> HIplImage a c d ->  
              HIplImage b c d -> HIplImage FreshImage c d
-cvAndMask mask src1 src2 = unsafePerformIO $
-                        withHIplImage src1 $ \src1' ->
-                          withHIplImage src2 $ \src2' ->
-                            return . fst. withDuplicateImage src2 $ \dst ->
-                              withHIplImage mask $ \mask' ->
-                                cvAndAux src1' src2' dst mask'
+cvAndMask mask src1 src2 = fst . withDuplicateImage src2 $ \dst ->
+                             withHIplImage src1 $ \src1' ->
+                               withHIplImage src2 $ \src2' ->
+                                 withHIplImage mask $ \mask' ->
+                                   cvAndAux src1' src2' dst mask'
 
 -- |Calculates the per-element bitwise conjunction of two arrays.
 cvAnd :: (HasChannels c, HasDepth d, Storable d) => 
           HIplImage a c d -> HIplImage b c d ->  HIplImage FreshImage c d
-cvAnd src1 src2 = unsafePerformIO $
-                  withHIplImage src1 $ \src1' ->
-                    withHIplImage src2 $ \src2' ->
-                      return . fst . withCompatibleImage src1 $ \dst ->
+cvAnd src1 src2 = fst . withCompatibleImage src1 $ \dst ->
+                    withHIplImage src1 $ \src1' ->
+                      withHIplImage src2 $ \src2' ->
                         cvAndAux src1' src2' dst nullPtr
-                                
 
 unsafeAnd :: (HasChannels c, HasDepth d, Storable d) => 
              HIplImage a c d -> HIplImage FreshImage c d ->  

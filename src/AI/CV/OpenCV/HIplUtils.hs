@@ -1,9 +1,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 -- |Functions for working with 'HIplImage's.
-module AI.CV.OpenCV.HIplUtils (isColor, isMono, imgChannels, pixels, pixelsCopy,
+module AI.CV.OpenCV.HIplUtils (isColor, isMono, imgChannels, withPixels, pixels,
                                fromPtr, fromFileColor, fromFileGray, toFile, 
                                compatibleImage, duplicateImage, fromPixels, 
-                               fromPixelsCopy, fromGrayPixels, fromColorPixels, 
+                               withImagePixels, fromGrayPixels, fromColorPixels,
                                withDuplicateImage, withCompatibleImage, 
                                HIplImage, mkHIplImage, width, height, 
                                withHIplImage, FreshImage, MonoChromatic, 
@@ -38,11 +38,12 @@ isMono = id
 imgChannels :: forall a c d. HasChannels c => HIplImage a c d -> Int
 imgChannels _ = numChannels (undefined::c)
 
--- |Return a 'V.Vector' containing the pixels that make up an
--- 'HIplImage'. This does not copy the underlying data!
-pixels :: forall a c d. (HasDepth d, Storable d) => 
-          HIplImage a c d -> V.Vector d
-pixels img = V.unsafeFromForeignPtr (imageData img) 0 n
+-- |Apply the supplied function to a 'V.Vector' containing the pixels
+-- that make up an 'HIplImage'. This does not copy the underlying
+-- data.
+withPixels :: forall a c d r. (HasDepth d, Storable d) => 
+              HIplImage a c d -> (V.Vector d -> r) -> r
+withPixels img f = f $ V.unsafeFromForeignPtr (imageData img) 0 n
     where n = imageSize img `div` bytesPerPixel (undefined::d)
 
 doST :: IO a -> a
@@ -51,12 +52,12 @@ doST x = runST (unsafeIOToST x)
 -- |Return a 'V.Vector' containing the pixels that make up an
 -- 8-bit-per-pixel 'HIplImage'. This makes a copy of the underlying
 -- pixel data.
-pixelsCopy :: Storable d => HIplImage a c d -> V.Vector d
-pixelsCopy img = doST $ do ptr <- mallocForeignPtrBytes len
-                           withForeignPtr ptr $
-                              \dst -> withForeignPtr (imageData img) $
-                                        \src -> copyBytes dst src len
-                           return $ V.unsafeFromForeignPtr ptr 0 len
+pixels :: Storable d => HIplImage a c d -> V.Vector d
+pixels img = doST $ do ptr <- mallocForeignPtrBytes len
+                       withForeignPtr ptr $ \dst -> 
+                         withForeignPtr (imageData img) $ \src -> 
+                             copyBytes dst src len
+                       return $ V.unsafeFromForeignPtr ptr 0 len
     where len = imageSize img
 
 -- |Read an 'HIplImage' from a 'Ptr' 'IplImage'
@@ -118,15 +119,15 @@ duplicateImage img@(HIplImage _ _ _ _ _ _ ) =
           sz = imageSize img
           stride = widthStep img
 
--- |Construct an 'HIplImage' from a width, a height, and a 'V.Vector'
--- of pixel values. The new 'HIplImage' \'s pixel data is
--- shared with the supplied 'V.Vector'.
-fromPixels :: forall a c d. 
-              (HasChannels c, Integral a, HasDepth d, Storable d) =>
-              a -> a -> V.Vector d -> HIplImage () c d
-fromPixels w h pix = if fromIntegral len == sz
-                     then HIplImage 0 w' h' sz fp (w'*nc)
-                     else error "Length disagreement"
+-- |Pass the given function a 'HIplImage' constructed from a width, a
+-- height, and a 'V.Vector' of pixel values. The new 'HIplImage' \'s
+-- pixel data is shared with the supplied 'V.Vector'.
+withImagePixels :: forall a c d r. 
+                   (HasChannels c, Integral a, HasDepth d, Storable d) =>
+                   a -> a -> V.Vector d -> (HIplImage () c d -> r) -> r
+withImagePixels w h pix f = if fromIntegral len == sz
+                            then f $ HIplImage 0 w' h' sz fp (w'*nc)
+                            else error "Length disagreement"
     where w' = fromIntegral w
           h' = fromIntegral h
           nc = numChannels (undefined::c)
@@ -134,15 +135,15 @@ fromPixels w h pix = if fromIntegral len == sz
           (fp,len) = case V.unsafeToForeignPtr (V.force pix) of
                          (fp,0,len) -> (fp,len)
                          _ -> error "fromPixels non-zero offset"
-{-# INLINE fromPixels #-}
+{-# INLINE [0] withImagePixels #-}
 
 -- |Construct a fresh 'HIplImage' from a width, a height, and a
 -- 'V.Vector' of 8-bit pixel values.
-fromPixelsCopy :: forall a c d. 
-                  (Integral a, HasChannels c, HasDepth d, Storable d) =>
-                  a -> a -> V.Vector d -> HIplImage FreshImage c d
-fromPixelsCopy w h pix = doST $ do fp <- copyData
-                                   return $ HIplImage 0 w' h' sz fp (w'*nc)
+fromPixels :: forall a c d. 
+              (Integral a, HasChannels c, HasDepth d, Storable d) =>
+              a -> a -> V.Vector d -> HIplImage FreshImage c d
+fromPixels w h pix = doST $ do fp <- copyData
+                               return $ HIplImage 0 w' h' sz fp (w'*nc)
     where w' = fromIntegral w
           h' = fromIntegral h
           nc = numChannels (undefined::c)
@@ -154,18 +155,18 @@ fromPixelsCopy w h pix = doST $ do fp <- copyData
                                        \dst -> let src' = plusPtr src offset
                                                in copyBytes dst src' len
                            return fp
-{-# INLINE fromPixelsCopy #-}
+{-# INLINE [0] fromPixels #-}
 
 -- |Helper function to explicitly type a vector of monochromatic pixel
 -- data.
 fromGrayPixels :: Integral a => 
-                  a -> a -> V.Vector Word8 -> HIplImage () MonoChromatic Word8
+                  a -> a -> V.Vector Word8 -> HIplImage FreshImage MonoChromatic Word8
 fromGrayPixels w h = isMono . fromPixels w h
 
 -- |Helper function to explicitly type a vector of trichromatic pixel
 -- data.
 fromColorPixels :: Integral a =>
-                   a -> a -> V.Vector Word8 -> HIplImage () TriChromatic Word8
+                   a -> a -> V.Vector Word8 -> HIplImage FreshImage TriChromatic Word8
 fromColorPixels w h = isColor . fromPixels w h
 
 -- |Provides the supplied function with a 'Ptr' to the 'IplImage'
@@ -179,6 +180,7 @@ withDuplicateImage img1 f = runST $ unsafeIOToST $
                             do img2 <- duplicateImage img1
                                r <- withHIplImage img2 f
                                return (img2, r)
+{-# NOINLINE withDuplicateImage #-}
 
 -- |Provides the supplied function with a 'Ptr' to the 'IplImage'
 -- underlying a new 'HIplImage' of the same dimensions as the given
@@ -190,3 +192,4 @@ withCompatibleImage img1 f = runST $ unsafeIOToST $
                              do img2 <- compatibleImage img1
                                 r <- withHIplImage img2 f
                                 return (img2, r)
+{-# NOINLINE withCompatibleImage #-}

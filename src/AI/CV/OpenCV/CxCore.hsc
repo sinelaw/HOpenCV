@@ -311,6 +311,11 @@ cvLine dst (x1,y1) (x2,y2) (r,g,b) thickness lineType =
         where fi = fromIntegral
               fr = realToFrac
 
+-- |Convert null pointers to 'Nothing' and non-null pointers to 'Just'
+-- values.
+ptrToMaybe :: Ptr a -> Maybe (Ptr a)
+ptrToMaybe p = if p == nullPtr then Nothing else Just p
+
 ------------------------------------------------------------------------------
 -- Debugging stuff, not part of opencv
 

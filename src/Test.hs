@@ -1,5 +1,5 @@
 module Main where
-
+import Data.Maybe (fromJust)
 import Foreign.Ptr
 import Foreign.ForeignPtr
 import Foreign.C.Types
@@ -12,7 +12,7 @@ import Control.Monad(when)
 
 showFrames :: CInt -> Ptr IplImage -> Ptr CvCapture -> IO ()
 showFrames winNum targetImage cvcapture  = do
-  frame <- cvQueryFrame cvcapture 
+  frame <- fromJust `fmap` cvQueryFrame cvcapture 
   cvConvertImage (fromArr frame) (fromArr targetImage) 0
   calcFrame targetImage
       where calcFrame targetSmall = do
@@ -25,7 +25,7 @@ showFrames winNum targetImage cvcapture  = do
   
 processImages :: Ptr CvCapture -> IO ()
 processImages capture = do
-  frame <- cvQueryFrame capture
+  frame <- fromJust `fmap` cvQueryFrame capture
   let winNum = 0
   newWindow winNum True
   target <- createImageF (cvGetSize frame) 1 iplDepth8u

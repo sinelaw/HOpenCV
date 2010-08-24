@@ -4,18 +4,20 @@
 -- than two.
 module AI.CV.OpenCV.HighCV (erode, dilate, houghStandard, houghProbabilistic, 
                             LineType(..), RGB, drawLines, HIplImage, width, 
-                            height, pixels, fromGrayPixels, fromColorPixels, 
-                            fromFileGray, fromFileColor, toFile, findContours, 
-                            fromPtr, isColor, isMono, fromPixels, sampleLine,
-                            Connectivity(..), fromPixelsCopy, cannyEdges,
-                            createFileCapture, resize, InterpolationMethod(..),
+                            height, pixels, withPixels, fromGrayPixels, 
+                            fromColorPixels, fromFileGray, fromFileColor, 
+                            toFile, findContours, fromPtr, isColor, isMono, 
+                            withImagePixels, sampleLine, Connectivity(..), 
+                            fromPixels, cannyEdges, createFileCapture, 
+                            resize, InterpolationMethod(..),
                             MonoChromatic, TriChromatic, FreshImage,
                             module AI.CV.OpenCV.HighColorConv)
     where
 import AI.CV.OpenCV.CxCore
 import AI.CV.OpenCV.CV
 import AI.CV.OpenCV.HighColorConv
-import AI.CV.OpenCV.HighGui (createFileCaptureF, cvQueryFrame2)
+import AI.CV.OpenCV.HighGui (createFileCaptureF, cvQueryFrame, setCapturePos, 
+                             CapturePos(PosFrames), CvCapture)
 import AI.CV.OpenCV.HIplUtils
 import AI.CV.OpenCV.Contours
 import Control.Monad.ST (runST, unsafeIOToST)
@@ -206,13 +208,28 @@ findContours :: HIplImage a MonoChromatic Word8 -> [CvContour]
 findContours img = snd $ withDuplicateImage img $
                      \src -> cvFindContours src CV_RETR_CCOMP CV_CHAIN_APPROX_SIMPLE
 
+-- |Raise an error if 'cvQueryFrame' returns 'Nothing'; otherwise
+-- returns a 'Ptr' 'IplImage'.
+queryError :: Ptr CvCapture -> IO (Ptr IplImage)
+queryError = (maybe (error "Unable to capture frame") id `fmap`) . cvQueryFrame
+
+-- |If 'cvQueryFrame' returns 'Nothing', try rewinding the video and
+-- querying again. If it still fails, raise an error. When a non-null
+-- frame is obtained, return it.
+queryFrameLoop :: Ptr CvCapture -> IO (Ptr IplImage)
+queryFrameLoop cap = do f <- cvQueryFrame cap
+                        case f of
+                          Nothing -> do setCapturePos cap (PosFrames 0)
+                                        queryError cap
+                          Just f' -> return f'
+
 -- |Open a capture stream from a movie file. The action returned may
 -- be used to query for the next available frame.
 createFileCapture :: (HasChannels c, HasDepth d, Storable d) =>
                      FilePath -> IO (IO (HIplImage () c d))
 createFileCapture fname = do capture <- createFileCaptureF fname
                              return (withForeignPtr capture $ 
-                                     (>>= fromPtr) . cvQueryFrame2)
+                                     (>>= fromPtr) . queryFrameLoop)
 
 -- |Resize the supplied 'HIplImage' to the given width and height using
 -- the supplied 'InterpolationMethod'.

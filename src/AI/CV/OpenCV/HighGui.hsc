@@ -1,6 +1,11 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls #-}
- 
-module AI.CV.OpenCV.HighGui where
+module AI.CV.OpenCV.HighGui (cvLoadImage, LoadColor(..), cvSaveImage, 
+                             CvCapture, cvCreateCameraCapture, 
+                             createCameraCaptureF, createFileCaptureF,
+                             cvCreateFileCapture, setCapturePos, 
+                             CapturePos(..), cvQueryFrame,
+                             newWindow, delWindow, showImage, waitKey,
+                             cvConvertImage) where
  
 import Foreign.ForeignPtrWrap
 import Foreign.C.Types
@@ -10,6 +15,7 @@ import Foreign.C.String
  
 import AI.CV.OpenCV.CxCore
 
+#include <opencv/highgui.h>
 
 ------------------------------------------------
 -- General
@@ -66,14 +72,22 @@ cvCreateFileCapture filename = err' . checkPtr $
 foreign import ccall unsafe "highgui.h cvSetCaptureProperty"
   c_cvSetCaptureProperty :: Ptr CvCapture -> CInt -> CDouble -> IO ()
 
-resetCapturePos :: Ptr CvCapture -> IO ()
-resetCapturePos cap = c_cvSetCaptureProperty cap 0 0
+-- |The current position of a video capture.
+data CapturePos = PosMsec Double  
+                -- ^Position in milliseconds or video timestamp.
+                | PosFrames Int   
+                -- ^0-based index of the next frame to be decoded or captured.
+                | PosRatio Double 
+                -- ^Relative position of the video file (0 = start, 1 = end).
 
-cvQueryFrame2 :: Ptr CvCapture -> IO (Ptr IplImage)
-cvQueryFrame2 cap = do frame <- c_cvQueryFrame cap
-                       if frame == nullPtr
-                          then resetCapturePos cap >> cvQueryFrame cap
-                          else return frame
+posEnum :: CapturePos -> (CInt, CDouble)
+posEnum (PosMsec t) = (#{const CV_CAP_PROP_POS_MSEC}, realToFrac t)
+posEnum (PosFrames n) = (#{const CV_CAP_PROP_POS_FRAMES}, fromIntegral n)
+posEnum (PosRatio r) = (#{const CV_CAP_PROP_POS_AVI_RATIO}, realToFrac r)
+
+-- |Set the current position of a video capture.
+setCapturePos :: Ptr CvCapture -> CapturePos -> IO ()
+setCapturePos cap pos = uncurry (c_cvSetCaptureProperty cap) $ posEnum pos
   
 foreign import ccall unsafe "HOpenCV_wrap.h release_capture"
   release_capture  :: Ptr CvCapture -> IO ()
@@ -90,9 +104,10 @@ createFileCaptureF = createForeignPtr cp_release_capture . cvCreateFileCapture
 foreign import ccall unsafe "highgui.h cvQueryFrame"
   c_cvQueryFrame :: Ptr CvCapture -> IO (Ptr IplImage)
 
-cvQueryFrame :: Ptr CvCapture -> IO (Ptr IplImage)
-cvQueryFrame cap = errorName "Failed to query frame from capture device" . 
-                   checkPtr $ c_cvQueryFrame cap
+cvQueryFrame :: Ptr CvCapture -> IO (Maybe (Ptr IplImage))
+cvQueryFrame cap = ptrToMaybe `fmap` c_cvQueryFrame cap
+-- cvQueryFrame cap = errorName "Failed to query frame from capture device" . 
+--                    checkPtr $ c_cvQueryFrame cap
 
 -------------------------------------------------
 -- Windows
