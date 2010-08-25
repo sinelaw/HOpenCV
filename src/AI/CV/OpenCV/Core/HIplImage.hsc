@@ -1,8 +1,10 @@
-{-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, ScopedTypeVariables, GADTs #-}
+{-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, ScopedTypeVariables, 
+             GADTs, TypeFamilies, MultiParamTypeClasses, FlexibleInstances #-}
 module AI.CV.OpenCV.Core.HIplImage 
     ( FreshImage, TriChromatic, MonoChromatic, HasChannels(..), HasDepth(..), 
       HIplImage(..), width, height, imageData, imageSize, widthStep, 
-      mkHIplImage, withHIplImage, bytesPerPixel, ByteOrFloat) where
+      mkHIplImage, mkBlackImage, withHIplImage, bytesPerPixel, 
+      ByteOrFloat, HasScalar(..), IsCvScalar(..)) where
 import AI.CV.OpenCV.Core.CxCore (IplImage,Depth(..),iplDepth8u, iplDepth16u,
                                  iplDepth32f, iplDepth64f)
 import AI.CV.OpenCV.Core.CV (cvCvtColor)
@@ -88,9 +90,38 @@ class ByteOrFloat a where
 instance ByteOrFloat Word8 where
 instance ByteOrFloat Float where
 
+-- |An image with a particular number of channels have an associated
+-- scalar type built from the type of its pixels. This class lets us
+-- ensure that a scalar value to be used in an operation with an image
+-- is compatible with that image.
+class HasDepth d => HasScalar c d where
+    type CvScalar c d
+
+instance HasDepth d => HasScalar MonoChromatic d where
+    type CvScalar MonoChromatic d = d
+
+instance HasDepth d => HasScalar TriChromatic d where
+    type CvScalar TriChromatic d = (d,d,d)
+
+class IsCvScalar x where
+    toCvScalar :: x -> (CDouble, CDouble, CDouble, CDouble)
+
+instance IsCvScalar Word8 where toCvScalar = depthToScalar
+instance IsCvScalar Word16 where toCvScalar = depthToScalar
+instance IsCvScalar Float where toCvScalar = depthToScalar
+instance IsCvScalar Double where toCvScalar = depthToScalar
+instance (HasDepth d, IsCvScalar d) => IsCvScalar (d,d,d) where
+    toCvScalar (r,g,b) = let f = realToFrac . toDouble
+                         in (f r, f g, f b, 0)
+
+depthToScalar :: HasDepth d => d -> (CDouble, CDouble, CDouble, CDouble)
+depthToScalar x = let x' = realToFrac (toDouble x)
+                  in (x', x', x', x')
+
 bytesPerPixel :: HasDepth d => d -> Int
 bytesPerPixel = (`div` 8) . fromIntegral . unSign . unDepth . depth
     where unSign = (complement #{const IPL_DEPTH_SIGN} .&.)
+
 
 -- |A data structure representing the information OpenCV uses from an
 -- 'IplImage' struct. It includes the pixel origin, image width, image
@@ -124,6 +155,19 @@ mkHIplImage w h =
     where numBytes = stride * h
           bpp = bytesPerPixel (undefined::d)
           stride = w * (numChannels (undefined::c) :: Int) * bpp
+
+foreign import ccall unsafe "memset"
+  memset :: Ptr Word8 -> Word8 -> CInt -> IO ()
+
+-- |Prepare a 'HIplImage' of the given width and height. Set all
+-- pixels to zero.
+mkBlackImage :: (HasChannels c, HasDepth d, Storable d, Integral a) => 
+                    a -> a -> IO (HIplImage FreshImage c d)
+mkBlackImage w h = do img <- mkHIplImage (fromIntegral w) (fromIntegral h)
+                      let sz = fromIntegral $ imageSize img
+                      withForeignPtr (imageData img) $ \ptr ->
+                          memset (castPtr ptr) 0 sz
+                      return img
 
 -- |Provides the supplied function with a 'Ptr' to the 'IplImage'
 -- underlying the given 'HIplImage'.
