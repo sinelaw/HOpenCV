@@ -9,7 +9,7 @@ module AI.CV.OpenCV.HighCV (erode, dilate, houghStandard, houghProbabilistic,
                             toFile, fromPtr, isColor, isMono, 
                             withImagePixels, sampleLine, Connectivity(..), 
                             fromPixels, cannyEdges, createFileCapture, 
-                            createCameraCapture, resize, FourCC,
+                            createCameraCapture, resize, FourCC, getROI,
                             InterpolationMethod(..), MonoChromatic, 
                             TriChromatic, FreshImage, createVideoWriter,
                             module AI.CV.OpenCV.ColorConversion)

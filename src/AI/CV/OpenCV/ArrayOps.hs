@@ -1,7 +1,8 @@
 {-# LANGUAGE ForeignFunctionInterface, TypeFamilies, ScopedTypeVariables #-}
 -- |Array operations.
 module AI.CV.OpenCV.ArrayOps (subRS, absDiff, convertScale, 
-                              cvAnd, cvAndMask, cvScaleAdd, cvAndS) where
+                              cvAnd, cvAndMask, cvScaleAdd, cvAndS,
+                              cvMul, cvMul', cvAdd, cvAddS) where
 import Data.Word (Word8)
 import Foreign.C.Types (CDouble)
 import Foreign.Ptr (Ptr, castPtr, nullPtr)
@@ -189,3 +190,103 @@ cvScaleAdd src1 s src2 = fst . withCompatibleImage src1 $ \dst ->
                                c_cvScaleAdd (castPtr src1') r g b a 
                                             (castPtr src2') (castPtr dst)
     where (r,g,b,a) = toCvScalar s
+
+foreign import ccall unsafe "opencv/cxcore.h cvMul"
+  c_cvMul :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> CDouble -> IO ()
+
+cvMulAux :: Ptr IplImage -> Ptr IplImage -> Ptr IplImage -> Double -> IO ()
+cvMulAux src1 src2 dst s = c_cvMul (castPtr src1) (castPtr src2) 
+                                   (castPtr dst) (realToFrac s)
+
+-- |Per-element product of two arrays.
+cvMul :: (HasChannels c, HasDepth d, Storable d) => 
+         HIplImage a c d -> HIplImage b c d -> HIplImage FreshImage c d
+cvMul src1 src2 = fst . withCompatibleImage src1 $ \dst ->
+                    withHIplImage src1 $ \src1' ->
+                      withHIplImage src2 $ \src2' ->
+                        cvMulAux src1' src2' dst 1
+
+-- |Per-element product of two arrays with an extra scale factor that
+-- is multiplied with each product.
+cvMul' :: (HasChannels c, HasDepth d, Storable d) => 
+          Double -> HIplImage a c d -> HIplImage b c d -> 
+          HIplImage FreshImage c d
+cvMul' scale src1 src2 = fst . withCompatibleImage src1 $ \dst ->
+                           withHIplImage src1 $ \src1' ->
+                               withHIplImage src2 $ \src2' ->
+                                   cvMulAux src1' src2' dst scale
+
+unsafeMul :: (HasChannels c, HasDepth d, Storable d) => 
+             HIplImage a c d -> HIplImage FreshImage c d -> 
+             HIplImage FreshImage c d
+unsafeMul src1 src2 = unsafePerformIO $
+                      do withHIplImage src1 $ \src1' ->
+                             withHIplImage src2 $ \src2' ->
+                                 cvMulAux src1' src2' src2' 1
+                         return src2
+
+unsafeMul' :: (HasChannels c, HasDepth d, Storable d) => 
+             Double -> HIplImage a c d -> HIplImage FreshImage c d -> 
+             HIplImage FreshImage c d
+unsafeMul' scale src1 src2 = unsafePerformIO $
+                             do withHIplImage src1 $ \src1' ->
+                                  withHIplImage src2 $ \src2' ->
+                                    cvMulAux src1' src2' src2' scale
+                                return src2
+
+
+{-# RULES 
+"cvMul/in-place" forall s1 (g::a->HIplImage FreshImage c d). 
+                     cvMul s1 . g = unsafeMul s1 . g
+"cvMul'/in-place" forall s s1 (g::a->HIplImage FreshImage c d). 
+                      cvMul' s s1 . g = unsafeMul' s s1 . g
+  #-}
+
+foreign import ccall unsafe "opencv/cxcore.h cvAdd"
+  c_cvAdd :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> IO ()
+
+-- |Per-element sum of two arrays.
+cvAdd :: (HasChannels c, HasDepth d, Storable d) => 
+         HIplImage a c d -> HIplImage b c d -> HIplImage FreshImage c d
+cvAdd src1 src2 = fst . withCompatibleImage src1 $ \dst ->
+                    withHIplImage src1 $ \src1' ->
+                      withHIplImage src2 $ \src2' ->
+                         c_cvAdd (castPtr src1') (castPtr src2') 
+                                 (castPtr dst) nullPtr
+
+unsafeAdd  :: (HasChannels c, HasDepth d, Storable d) => 
+              HIplImage a c d -> HIplImage FreshImage c d -> HIplImage FreshImage c d
+unsafeAdd src1 src2 = unsafePerformIO $
+                      do withHIplImage src1 $ \src1' ->
+                           withHIplImage src2 $ \src2' ->
+                             c_cvAdd (castPtr src1') (castPtr src2') 
+                                     (castPtr src2') nullPtr
+                         return src2
+
+foreign import ccall unsafe "opencv/cxcore.h cvAddS"
+  c_cvAddS :: Ptr CvArr -> CDouble -> CDouble -> CDouble -> CDouble -> 
+              Ptr CvArr -> Ptr CvArr -> IO ()
+
+cvAddS :: (HasChannels c, HasDepth d, Storable d, IsCvScalar s, 
+           s ~ CvScalar c d) => 
+          s -> HIplImage a c d -> HIplImage FreshImage c d
+cvAddS scalar src = fst . withCompatibleImage src $ \dst ->
+                      withHIplImage src $ \src' ->
+                        c_cvAddS (castPtr src') r g b a (castPtr dst) nullPtr
+    where (r,g,b,a) = toCvScalar scalar
+
+unsafeAddS :: (HasChannels c, HasDepth d, Storable d, IsCvScalar s, 
+               s ~ CvScalar c d) => 
+              s -> HIplImage FreshImage c d -> HIplImage FreshImage c d
+unsafeAddS scalar src = unsafePerformIO $ do
+                        withHIplImage src $ \src' ->
+                          c_cvAddS (castPtr src') r g b a (castPtr src') nullPtr
+                        return src
+    where (r,g,b,a) = toCvScalar scalar
+
+{-# RULES
+"cvAdd/in-place" forall s1 (g::a->HIplImage FreshImage c d). 
+                 cvAdd s1 . g = unsafeAdd s1 . g
+"cvAddS/in-place" forall s (g::a->HIplImage FreshImage c d).
+                  cvAddS s . g = unsafeAddS s . g
+  #-}

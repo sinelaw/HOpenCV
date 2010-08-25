@@ -9,7 +9,7 @@ module AI.CV.OpenCV.Core.HIplUtils
      HIplImage, mkHIplImage, width, height, mkBlackImage,
      withHIplImage, FreshImage, MonoChromatic, 
      TriChromatic, HasChannels, HasDepth(..), HasScalar(..), IsCvScalar(..),
-     ByteOrFloat) where
+     ByteOrFloat, getROI) where
 import AI.CV.OpenCV.Core.CxCore (IplImage)
 import AI.CV.OpenCV.Core.HighGui (cvLoadImage, cvSaveImage, LoadColor(..))
 import AI.CV.OpenCV.Core.HIplImage
@@ -21,6 +21,7 @@ import Foreign.Marshal.Utils (copyBytes)
 import Foreign.Ptr
 import Foreign.Storable
 import System.Directory (doesFileExist)
+import System.IO.Unsafe
 import Unsafe.Coerce
 
 -- |This is a way to let the type checker know that you belieave an
@@ -40,6 +41,11 @@ isMono = id
 -- value.
 imgChannels :: forall a c d. HasChannels c => HIplImage a c d -> Int
 imgChannels _ = numChannels (undefined::c)
+
+-- |Return the number of bytes per pixel color component of an
+-- 'HIplImage'.
+colorDepth :: forall a c d. HasDepth d => HIplImage a c d -> Int
+colorDepth _ = bytesPerPixel (undefined::d)
 
 -- |Apply the supplied function to a 'V.Vector' containing the pixels
 -- that make up an 'HIplImage'. This does not copy the underlying
@@ -197,3 +203,25 @@ withCompatibleImage img1 f = runST $ unsafeIOToST $
                                 r <- withHIplImage img2 f
                                 return (img2, r)
 {-# NOINLINE withCompatibleImage #-}
+
+-- |Extract a rectangular region of interest from an image. Returns a
+-- new image whose pixel data is copied from the ROI of the source
+-- image. Parameters are the upper-left corner of the ROI in image
+-- coordinates, the (width,height) of the ROI in pixels, and the
+-- source 'HIplImage'.
+getROI :: (HasChannels c, HasDepth d, Storable d) =>
+          (Int,Int) -> (Int,Int) -> HIplImage a c d -> HIplImage FreshImage c d
+getROI (rx,ry) (rw,rh) src = 
+    unsafePerformIO $
+    do img <- mkHIplImage rw rh
+       withForeignPtr (imageData img) $ \dst ->
+         withForeignPtr (imageData src) $ \src ->
+           mapM_ (\(dOff, sOff) -> copyBytes (plusPtr dst dOff) 
+                                             (plusPtr src sOff)
+                                             rowLen)
+                 (zip [0,rowLen..rw*rh*bpp-1] [start,start+stride..])
+       return img
+    where stride = fromIntegral $ widthStep src
+          start = stride*ry + rx*bpp
+          bpp = imgChannels src * colorDepth src
+          rowLen = rw*bpp

@@ -1,4 +1,5 @@
-{-# LANGUAGE ForeignFunctionInterface, ScopedTypeVariables #-}
+{-# LANGUAGE ForeignFunctionInterface, ScopedTypeVariables, 
+             MultiParamTypeClasses #-}
 -- |Image thresholding operations. These operations will perform
 -- destructive, in-place updates when composed with a producer of
 -- fresh images.
@@ -8,7 +9,6 @@ module AI.CV.OpenCV.Threshold (thresholdBinary, thresholdBinaryInv,
                                thresholdBinaryOtsu, thresholdBinaryOtsuInv,
                                thresholdTruncateOtsu, 
                                thresholdToZeroOtsu, thresholdToZeroOtsuInv) where
-import Control.Arrow (second)
 import Data.Bits ((.|.))
 import Data.Word (Word8)
 import Foreign.C.Types (CDouble, CInt)
@@ -25,34 +25,47 @@ data ThresholdType = ThreshBinary
                    | ThreshToZeroInv
                      deriving Enum
 
+-- The OpenCV thresholding functions have the property that the source
+-- image must be a single-channel with 8-bit or float pixels. The
+-- destination image must be either the same pixel type as the source,
+-- or 8-bit. This means that images of float pixels can be converted
+-- to 8-bit images during the thresholding process.
+class SameOrByte d1 d2 where
+instance SameOrByte Float Word8 where
+instance SameOrByte Float Float where
+instance SameOrByte Word8 Word8 where
+
 foreign import ccall unsafe "opencv/cv.h cvThreshold"
   c_cvThreshold :: Ptr CvArr -> Ptr CvArr -> CDouble -> CDouble -> CInt -> 
                    IO (CDouble)
 
 -- The worker function that calls c_cvThreshold.
-cvThreshold :: (ByteOrFloat d, HasDepth d, Storable d) =>
-               d -> d -> Int -> HIplImage a MonoChromatic d ->
-               (HIplImage FreshImage MonoChromatic d, d)
+cvThreshold :: (ByteOrFloat d1, HasDepth d1, Storable d1,
+                HasDepth d2, Storable d2, SameOrByte d1 d2) =>
+               d1 -> d1 -> Int -> HIplImage a MonoChromatic d1 ->
+               (HIplImage FreshImage MonoChromatic d2, d1)
 cvThreshold threshold maxValue tType src = 
     unsafePerformIO $
     withHIplImage src $ \srcPtr ->
-      cvtResult . withCompatibleImage src $ \dstPtr -> 
-                    c_cvThreshold (castPtr srcPtr) (castPtr dstPtr) 
-                                  threshold' maxValue' tType'
+        do dst <- mkHIplImage (width src) (height src)
+           r <- withHIplImage dst $ \dstPtr ->
+                  c_cvThreshold (castPtr srcPtr) (castPtr dstPtr) 
+                                threshold' maxValue' tType'
+           return (dst, fromDouble (realToFrac r))
     where threshold' = realToFrac . toDouble $ threshold
           maxValue' = realToFrac . toDouble $ maxValue
           tType' = fromIntegral tType
-          cvtResult = return . second (fromDouble . realToFrac)
 
-cvThreshold1 :: (ByteOrFloat d, HasDepth d, Storable d) =>
-               d -> d -> Int -> HIplImage a MonoChromatic d ->
-               HIplImage FreshImage MonoChromatic d
+cvThreshold1 :: (ByteOrFloat d1, HasDepth d1, Storable d1, 
+                 HasDepth d2, Storable d2, SameOrByte d1 d2) =>
+               d1 -> d1 -> Int -> HIplImage a MonoChromatic d1 ->
+               HIplImage FreshImage MonoChromatic d2
 cvThreshold1 threshold maxValue tType src = 
     fst $ cvThreshold threshold maxValue tType src
 
-unsafeCvThreshold :: (ByteOrFloat d, HasDepth d, Storable d) =>
-                      d -> d -> Int -> HIplImage FreshImage MonoChromatic d ->
-                      (HIplImage FreshImage MonoChromatic d, d)
+unsafeCvThreshold :: (ByteOrFloat d1, HasDepth d1, Storable d1) =>
+                      d1 -> d1 -> Int -> HIplImage FreshImage MonoChromatic d1 ->
+                      (HIplImage FreshImage MonoChromatic d1, d1)
 unsafeCvThreshold threshold maxValue tType src = 
     unsafePerformIO $
     withHIplImage src $ \srcPtr ->
@@ -63,9 +76,9 @@ unsafeCvThreshold threshold maxValue tType src =
           maxValue' = realToFrac . toDouble $ maxValue
           tType' = fromIntegral tType
 
-unsafeCvThreshold1 :: (ByteOrFloat d, HasDepth d, Storable d) =>
-                      d -> d -> Int -> HIplImage FreshImage MonoChromatic d ->
-                      HIplImage FreshImage MonoChromatic d
+unsafeCvThreshold1 :: (ByteOrFloat d1, HasDepth d1, Storable d1) =>
+                      d1 -> d1 -> Int -> HIplImage FreshImage MonoChromatic d1 ->
+                      HIplImage FreshImage MonoChromatic d1
 unsafeCvThreshold1 th mv tt = fst . unsafeCvThreshold th mv tt
 
 -- Use Otsu's method to determine an optimal threshold value which is
@@ -87,18 +100,20 @@ unsafeCvThresholdOtsu maxValue tType = unsafeCvThreshold 0 maxValue tType'
 -- @maxValue@ passing pixels are mapped to, and the source
 -- 'HIplImage'. Each pixel greater than @threshold@ is mapped to
 -- @maxValue@, while all others are mapped to zero.
-thresholdBinary :: (ByteOrFloat d, HasDepth d, Storable d) =>
-                   d -> d -> HIplImage a MonoChromatic d ->
-                   HIplImage FreshImage MonoChromatic d
+thresholdBinary :: (ByteOrFloat d1, HasDepth d1, Storable d1, 
+                    HasDepth d2, Storable d2, SameOrByte d1 d2) =>
+                   d1 -> d1 -> HIplImage a MonoChromatic d1 ->
+                   HIplImage FreshImage MonoChromatic d2
 thresholdBinary th maxValue = cvThreshold1 th maxValue (fromEnum ThreshBinary)
 
 -- |Inverse binary thresholding. Parameters are the @threshold@ value,
 -- the @maxValue@ passing pixels are mapped to, and the source
 -- 'HIplImage'. Each pixel greater than @threshold@ is mapped to zero,
 -- while all others are mapped to @maxValue@.
-thresholdBinaryInv :: (ByteOrFloat d, HasDepth d, Storable d) =>
-                      d -> d -> HIplImage a MonoChromatic d ->
-                      HIplImage FreshImage MonoChromatic d
+thresholdBinaryInv :: (ByteOrFloat d1, HasDepth d1, Storable d1,
+                       HasDepth d2, Storable d2, SameOrByte d1 d2) =>
+                      d1 -> d1 -> HIplImage a MonoChromatic d1 ->
+                      HIplImage FreshImage MonoChromatic d2
 thresholdBinaryInv th maxValue = cvThreshold1 th maxValue tType
     where tType = fromEnum ThreshBinaryInv
 
@@ -129,14 +144,15 @@ unsafeThreshBinInv th maxValue = unsafeCvThreshold1 th maxValue tType
 -- @threshold@ value and the source 'HIplImage'. Maps pixels that are
 -- greater than @threshold@ to the @threshold@ value; leaves all other
 -- pixels unchanged.
-thresholdTruncate :: (ByteOrFloat d, HasDepth d, Storable d, Num d) => 
-                     d -> HIplImage a MonoChromatic d ->
-                     HIplImage FreshImage MonoChromatic d
+thresholdTruncate :: (ByteOrFloat d1, HasDepth d1, Storable d1, Num d1,
+                      HasDepth d2, Storable d2, SameOrByte d1 d2) => 
+                     d1 -> HIplImage a MonoChromatic d1 ->
+                     HIplImage FreshImage MonoChromatic d2
 thresholdTruncate threshold = cvThreshold1 threshold 0 (fromEnum ThreshTrunc)
 
-unsafeThreshTrunc :: (ByteOrFloat d, HasDepth d, Storable d, Num d) => 
-                     d -> HIplImage FreshImage MonoChromatic d ->
-                     HIplImage FreshImage MonoChromatic d
+unsafeThreshTrunc :: (ByteOrFloat d1, HasDepth d1, Storable d1, Num d1) =>
+                     d1 -> HIplImage FreshImage MonoChromatic d1 ->
+                     HIplImage FreshImage MonoChromatic d1
 unsafeThreshTrunc th = unsafeCvThreshold1 th 0 (fromEnum ThreshTrunc)
 
 {-# RULES "thresholdTruncate/in-place"
@@ -147,17 +163,19 @@ unsafeThreshTrunc th = unsafeCvThreshold1 th 0 (fromEnum ThreshTrunc)
 -- |Maps pixels that are less than or equal to @threshold@ to zero;
 -- leaves all other pixels unchanged. Parameters the @threshold@ value
 -- and the source 'HIplImage'.
-thresholdToZero :: (ByteOrFloat d, HasDepth d, Storable d, Num d) => 
-                   d -> HIplImage a MonoChromatic d ->
-                   HIplImage FreshImage MonoChromatic d
+thresholdToZero :: (ByteOrFloat d1, HasDepth d1, Storable d1, Num d1,
+                    HasDepth d2, Storable d2, SameOrByte d1 d2) => 
+                   d1 -> HIplImage a MonoChromatic d1 ->
+                   HIplImage FreshImage MonoChromatic d2
 thresholdToZero threshold = cvThreshold1 threshold 0 (fromEnum ThreshToZero)
 
 -- |Maps pixels that are greater than @threshold@ to zero; leaves all
 -- other pixels unchanged. Parameters the @threshold@ value and the
 -- source 'HIplImage'.
-thresholdToZeroInv :: (ByteOrFloat d, HasDepth d, Storable d, Num d) => 
-                      d -> HIplImage a MonoChromatic d ->
-                      HIplImage FreshImage MonoChromatic d
+thresholdToZeroInv :: (ByteOrFloat d1, HasDepth d1, Storable d1, Num d1,
+                       HasDepth d2, Storable d2, SameOrByte d1 d2) => 
+                      d1 -> HIplImage a MonoChromatic d1 ->
+                      HIplImage FreshImage MonoChromatic d2
 thresholdToZeroInv threshold = cvThreshold1 threshold 0 tType
     where tType = fromEnum ThreshToZeroInv
 
