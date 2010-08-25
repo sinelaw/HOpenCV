@@ -6,8 +6,10 @@ module AI.CV.OpenCV.Core.HighGui
      cvCreateFileCapture, setCapturePos, 
      CapturePos(..), cvQueryFrame,
      newWindow, delWindow, showImage, waitKey,
-     cvConvertImage, c_debug_ipl) where
- 
+     cvConvertImage, c_debug_ipl,
+     createVideoWriterF, cvWriteFrame, FourCC) where
+
+import Data.Bits ((.&.), shiftL) 
 import Foreign.ForeignPtrWrap
 import Foreign.C.Types
 import Foreign.Ptr
@@ -107,8 +109,38 @@ foreign import ccall unsafe "highgui.h cvQueryFrame"
 
 cvQueryFrame :: Ptr CvCapture -> IO (Maybe (Ptr IplImage))
 cvQueryFrame cap = ptrToMaybe `fmap` c_cvQueryFrame cap
--- cvQueryFrame cap = errorName "Failed to query frame from capture device" . 
---                    checkPtr $ c_cvQueryFrame cap
+
+data CvVideoWriter
+
+type FourCC = (Char, Char, Char, Char)
+
+fourCC :: FourCC -> CInt
+fourCC (a,b,c,d) = (c1 .&. 255) + shiftL (c2 .&. 255) 8 + 
+                   shiftL (c3 .&. 255) 16 + shiftL (c4 .&. 255) 24
+    where [c1,c2,c3,c4] = map (fromIntegral . fromEnum) [a,b,c,d]
+
+foreign import ccall unsafe "highgui.h cvCreateVideoWriter"
+  c_cvCreateVideoWriter :: CString -> CInt -> CDouble -> CInt -> CInt -> CInt ->
+                           IO (Ptr CvVideoWriter)
+
+foreign import ccall unsafe "HOpenCV_wrap.h &release_video_writer"
+  cp_release_writer :: FunPtr (Ptr CvVideoWriter -> IO ())
+
+cvCreateVideoWriter :: FilePath -> FourCC -> Double -> (Int, Int) -> 
+                       IO (Ptr CvVideoWriter)
+cvCreateVideoWriter fname codec fps (w, h) = 
+    withCString fname $ \str ->
+        c_cvCreateVideoWriter str (fourCC codec) (realToFrac fps) 
+                              (fromIntegral w) (fromIntegral h) 1
+                              
+-- |Create a video file writer.
+createVideoWriterF :: FilePath -> FourCC -> Double -> (Int, Int) -> 
+                      IO (ForeignPtr CvVideoWriter)
+createVideoWriterF fname codec fps sz = createForeignPtr cp_release_writer $
+                                        cvCreateVideoWriter fname codec fps sz
+
+foreign import ccall unsafe "highgui.h cvWriteFrame"
+  cvWriteFrame :: Ptr CvVideoWriter -> Ptr IplImage -> IO ()
 
 -------------------------------------------------
 -- Windows

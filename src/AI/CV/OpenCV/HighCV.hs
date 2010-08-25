@@ -9,16 +9,17 @@ module AI.CV.OpenCV.HighCV (erode, dilate, houghStandard, houghProbabilistic,
                             toFile, fromPtr, isColor, isMono, 
                             withImagePixels, sampleLine, Connectivity(..), 
                             fromPixels, cannyEdges, createFileCapture, 
-                            createCameraCapture, resize, 
+                            createCameraCapture, resize, FourCC,
                             InterpolationMethod(..), MonoChromatic, 
-                            TriChromatic, FreshImage,
+                            TriChromatic, FreshImage, createVideoWriter,
                             module AI.CV.OpenCV.ColorConversion)
     where
 import AI.CV.OpenCV.Core.CxCore
 import AI.CV.OpenCV.Core.CV
 import AI.CV.OpenCV.Core.HighGui (createFileCaptureF, cvQueryFrame, 
                                   setCapturePos, CapturePos(PosFrames), 
-                                  CvCapture, createCameraCaptureF)
+                                  CvCapture, createCameraCaptureF, 
+                                  createVideoWriterF, cvWriteFrame, FourCC)
 import AI.CV.OpenCV.Core.HIplUtils
 import AI.CV.OpenCV.ColorConversion
 --import AI.CV.OpenCV.Contours
@@ -253,6 +254,21 @@ createCameraCapture cam = do capture <- createCameraCaptureF cam'
                              return (withForeignPtr capture $ 
                                      (>>= fromPtr) . queryError)
     where cam' = maybe (-1) id cam
+
+-- |Create a video file writer. The parameters are the file name, the
+-- 4-character code (of the codec used to compress the frames
+-- (e.g. @(\'F\',\'M\',\'P\',\'4\')@ for MPEG-4), the framerate of the
+-- created video stream, and the size of the video frames. The
+-- returned action may be used to add frames to the video stream.
+createVideoWriter :: (HasChannels c, HasDepth d, Storable d) =>
+                     FilePath -> FourCC -> Double -> (Int,Int) -> 
+                     IO (HIplImage a c d -> IO ())
+createVideoWriter fname codec fps sz = 
+    do writer <- createVideoWriterF fname codec fps sz
+       let writeFrame img = withForeignPtr writer $ \writer' ->
+                              withHIplImage img $ \img' ->
+                                cvWriteFrame writer' img'
+       return writeFrame
 
 -- |Resize the supplied 'HIplImage' to the given width and height using
 -- the supplied 'InterpolationMethod'.

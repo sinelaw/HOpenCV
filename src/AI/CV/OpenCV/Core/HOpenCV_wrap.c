@@ -35,6 +35,12 @@ void release_capture(CvCapture *capture)
     cvReleaseCapture(&temp);
 }
 
+void release_video_writer(CvVideoWriter *writer)
+{
+    CvVideoWriter *temp = writer;
+    cvReleaseVideoWriter(&temp);
+}
+
 /****************************************************************************/
 
 void num_to_name(int num, char *name, int length)

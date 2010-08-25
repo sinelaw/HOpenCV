@@ -4,6 +4,7 @@
 void debug_print_image_header(IplImage *image);
 
 void release_capture(CvCapture *capture);
+void release_video_writer(CvVideoWriter *writer);
 
     
 void new_window(int num, int flags);
