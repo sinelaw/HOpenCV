@@ -29,9 +29,8 @@ subRS value src = unsafePerformIO $
 -- scalar value.
 unsafeSubRS :: (HasChannels c, HasDepth d, HasScalar c d,
                 IsCvScalar s, s ~ CvScalar c d) =>
-               s -> HIplImage c d -> HIplImage c d
-unsafeSubRS value src = unsafePerformIO $
-                        withHIplImage src $ \srcPtr ->
+               s -> HIplImage c d -> IO (HIplImage c d)
+unsafeSubRS value src = withHIplImage src $ \srcPtr ->
                             do c_cvSubRS (castPtr srcPtr) r g b a
                                          (castPtr srcPtr) nullPtr
                                return src
@@ -54,9 +53,8 @@ absDiff src1 src2 = unsafePerformIO $
                                       (castPtr dst)
 
 unsafeAbsDiff :: (HasChannels c, HasDepth d) => 
-                 HIplImage c d -> HIplImage c d -> HIplImage c d
-unsafeAbsDiff src1 src2 = unsafePerformIO $
-                          withHIplImage src1 $ \src1' ->
+                 HIplImage c d -> HIplImage c d -> IO (HIplImage c d)
+unsafeAbsDiff src1 src2 = withHIplImage src1 $ \src1' ->
                             withHIplImage src2 $ \src2' ->
                                 do c_cvAbsDiff (castPtr src1') (castPtr src2') 
                                                (castPtr src2')
@@ -118,20 +116,19 @@ cvAnd src1 src2 = fst . withCompatibleImage src1 $ \dst ->
                         cvAndAux src1' src2' dst nullPtr
 
 unsafeAnd :: (HasChannels c, HasDepth d) => 
-             HIplImage c d -> HIplImage c d -> HIplImage c d
-unsafeAnd src1 src2 = unsafePerformIO $
-                      withHIplImage src1 $ \src1' ->
+             HIplImage c d -> HIplImage c d -> IO (HIplImage c d)
+unsafeAnd src1 src2 = withHIplImage src1 $ \src1' ->
                         withHIplImage src2 $ \src2' ->
                           cvAndAux src1' src2' src2' nullPtr >> return src2
 
 unsafeAndMask :: (HasChannels c, HasDepth d) => 
                  HIplImage MonoChromatic Word8 -> HIplImage c d ->  
-                 HIplImage c d -> HIplImage c d
-unsafeAndMask mask src1 src2 = unsafePerformIO $
-                      withHIplImage src1 $ \src1' ->
-                        withHIplImage src2 $ \src2' ->
-                          withHIplImage mask $ \mask' ->
-                            cvAndAux src1' src2' src2' mask' >> return src2
+                 HIplImage c d -> IO (HIplImage c d)
+unsafeAndMask mask src1 src2 = withHIplImage src1 $ \src1' ->
+                                 withHIplImage src2 $ \src2' ->
+                                   withHIplImage mask $ \mask' ->
+                                     cvAndAux src1' src2' src2' mask' >> 
+                                     return src2
 
 {-# RULES 
 "cvAnd/in-place" forall s. cvAnd s = pipeline (unsafeAnd s)
@@ -153,9 +150,8 @@ cvAndS s img = fst . withCompatibleImage img $ \dst ->
 
 unsafeAndS :: (HasChannels c, HasDepth d, HasScalar c d, IsCvScalar s, 
                s ~ CvScalar c d) => 
-              s -> HIplImage c d -> HIplImage c d
-unsafeAndS s img = unsafePerformIO $
-                   do withHIplImage img $ \src ->
+              s -> HIplImage c d -> IO (HIplImage c d)
+unsafeAndS s img = do withHIplImage img $ \src ->
                         c_cvAndS (castPtr src) r g b a (castPtr src) nullPtr
                       return img
     where (r,g,b,a) = toCvScalar s
@@ -201,17 +197,15 @@ cvMul' scale src1 src2 = fst . withCompatibleImage src1 $ \dst ->
                                    cvMulAux src1' src2' dst scale
 
 unsafeMul :: (HasChannels c, HasDepth d) => 
-             HIplImage c d -> HIplImage c d -> HIplImage c d
-unsafeMul src1 src2 = unsafePerformIO $
-                      do withHIplImage src1 $ \src1' ->
+             HIplImage c d -> HIplImage c d -> IO (HIplImage c d)
+unsafeMul src1 src2 = do withHIplImage src1 $ \src1' ->
                              withHIplImage src2 $ \src2' ->
                                  cvMulAux src1' src2' src2' 1
                          return src2
 
 unsafeMul' :: (HasChannels c, HasDepth d) => 
-              Double -> HIplImage c d -> HIplImage c d -> HIplImage c d
-unsafeMul' scale src1 src2 = unsafePerformIO $
-                             do withHIplImage src1 $ \src1' ->
+              Double -> HIplImage c d -> HIplImage c d -> IO (HIplImage c d)
+unsafeMul' scale src1 src2 = do withHIplImage src1 $ \src1' ->
                                   withHIplImage src2 $ \src2' ->
                                     cvMulAux src1' src2' src2' scale
                                 return src2
@@ -234,9 +228,8 @@ cvAdd src1 src2 = fst . withCompatibleImage src1 $ \dst ->
                                  (castPtr dst) nullPtr
 
 unsafeAdd  :: (HasChannels c, HasDepth d) => 
-              HIplImage c d -> HIplImage c d -> HIplImage c d
-unsafeAdd src1 src2 = unsafePerformIO $
-                      do withHIplImage src1 $ \src1' ->
+              HIplImage c d -> HIplImage c d -> IO (HIplImage c d)
+unsafeAdd src1 src2 = do withHIplImage src1 $ \src1' ->
                            withHIplImage src2 $ \src2' ->
                              c_cvAdd (castPtr src1') (castPtr src2') 
                                      (castPtr src2') nullPtr
@@ -254,11 +247,10 @@ cvAddS scalar src = fst . withCompatibleImage src $ \dst ->
     where (r,g,b,a) = toCvScalar scalar
 
 unsafeAddS :: (HasChannels c, HasDepth d, IsCvScalar s, s ~ CvScalar c d) => 
-              s -> HIplImage c d -> HIplImage c d
-unsafeAddS scalar src = unsafePerformIO $ do
-                        withHIplImage src $ \src' ->
-                          c_cvAddS (castPtr src') r g b a (castPtr src') nullPtr
-                        return src
+              s -> HIplImage c d -> IO (HIplImage c d)
+unsafeAddS scalar src = do withHIplImage src $ \src' ->
+                             c_cvAddS (castPtr src') r g b a (castPtr src') nullPtr
+                           return src
     where (r,g,b,a) = toCvScalar scalar
 
 {-# RULES

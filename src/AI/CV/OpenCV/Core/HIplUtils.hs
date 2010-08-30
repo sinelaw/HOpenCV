@@ -221,12 +221,13 @@ getROI (rx,ry) (rw,rh) src =
           bpp = imgChannels src * colorDepth src
           rowLen = rw*bpp
 
-pipeline :: (HIplImage c d -> r) -> HIplImage c d -> r
-pipeline f = unsafePerformIO . (return . (f $!) <=< duplicateImage)
+pipeline :: (HIplImage c d -> IO r) -> HIplImage c d -> r
+--pipeline f = unsafePerformIO . ((f $!) <=< duplicateImage)
+pipeline f = unsafePerformIO . (f <=< duplicateImage)
 
 {-# NOINLINE pipeline #-}
 
 {-# RULES
-"pipeline/join" forall f g h. pipeline f (pipeline g h) = pipeline (f . g) h
-"pipeline/compose" forall f g. pipeline f . pipeline g = pipeline (f. g)
+"pipeline/join" forall f g h. pipeline f (pipeline g h) = pipeline (f <=< g) h
+"pipeline/compose" forall f g. pipeline f . pipeline g = pipeline (f <=< g)
   #-}

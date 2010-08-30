@@ -53,9 +53,8 @@ dilate n img = unsafePerformIO . withHIplImage img $
 -- image and is only used by the rewrite rules when there is no way to
 -- observe the input image.
 unsafeErode :: (HasChannels c, HasDepth d) => 
-               Int -> HIplImage c d -> HIplImage c d
-unsafeErode n img = unsafePerformIO $
-                    withHIplImage img (\src -> cvErode src src n') >> 
+               Int -> HIplImage c d -> IO (HIplImage c d)
+unsafeErode n img = withHIplImage img (\src -> cvErode src src n') >> 
                     return (unsafeCoerce img)
     where n' = fromIntegral n
 
@@ -63,9 +62,8 @@ unsafeErode n img = unsafePerformIO $
 -- given image and is only used by the rewrite rules when there is no
 -- way to observe the input image.
 unsafeDilate :: (HasChannels c, HasDepth d) =>
-                Int -> HIplImage c d-> HIplImage c d
-unsafeDilate n img = unsafePerformIO $
-                     withHIplImage img (\src -> cvDilate src src n') >> 
+                Int -> HIplImage c d-> IO (HIplImage c d)
+unsafeDilate n img = withHIplImage img (\src -> cvDilate src src n') >> 
                      return (unsafeCoerce img)
     where n' = fromIntegral n
 
@@ -171,10 +169,10 @@ drawLines col thick lineType lines img =
 -- |Unsafe in-place line drawing.
 unsafeDrawLines :: (HasChannels c, HasDepth d) =>
                    RGB -> Int -> LineType -> [((Int,Int),(Int,Int))] -> 
-                   HIplImage c d -> HIplImage c d
+                   HIplImage c d -> IO (HIplImage c d)
 unsafeDrawLines col thick lineType lines img = 
-    unsafePerformIO . withHIplImage img $ \ptr -> 
-        mapM_ (draw ptr) lines >> return (unsafeCoerce img)
+    withHIplImage img $ \ptr -> 
+      mapM_ (draw ptr) lines >> return (unsafeCoerce img)
     where draw ptr (pt1,pt2) = cvLine ptr pt1 pt2 col thick lineType'
           lineType' = lineTypeEnum lineType
 
@@ -197,9 +195,9 @@ cannyEdges threshold1 threshold2 aperture img =
 
 unsafeCanny :: HasDepth d =>
                Double -> Double -> Int -> HIplImage MonoChromatic d -> 
-               HIplImage MonoChromatic d
+               IO (HIplImage MonoChromatic d)
 unsafeCanny threshold1 threshold2 aperture img = 
-    unsafePerformIO . withHIplImage img $ \src -> 
+    withHIplImage img $ \src -> 
         cvCanny src src threshold1 threshold2 aperture >> return img
 
 {-# RULES "canny/in-place" forall t1 t2 a.

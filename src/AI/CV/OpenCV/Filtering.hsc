@@ -54,9 +54,8 @@ smoothGaussian' w h sigma src =
 
 unsafeGaussian  :: (ByteOrFloat d, HasChannels c) => 
                    Int -> Maybe Int -> Maybe Double ->
-                   HIplImage c d -> HIplImage c d
-unsafeGaussian w h sigma src = unsafePerformIO $ 
-                               withHIplImage src $ \src' ->
+                   HIplImage c d -> IO (HIplImage c d)
+unsafeGaussian w h sigma src = withHIplImage src $ \src' ->
                                  do smooth src' src' cvGaussian w h' sigma' 0
                                     return src
     where sigma' = case sigma of

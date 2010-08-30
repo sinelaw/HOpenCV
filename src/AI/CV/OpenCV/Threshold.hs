@@ -62,9 +62,8 @@ cvThreshold1 threshold maxValue tType src =
 
 unsafeCvThreshold :: ByteOrFloat d1 =>
                      d1 -> d1 -> Int -> HIplImage MonoChromatic d1 ->
-                     (HIplImage MonoChromatic d1, d1)
+                     IO (HIplImage MonoChromatic d1, d1)
 unsafeCvThreshold threshold maxValue tType src = 
-    unsafePerformIO $
     withHIplImage src $ \srcPtr ->
       do r <- c_cvThreshold (castPtr srcPtr) (castPtr srcPtr) 
                              threshold' maxValue' tType'
@@ -75,8 +74,8 @@ unsafeCvThreshold threshold maxValue tType src =
 
 unsafeCvThreshold1 :: ByteOrFloat d1 =>
                       d1 -> d1 -> Int -> HIplImage MonoChromatic d1 ->
-                      HIplImage MonoChromatic d1
-unsafeCvThreshold1 th mv tt = fst . unsafeCvThreshold th mv tt
+                      IO (HIplImage MonoChromatic d1)
+unsafeCvThreshold1 th mv tt = fmap fst . unsafeCvThreshold th mv tt
 
 {-# RULES 
 "cvThreshold1/in-place" forall t mv tt.
@@ -95,7 +94,7 @@ cvThresholdOtsu maxValue tType = cvThreshold 0 maxValue tType'
 
 unsafeCvThresholdOtsu :: Word8 -> Int -> 
                          HIplImage MonoChromatic Word8 ->
-                         (HIplImage MonoChromatic Word8, Word8)
+                         IO (HIplImage MonoChromatic Word8, Word8)
 unsafeCvThresholdOtsu maxValue tType = unsafeCvThreshold 0 maxValue tType'
     where otsu = 8
           tType' = tType .|. otsu
@@ -121,13 +120,13 @@ thresholdBinaryInv th maxValue = cvThreshold1 th maxValue tType
 
 unsafeThreshBin :: ByteOrFloat d =>
                    d -> d -> HIplImage MonoChromatic d ->
-                   HIplImage MonoChromatic d
+                   IO (HIplImage MonoChromatic d)
 unsafeThreshBin th maxValue = unsafeCvThreshold1 th maxValue tType
     where tType = fromEnum ThreshBinary
 
 unsafeThreshBinInv :: ByteOrFloat d =>
                       d -> d -> HIplImage MonoChromatic d ->
-                      HIplImage MonoChromatic d
+                      IO (HIplImage MonoChromatic d)
 unsafeThreshBinInv th maxValue = unsafeCvThreshold1 th maxValue tType
     where tType = fromEnum ThreshBinaryInv
 
@@ -149,7 +148,7 @@ thresholdTruncate threshold = cvThreshold1 threshold 0 (fromEnum ThreshTrunc)
 
 unsafeThreshTrunc :: ByteOrFloat d1 =>
                      d1 -> HIplImage MonoChromatic d1 ->
-                     HIplImage MonoChromatic d1
+                     IO (HIplImage MonoChromatic d1)
 unsafeThreshTrunc th = unsafeCvThreshold1 th 0 (fromEnum ThreshTrunc)
 
 {-# RULES "thresholdTruncate/in-place" forall th. 
@@ -175,13 +174,13 @@ thresholdToZeroInv threshold = cvThreshold1 threshold 0 tType
 
 unsafeThresholdToZero :: ByteOrFloat d => 
                          d -> HIplImage MonoChromatic d ->
-                         HIplImage MonoChromatic d
+                         IO (HIplImage MonoChromatic d)
 unsafeThresholdToZero th = unsafeCvThreshold1 th 0 tType
     where tType = fromEnum ThreshToZero
 
 unsafeThresholdToZeroInv :: ByteOrFloat d => 
                             d -> HIplImage MonoChromatic d ->
-                            HIplImage MonoChromatic d
+                            IO (HIplImage MonoChromatic d)
 unsafeThresholdToZeroInv th = unsafeCvThreshold1 th 0 tType
     where tType = fromEnum ThreshToZeroInv
 
@@ -215,12 +214,12 @@ thresholdBinaryOtsuInv maxValue = cvThresholdOtsu maxValue tType
     where tType = fromEnum ThreshBinaryInv
 
 unsafeBinOtsu :: Word8 -> HIplImage MonoChromatic Word8 ->
-                 (HIplImage MonoChromatic Word8, Word8)
+                 IO (HIplImage MonoChromatic Word8, Word8)
 unsafeBinOtsu maxValue = unsafeCvThresholdOtsu maxValue tType
     where tType = fromEnum ThreshBinary
 
 unsafeBinOtsuInv :: Word8 -> HIplImage MonoChromatic Word8 ->
-                    (HIplImage MonoChromatic Word8, Word8)
+                    IO (HIplImage MonoChromatic Word8, Word8)
 unsafeBinOtsuInv maxValue = unsafeCvThresholdOtsu maxValue tType
     where tType = fromEnum ThreshBinaryInv
 
@@ -242,7 +241,7 @@ thresholdTruncateOtsu :: HIplImage MonoChromatic Word8 ->
 thresholdTruncateOtsu = cvThresholdOtsu 0 (fromEnum ThreshTrunc)
 
 unsafeTruncOtsu :: HIplImage MonoChromatic Word8 -> 
-                   (HIplImage MonoChromatic Word8, Word8)
+                   IO (HIplImage MonoChromatic Word8, Word8)
 unsafeTruncOtsu = unsafeCvThresholdOtsu 0 (fromEnum ThreshTrunc)
 
 {-# RULES "thresholdTruncateOtsu/in-place" 
@@ -264,12 +263,12 @@ thresholdToZeroOtsuInv :: HIplImage MonoChromatic Word8 ->
 thresholdToZeroOtsuInv = cvThresholdOtsu 0 (fromEnum ThreshToZeroInv)
 
 unsafeToZeroOtsu :: HIplImage MonoChromatic Word8 -> 
-                    (HIplImage MonoChromatic Word8, Word8)
+                    IO (HIplImage MonoChromatic Word8, Word8)
 unsafeToZeroOtsu = unsafeCvThresholdOtsu 0 tType
     where tType = fromEnum ThreshToZero
 
 unsafeToZeroOtsuInv :: HIplImage MonoChromatic Word8 -> 
-                       (HIplImage MonoChromatic Word8, Word8)
+                       IO (HIplImage MonoChromatic Word8, Word8)
 unsafeToZeroOtsuInv = unsafeCvThresholdOtsu 0 tType
     where tType = fromEnum ThreshToZeroInv
 
