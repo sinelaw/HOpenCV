@@ -13,6 +13,7 @@ module AI.CV.OpenCV.Core.HIplUtils
 import AI.CV.OpenCV.Core.CxCore (IplImage)
 import AI.CV.OpenCV.Core.HighGui (cvLoadImage, cvSaveImage, LoadColor(..))
 import AI.CV.OpenCV.Core.HIplImage
+import Control.Monad ((<=<))
 import Control.Monad.ST (runST, unsafeIOToST)
 import qualified Data.Vector.Storable as V
 import Data.Word (Word8)
@@ -181,7 +182,7 @@ fromColorPixels w h = isColor . fromPixels w h
 withDuplicateImage :: (HasChannels c, HasDepth d) => 
                       HIplImage a c d -> (Ptr IplImage -> IO b) -> 
                       (HIplImage FreshImage c d, b)
-withDuplicateImage img1 f = runST $ unsafeIOToST $
+withDuplicateImage img1 f = unsafePerformIO $
                             do img2 <- duplicateImage img1
                                r <- withHIplImage img2 f
                                return (img2, r)
@@ -220,3 +221,6 @@ getROI (rx,ry) (rw,rh) src =
           start = stride*ry + rx*bpp
           bpp = imgChannels src * colorDepth src
           rowLen = rw*bpp
+
+pipeline :: (HIplImage FreshImage c1 d1 -> HIplImage FreshImage c2 d2) -> HIplImage a c1 d1 -> HIplImage FreshImage c2 d2
+pipeline f = unsafePerformIO . (return . f <=< duplicateImage)

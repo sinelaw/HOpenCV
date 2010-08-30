@@ -12,7 +12,8 @@ module AI.CV.OpenCV.HighCV (erode, dilate, houghStandard, houghProbabilistic,
                             createCameraCapture, resize, FourCC, getROI,
                             InterpolationMethod(..), MonoChromatic, 
                             TriChromatic, FreshImage, createVideoWriter,
-                            module AI.CV.OpenCV.ColorConversion)
+                            module AI.CV.OpenCV.ColorConversion, 
+                            createFileCaptureLoop)
     where
 import AI.CV.OpenCV.Core.CxCore
 import AI.CV.OpenCV.Core.CV
@@ -23,19 +24,18 @@ import AI.CV.OpenCV.Core.HighGui (createFileCaptureF, cvQueryFrame,
 import AI.CV.OpenCV.Core.HIplUtils
 import AI.CV.OpenCV.ColorConversion
 --import AI.CV.OpenCV.Contours
-import Control.Monad.ST (runST, unsafeIOToST)
 import Data.Word (Word8)
 import Foreign.Ptr
 import Foreign.ForeignPtr (withForeignPtr)
 import Foreign.Storable
+import System.IO.Unsafe (unsafePerformIO)
 import Unsafe.Coerce
 
 -- |Erode an 'HIplImage' with a 3x3 structuring element for the
 -- specified number of iterations.
 erode :: (HasChannels c, HasDepth d) =>
          Int -> HIplImage a c d -> HIplImage FreshImage c d
-erode n img = runST $
-              unsafeIOToST . withHIplImage img $
+erode n img = unsafePerformIO . withHIplImage img $
               \src -> return . fst . withCompatibleImage img $
                       \dst -> cvErode src dst n'
     where n' = fromIntegral n
@@ -44,8 +44,7 @@ erode n img = runST $
 -- specified number of iterations.
 dilate :: (HasChannels c, HasDepth d) =>
           Int -> HIplImage a c d -> HIplImage FreshImage c d
-dilate n img = runST $ 
-               unsafeIOToST . withHIplImage img $
+dilate n img = unsafePerformIO . withHIplImage img $
                \src -> return . fst . withCompatibleImage img $
                        \dst -> cvDilate src dst n'
     where n' = fromIntegral n
@@ -55,10 +54,9 @@ dilate n img = runST $
 -- observe the input image.
 unsafeErode :: (HasChannels c, HasDepth d) =>
                Int -> HIplImage a c d -> HIplImage FreshImage c d
-unsafeErode n img = runST $ 
-                    unsafeIOToST $
-                        withHIplImage img (\src -> cvErode src src n') >> 
-                        return (unsafeCoerce img)
+unsafeErode n img = unsafePerformIO $
+                    withHIplImage img (\src -> cvErode src src n') >> 
+                    return (unsafeCoerce img)
     where n' = fromIntegral n
 
 -- |Unsafe in-place dilation. This is a destructive update of the
@@ -66,10 +64,9 @@ unsafeErode n img = runST $
 -- way to observe the input image.
 unsafeDilate :: (HasChannels c, HasDepth d) =>
                 Int -> HIplImage a c d-> HIplImage FreshImage c d
-unsafeDilate n img = runST $ 
-                     unsafeIOToST $
-                         withHIplImage img (\src -> cvDilate src src n') >> 
-                         return (unsafeCoerce img)
+unsafeDilate n img = unsafePerformIO $
+                     withHIplImage img (\src -> cvDilate src src n') >> 
+                     return (unsafeCoerce img)
     where n' = fromIntegral n
 
 -- Perform destructive in-place updates when such a change is
@@ -89,8 +86,7 @@ unsafeDilate n img = runST $
 -- of pixel values.
 sampleLine :: (HasChannels c, HasDepth d) =>
               (Int, Int) -> (Int, Int) -> Connectivity -> HIplImage a c d -> [d]
-sampleLine pt1 pt2 conn img = runST $ unsafeIOToST $ 
-                              withHIplImage img $ 
+sampleLine pt1 pt2 conn img = unsafePerformIO . withHIplImage img $ 
                                 \p -> cvSampleLine p pt1 pt2 conn
 
 -- |Line detection in a binary image using a standard Hough
@@ -99,7 +95,7 @@ sampleLine pt1 pt2 conn img = runST $ unsafeIOToST $
 -- line classification accumulator threshold; and the input image.
 houghStandard :: Double -> Double -> Int -> HIplImage a MonoChromatic Word8 -> 
                  [((Int, Int),(Int,Int))]
-houghStandard rho theta threshold img = runST $ unsafeIOToST $
+houghStandard rho theta threshold img = unsafePerformIO $
     do storage <- cvCreateMemStorage (min 0 (fromIntegral threshold))
        cvSeq <- withHIplImage img $ 
                 \p -> cvHoughLines2 p storage 0 rho theta threshold 0 0
@@ -129,7 +125,7 @@ houghStandard rho theta threshold img = runST $ unsafeIOToST $
 houghProbabilistic :: Double -> Double -> Int -> Double -> Double -> 
                       HIplImage a MonoChromatic Word8 -> [((Int, Int),(Int,Int))]
 houghProbabilistic rho theta threshold minLength maxGap img = 
-    runST $ unsafeIOToST $
+    unsafePerformIO $
     do storage <- cvCreateMemStorage (min 0 (fromIntegral threshold))
        let cvSeq = snd $ withDuplicateImage img $
                      \p -> cvHoughLines2 p storage 1 rho theta threshold
@@ -177,8 +173,8 @@ unsafeDrawLines :: (HasChannels c, HasDepth d) =>
                    RGB -> Int -> LineType -> [((Int,Int),(Int,Int))] -> 
                    HIplImage a c d -> HIplImage FreshImage c d
 unsafeDrawLines col thick lineType lines img = 
-    runST $ unsafeIOToST $
-    withHIplImage img $ \ptr -> mapM_ (draw ptr) lines >> return (unsafeCoerce img)
+    unsafePerformIO . withHIplImage img $ \ptr -> 
+        mapM_ (draw ptr) lines >> return (unsafeCoerce img)
     where draw ptr (pt1,pt2) = cvLine ptr pt1 pt2 col thick lineType'
           lineType' = lineTypeEnum lineType
 
@@ -204,8 +200,7 @@ unsafeCanny :: HasDepth d =>
                Double -> Double -> Int -> HIplImage FreshImage MonoChromatic d -> 
                HIplImage FreshImage MonoChromatic d
 unsafeCanny threshold1 threshold2 aperture img = 
-    runST $ unsafeIOToST $
-    withHIplImage img $ \src -> 
+    unsafePerformIO . withHIplImage img $ \src -> 
         cvCanny src src threshold1 threshold2 aperture >> return img
 
 {-# RULES
@@ -237,12 +232,28 @@ queryFrameLoop cap = do f <- cvQueryFrame cap
                           Just f' -> return f'
 
 -- |Open a capture stream from a movie file. The returned action may
--- be used to query for the next available frame.
+-- be used to query for the next available frame. If no frame is
+-- available either due to error or the end of the video sequence,
+-- 'Nothing' is returned.
 createFileCapture :: (HasChannels c, HasDepth d) =>
-                     FilePath -> IO (IO (HIplImage () c d))
+                     FilePath -> IO (IO (Maybe (HIplImage () c d)))
 createFileCapture fname = do capture <- createFileCaptureF fname
-                             return (withForeignPtr capture $ 
-                                     (>>= fromPtr) . queryFrameLoop)
+                             return (withForeignPtr capture $ \cap ->
+                                       do f <- cvQueryFrame cap
+                                          case f of
+                                            Nothing -> return Nothing
+                                            Just f' -> Just `fmap` fromPtr f')
+
+-- |Open a capture stream from a movie file. The returned action may
+-- be used to query for the next available frame. The sequence of
+-- frames will return to its beginning when the end of the video is
+-- encountered.
+createFileCaptureLoop :: (HasChannels c, HasDepth d) =>
+                     FilePath -> IO (IO (HIplImage () c d))
+createFileCaptureLoop fname = do capture <- createFileCaptureF fname
+                                 return (withForeignPtr capture $ 
+                                         (>>= fromPtr) . queryFrameLoop)
+
 
 -- |Open a capture stream from a connected camera. The parameter is
 -- the index of the camera to be used, or 'Nothing' if it does not
@@ -276,7 +287,7 @@ resize :: (HasChannels c, HasDepth d) =>
           InterpolationMethod -> Int -> Int -> HIplImage a c d -> 
           HIplImage FreshImage c d
 resize method w h img = 
-    runST $ unsafeIOToST $
+    unsafePerformIO $
     do img' <- mkHIplImage w h
        _ <- withHIplImage img $ \src ->
               withHIplImage img' $ \dst ->
