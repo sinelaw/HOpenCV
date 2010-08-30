@@ -1,9 +1,8 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, ScopedTypeVariables, 
-             GADTs, TypeFamilies, MultiParamTypeClasses, FlexibleInstances #-}
+             TypeFamilies, MultiParamTypeClasses, FlexibleInstances, GADTs #-}
 module AI.CV.OpenCV.Core.HIplImage 
     ( FreshImage, TriChromatic, MonoChromatic, HasChannels(..), HasDepth(..), 
-      HIplImage(..), width, height, imageData, imageSize, widthStep, 
-      mkHIplImage, mkBlackImage, withHIplImage, bytesPerPixel, 
+      HIplImage(..), mkHIplImage, mkBlackImage, withHIplImage, bytesPerPixel, 
       ByteOrFloat, HasScalar(..), IsCvScalar(..)) where
 import AI.CV.OpenCV.Core.CxCore (IplImage,Depth(..),iplDepth8u, iplDepth16u,
                                  iplDepth32f, iplDepth64f)
@@ -62,9 +61,9 @@ data MonoChromatic
 class HasChannels a where
     numChannels :: a -> Int
 
-class HasDepth a where
-    depth    :: a -> Depth
-    toDouble :: a -> Double
+class (Storable a, Num a) => HasDepth a where
+    depth      :: a -> Depth
+    toDouble   :: a -> Double
     fromDouble :: Double -> a
 
 instance HasChannels TriChromatic where numChannels _ = 3
@@ -86,7 +85,7 @@ instance HasDepth Double where
     toDouble = id
     fromDouble = id
 
-class ByteOrFloat a where
+class HasDepth a => ByteOrFloat a where
 instance ByteOrFloat Word8 where
 instance ByteOrFloat Float where
 
@@ -130,24 +129,17 @@ bytesPerPixel = (`div` 8) . fromIntegral . unSign . unDepth . depth
 -- backing pixel data is fresh (vs shared), the number of color
 -- channels (i.e. 'MonoChromatic' or 'TriChromatic'), and the pixel
 -- depth (e.g. 'Word8', 'Float').
-data HIplImage a c d where
-    HIplImage :: (HasChannels c, HasDepth d, Storable d) => 
-                 Int -> Int -> Int -> Int -> ForeignPtr d -> Int -> 
-                 HIplImage a c d
-
-origin, width, height, imageSize, widthStep :: HIplImage a c d -> Int
-origin (HIplImage o _ _ _ _ _) = o
-width (HIplImage _ w _ _ _ _) = w
-height (HIplImage _ _ h _ _ _) = h
-imageSize (HIplImage _ _ _ s _ _) = s
-widthStep (HIplImage _ _ _ _ _ s) = s
-
-imageData :: HIplImage a c d -> ForeignPtr d
-imageData (HIplImage _ _ _ _ d _) = d
+data HIplImage a c d = (HasChannels c, HasDepth d) => 
+                       HIplImage { origin    :: Int
+                                 , width     :: Int
+                                 , height    :: Int
+                                 , imageSize :: Int
+                                 , imageData :: ForeignPtr d
+                                 , widthStep :: Int }
 
 -- |Prepare a 'HIplImage' of the given width and height. The pixel and
 -- color depths are gleaned from the type, and may often be inferred.
-mkHIplImage :: forall c d. (HasChannels c, HasDepth d, Storable d) => 
+mkHIplImage :: forall c d. (HasChannels c, HasDepth d) => 
                Int -> Int -> IO (HIplImage FreshImage c d)
 mkHIplImage w h = 
     do ptr <- mallocForeignPtrArray numBytes
@@ -161,8 +153,8 @@ foreign import ccall unsafe "memset"
 
 -- |Prepare a 'HIplImage' of the given width and height. Set all
 -- pixels to zero.
-mkBlackImage :: (HasChannels c, HasDepth d, Storable d, Integral a) => 
-                    a -> a -> IO (HIplImage FreshImage c d)
+mkBlackImage :: (HasChannels c, HasDepth d, Integral a) => 
+                a -> a -> IO (HIplImage FreshImage c d)
 mkBlackImage w h = do img <- mkHIplImage (fromIntegral w) (fromIntegral h)
                       let sz = fromIntegral $ imageSize img
                       withForeignPtr (imageData img) $ \ptr ->
@@ -171,7 +163,7 @@ mkBlackImage w h = do img <- mkHIplImage (fromIntegral w) (fromIntegral h)
 
 -- |Provides the supplied function with a 'Ptr' to the 'IplImage'
 -- underlying the given 'HIplImage'.
-withHIplImage :: (HasChannels c, HasDepth d, Storable d) =>
+withHIplImage :: (HasChannels c, HasDepth d) =>
                  HIplImage a c d -> (Ptr IplImage -> IO b) -> IO b
 withHIplImage img f = alloca $ 
                       \p -> withForeignPtr (imageData img) 
@@ -212,29 +204,11 @@ pokeIpl himg ptr hp =
 -- values constructed within the Haskell runtime, on the other hand,
 -- do have their underlying pixel data buffers registered with a
 -- finalizer.
-instance forall a c d. (HasChannels c, HasDepth d, Storable d) => 
+instance forall a c d. (HasChannels c, HasDepth d) => 
     Storable (HIplImage a c d) where
     sizeOf _ = (#size IplImage)
     alignment _ = alignment (undefined :: CDouble)
     poke = error "Poking a Ptr HIplImage is unsafe."
-    -- poke ptr himg = do
-    --   (#poke IplImage, nSize) ptr ((#size IplImage)::Int)
-    --   (#poke IplImage, ID) ptr (0::Int)
-    --   (#poke IplImage, nChannels) ptr (numChannels himg)
-    --   (#poke IplImage, depth) ptr (unDepth (depth himg))
-    --   (#poke IplImage, dataOrder) ptr (dataOrder himg)
-    --   (#poke IplImage, origin) ptr (origin himg)
-    --   (#poke IplImage, width) ptr (width himg)
-    --   (#poke IplImage, height) ptr (height himg)
-    --   (#poke IplImage, roi) ptr nullPtr
-    --   (#poke IplImage, maskROI) ptr nullPtr
-    --   (#poke IplImage, imageId) ptr nullPtr
-    --   (#poke IplImage, tileInfo) ptr nullPtr
-    --   (#poke IplImage, imageSize) ptr (imageSize himg)
-    --   withForeignPtr (imageData himg) $ \p -> (#poke IplImage, imageData) ptr p
-    --   (#poke IplImage, widthStep) ptr (widthStep himg)
-    --   withForeignPtr (imageDataOrigin himg) $ 
-    --     \p ->(#poke IplImage, imageDataOrigin) ptr p
     peek ptr = do
       numChannels' <- (#peek IplImage, nChannels) ptr :: IO Int
       depth' <- Depth <$> (#peek IplImage, depth) ptr
@@ -258,8 +232,3 @@ instance forall a c d. (HasChannels c, HasDepth d, Storable d) =>
                 widthStep' <- (#peek IplImage, widthStep) ptr
                 return $ HIplImage origin' width' height' imageSize' 
                                    imageData' widthStep'
-
-
-
-
-                    

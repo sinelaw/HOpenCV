@@ -3,7 +3,6 @@
 module AI.CV.OpenCV.Filtering (smoothGaussian, smoothGaussian') where
 import Foreign.C.Types (CInt, CDouble)
 import Foreign.Ptr (Ptr, castPtr)
-import Foreign.Storable (Storable)
 import System.IO.Unsafe (unsafePerformIO)
 import AI.CV.OpenCV.Core.CxCore
 import AI.CV.OpenCV.Core.HIplUtils
@@ -32,7 +31,7 @@ cvGaussian = #{const CV_GAUSSIAN}
 -- the kernel size. This function is the same as calling
 -- @smoothGaussian' width Nothing Nothing@. May be performed in-place
 -- under composition.
-smoothGaussian :: (ByteOrFloat d, HasDepth d, Storable d, HasChannels c) => 
+smoothGaussian :: (ByteOrFloat d, HasChannels c) => 
                   Int -> HIplImage a c d -> HIplImage FreshImage c d
 smoothGaussian w = smoothGaussian' w Nothing Nothing
 
@@ -42,7 +41,7 @@ smoothGaussian w = smoothGaussian' w Nothing Nothing
 -- width), the Gaussian standard deviation (if 'Nothing', it will be
 -- calculated from the kernel size), and the source image. May be
 -- performed in-place under composition.
-smoothGaussian' :: (ByteOrFloat d, HasDepth d, Storable d, HasChannels c) => 
+smoothGaussian' :: (ByteOrFloat d, HasChannels c) => 
                    Int -> Maybe Int -> Maybe Double -> HIplImage a c d -> 
                    HIplImage FreshImage c d
 smoothGaussian' w h sigma src = 
@@ -53,7 +52,7 @@ smoothGaussian' w h sigma src =
     where sigma' = case sigma of { Nothing -> 0; Just s -> s }
           h' = case h of { Nothing -> 0; Just jh -> jh }
 
-unsafeGaussian  :: (ByteOrFloat d, HasDepth d, Storable d, HasChannels c) => 
+unsafeGaussian  :: (ByteOrFloat d, HasChannels c) => 
                    Int -> Maybe Int -> Maybe Double ->
                    HIplImage FreshImage c d -> HIplImage FreshImage c d
 unsafeGaussian w h sigma src = unsafePerformIO $ 

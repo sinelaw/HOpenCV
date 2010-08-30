@@ -50,10 +50,9 @@ colorDepth _ = bytesPerPixel (undefined::d)
 -- |Apply the supplied function to a 'V.Vector' containing the pixels
 -- that make up an 'HIplImage'. This does not copy the underlying
 -- data.
-withPixels :: forall a c d r. (HasDepth d, Storable d) => 
-              HIplImage a c d -> (V.Vector d -> r) -> r
-withPixels img f = f $ V.unsafeFromForeignPtr (imageData img) 0 n
-    where n = imageSize img `div` bytesPerPixel (undefined::d)
+withImagePixels :: HasDepth d => HIplImage a c d -> (V.Vector d -> r) -> r
+withImagePixels img f = f $ V.unsafeFromForeignPtr (imageData img) 0 n
+    where n = imageSize img `div` colorDepth img
 
 doST :: IO a -> a
 doST x = runST (unsafeIOToST x)
@@ -69,8 +68,7 @@ pixels img = doST $ do ptr <- mallocForeignPtrBytes len
     where len = imageSize img
 
 -- |Read a 'HIplImage' from a 'Ptr' 'IplImage'
-fromPtr :: (HasChannels c, HasDepth d, Storable d) => 
-           Ptr IplImage -> IO (HIplImage () c d)
+fromPtr :: (HasChannels c, HasDepth d) => Ptr IplImage -> IO (HIplImage () c d)
 fromPtr = peek . castPtr
 
 -- Ensure that a file exists.
@@ -95,16 +93,14 @@ fromFileGray fileName = do checkFile fileName
                            return $ unsafeCoerce img
 
 -- |Save a 'HIplImage' to the specified file.
-toFile :: (HasChannels c, HasDepth d, Storable d) => 
-          FilePath -> HIplImage a c d -> IO ()
+toFile :: (HasChannels c, HasDepth d) => FilePath -> HIplImage a c d -> IO ()
 toFile fileName img = withHIplImage img $ \ptr -> cvSaveImage fileName ptr
 
 
 -- |Allocate a new 'HIplImage' with the same dimensions, number of
 -- color channels, and color depth as an existing HIplImage. The pixel
 -- data of the original 'HIplImage' is not copied.
-compatibleImage :: forall a c d. 
-                   HIplImage a c d -> IO (HIplImage FreshImage c d)
+compatibleImage :: HIplImage a c d -> IO (HIplImage FreshImage c d)
 compatibleImage img@(HIplImage _ _ _ _ _ _) = 
     do ptr <- mallocForeignPtrArray sz
        return $ HIplImage 0 w h sz ptr stride
@@ -115,8 +111,7 @@ compatibleImage img@(HIplImage _ _ _ _ _ _) =
 
 -- |Create an exact duplicate of the given HIplImage. This allocates a
 -- fresh array to store the copied pixels.
-duplicateImage :: forall a c d.
-                  HIplImage a c d -> IO (HIplImage FreshImage c d)
+duplicateImage :: HIplImage a c d -> IO (HIplImage FreshImage c d)
 duplicateImage img@(HIplImage _ _ _ _ _ _ ) =
     do fptr <- mallocForeignPtrArray sz
        withForeignPtr (imageData img) $ 
@@ -130,12 +125,12 @@ duplicateImage img@(HIplImage _ _ _ _ _ _ ) =
 -- |Pass the given function a 'HIplImage' constructed from a width, a
 -- height, and a 'V.Vector' of pixel values. The new 'HIplImage' \'s
 -- pixel data is shared with the supplied 'V.Vector'.
-withImagePixels :: forall a c d r. 
-                   (HasChannels c, Integral a, HasDepth d, Storable d) =>
-                   a -> a -> V.Vector d -> (HIplImage () c d -> r) -> r
-withImagePixels w h pix f = if fromIntegral len == sz
-                            then f $ HIplImage 0 w' h' sz fp (w'*nc)
-                            else error "Length disagreement"
+withPixels :: forall a c d r. 
+              (HasChannels c, Integral a, HasDepth d) =>
+              a -> a -> V.Vector d -> (HIplImage () c d -> r) -> r
+withPixels w h pix f = if fromIntegral len == sz
+                       then f $ HIplImage 0 w' h' sz fp (w'*nc)
+                       else error "Length disagreement"
     where w' = fromIntegral w
           h' = fromIntegral h
           nc = numChannels (undefined::c)
@@ -148,7 +143,7 @@ withImagePixels w h pix f = if fromIntegral len == sz
 -- |Construct a fresh 'HIplImage' from a width, a height, and a
 -- 'V.Vector' of pixel values.
 fromPixels :: forall a c d. 
-              (Integral a, HasChannels c, HasDepth d, Storable d) =>
+              (Integral a, HasChannels c, HasDepth d) =>
               a -> a -> V.Vector d -> HIplImage FreshImage c d
 fromPixels w h pix = doST $ do fp <- copyData
                                return $ HIplImage 0 w' h' sz fp (w'*nc)
@@ -168,14 +163,14 @@ fromPixels w h pix = doST $ do fp <- copyData
 -- |Helper function to explicitly type a vector of monochromatic pixel
 -- data. Parameters are the output image's width, height, and pixel
 -- content.
-fromGrayPixels :: (HasDepth d, Storable d, Integral a) => 
+fromGrayPixels :: (HasDepth d, Integral a) => 
                   a -> a -> V.Vector d -> HIplImage FreshImage MonoChromatic d
 fromGrayPixels w h = isMono . fromPixels w h
 
 -- |Helper function to explicitly type a vector of trichromatic pixel
 -- data. Parameters are the output image's width, height, and pixel
 -- content.
-fromColorPixels :: (HasDepth d, Storable d, Integral a) =>
+fromColorPixels :: (HasDepth d, Integral a) =>
                    a -> a -> V.Vector d -> HIplImage FreshImage TriChromatic d
 fromColorPixels w h = isColor . fromPixels w h
 
@@ -183,7 +178,7 @@ fromColorPixels w h = isColor . fromPixels w h
 -- underlying a new 'HIplImage' that is an exact duplicate of the
 -- given 'HIplImage'. Returns the duplicate 'HIplImage' after
 -- performing the given action along with the result of that action.
-withDuplicateImage :: (HasChannels c, HasDepth d, Storable d) => 
+withDuplicateImage :: (HasChannels c, HasDepth d) => 
                       HIplImage a c d -> (Ptr IplImage -> IO b) -> 
                       (HIplImage FreshImage c d, b)
 withDuplicateImage img1 f = runST $ unsafeIOToST $
@@ -195,7 +190,7 @@ withDuplicateImage img1 f = runST $ unsafeIOToST $
 -- |Provides the supplied function with a 'Ptr' to the 'IplImage'
 -- underlying a new 'HIplImage' of the same dimensions as the given
 -- 'HIplImage'.
-withCompatibleImage :: (HasChannels c, HasDepth d, Storable d) => 
+withCompatibleImage :: (HasChannels c, HasDepth d) => 
                        HIplImage a c d -> (Ptr IplImage -> IO b) -> 
                        (HIplImage FreshImage c d, b)
 withCompatibleImage img1 f = runST $ unsafeIOToST $
@@ -209,7 +204,7 @@ withCompatibleImage img1 f = runST $ unsafeIOToST $
 -- image. Parameters are the upper-left corner of the ROI in image
 -- coordinates, the (width,height) of the ROI in pixels, and the
 -- source 'HIplImage'.
-getROI :: (HasChannels c, HasDepth d, Storable d) =>
+getROI :: (HasChannels c, HasDepth d) =>
           (Int,Int) -> (Int,Int) -> HIplImage a c d -> HIplImage FreshImage c d
 getROI (rx,ry) (rw,rh) src = 
     unsafePerformIO $

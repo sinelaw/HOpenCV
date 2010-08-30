@@ -32,7 +32,7 @@ import Unsafe.Coerce
 
 -- |Erode an 'HIplImage' with a 3x3 structuring element for the
 -- specified number of iterations.
-erode :: (HasChannels c, HasDepth d, Storable d) =>
+erode :: (HasChannels c, HasDepth d) =>
          Int -> HIplImage a c d -> HIplImage FreshImage c d
 erode n img = runST $
               unsafeIOToST . withHIplImage img $
@@ -42,7 +42,7 @@ erode n img = runST $
 
 -- |Dilate an 'HIplImage' with a 3x3 structuring element for the
 -- specified number of iterations.
-dilate :: (HasChannels c, HasDepth d, Storable d) =>
+dilate :: (HasChannels c, HasDepth d) =>
           Int -> HIplImage a c d -> HIplImage FreshImage c d
 dilate n img = runST $ 
                unsafeIOToST . withHIplImage img $
@@ -53,7 +53,7 @@ dilate n img = runST $
 -- |Unsafe in-place erosion. This is a destructive update of the given
 -- image and is only used by the rewrite rules when there is no way to
 -- observe the input image.
-unsafeErode :: (HasChannels c, HasDepth d, Storable d) =>
+unsafeErode :: (HasChannels c, HasDepth d) =>
                Int -> HIplImage a c d -> HIplImage FreshImage c d
 unsafeErode n img = runST $ 
                     unsafeIOToST $
@@ -64,7 +64,7 @@ unsafeErode n img = runST $
 -- |Unsafe in-place dilation. This is a destructive update of the
 -- given image and is only used by the rewrite rules when there is no
 -- way to observe the input image.
-unsafeDilate :: (HasChannels c, HasDepth d, Storable d) =>
+unsafeDilate :: (HasChannels c, HasDepth d) =>
                 Int -> HIplImage a c d-> HIplImage FreshImage c d
 unsafeDilate n img = runST $ 
                      unsafeIOToST $
@@ -87,7 +87,7 @@ unsafeDilate n img = runST $
 -- the end points. Parameters are the two endpoints, the line
 -- connectivity to use when sampling, and an image; returns the list
 -- of pixel values.
-sampleLine :: (HasChannels c, HasDepth d, Storable d) =>
+sampleLine :: (HasChannels c, HasDepth d) =>
               (Int, Int) -> (Int, Int) -> Connectivity -> HIplImage a c d -> [d]
 sampleLine pt1 pt2 conn img = runST $ unsafeIOToST $ 
                               withHIplImage img $ 
@@ -164,7 +164,7 @@ lineTypeEnum AALine    = 16
 -- |Draw each line, defined by its endpoints, on a duplicate of the
 -- given 'HIplImage' using the specified RGB color, line thickness,
 -- and aliasing style.
-drawLines :: (HasChannels c, HasDepth d, Storable d) =>
+drawLines :: (HasChannels c, HasDepth d) =>
              RGB -> Int -> LineType -> [((Int,Int),(Int,Int))] -> 
              HIplImage a c d -> HIplImage FreshImage c d
 drawLines col thick lineType lines img = 
@@ -173,7 +173,7 @@ drawLines col thick lineType lines img =
           lineType' = lineTypeEnum lineType
 
 -- |Unsafe in-place line drawing.
-unsafeDrawLines :: (HasChannels c, HasDepth d, Storable d) =>
+unsafeDrawLines :: (HasChannels c, HasDepth d) =>
                    RGB -> Int -> LineType -> [((Int,Int),(Int,Int))] -> 
                    HIplImage a c d -> HIplImage FreshImage c d
 unsafeDrawLines col thick lineType lines img = 
@@ -192,7 +192,7 @@ unsafeDrawLines col thick lineType lines img =
 -- is used for edge linking, the largest value is used to find the
 -- initial segments of strong edges. The third parameter is the
 -- aperture parameter for the Sobel operator.
-cannyEdges :: (HasDepth d, Storable d) =>
+cannyEdges :: HasDepth d =>
               Double -> Double -> Int -> HIplImage a MonoChromatic d -> 
               HIplImage FreshImage MonoChromatic d
 cannyEdges threshold1 threshold2 aperture img = 
@@ -200,7 +200,7 @@ cannyEdges threshold1 threshold2 aperture img =
         withHIplImage img $ \src -> 
             cvCanny src dst threshold1 threshold2 aperture
 
-unsafeCanny :: (HasDepth d, Storable d) =>
+unsafeCanny :: HasDepth d =>
                Double -> Double -> Int -> HIplImage FreshImage MonoChromatic d -> 
                HIplImage FreshImage MonoChromatic d
 unsafeCanny threshold1 threshold2 aperture img = 
@@ -238,7 +238,7 @@ queryFrameLoop cap = do f <- cvQueryFrame cap
 
 -- |Open a capture stream from a movie file. The returned action may
 -- be used to query for the next available frame.
-createFileCapture :: (HasChannels c, HasDepth d, Storable d) =>
+createFileCapture :: (HasChannels c, HasDepth d) =>
                      FilePath -> IO (IO (HIplImage () c d))
 createFileCapture fname = do capture <- createFileCaptureF fname
                              return (withForeignPtr capture $ 
@@ -248,7 +248,7 @@ createFileCapture fname = do capture <- createFileCaptureF fname
 -- the index of the camera to be used, or 'Nothing' if it does not
 -- matter what camera is used. The returned action may be used to
 -- query for the next available frame.
-createCameraCapture :: (HasChannels c, HasDepth d, Storable d) =>
+createCameraCapture :: (HasChannels c, HasDepth d) =>
                        Maybe Int -> IO (IO (HIplImage () c d))
 createCameraCapture cam = do capture <- createCameraCaptureF cam'
                              return (withForeignPtr capture $ 
@@ -260,7 +260,7 @@ createCameraCapture cam = do capture <- createCameraCaptureF cam'
 -- (e.g. @(\'F\',\'M\',\'P\',\'4\')@ for MPEG-4), the framerate of the
 -- created video stream, and the size of the video frames. The
 -- returned action may be used to add frames to the video stream.
-createVideoWriter :: (HasChannels c, HasDepth d, Storable d) =>
+createVideoWriter :: (HasChannels c, HasDepth d) =>
                      FilePath -> FourCC -> Double -> (Int,Int) -> 
                      IO (HIplImage a c d -> IO ())
 createVideoWriter fname codec fps sz = 
@@ -272,7 +272,7 @@ createVideoWriter fname codec fps sz =
 
 -- |Resize the supplied 'HIplImage' to the given width and height using
 -- the supplied 'InterpolationMethod'.
-resize :: (HasChannels c, HasDepth d, Storable d) => 
+resize :: (HasChannels c, HasDepth d) => 
           InterpolationMethod -> Int -> Int -> HIplImage a c d -> 
           HIplImage FreshImage c d
 resize method w h img = 

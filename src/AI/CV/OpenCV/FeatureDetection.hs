@@ -3,7 +3,6 @@
 module AI.CV.OpenCV.FeatureDetection (cornerHarris, cornerHarris') where
 import Foreign.C.Types (CInt, CDouble)
 import Foreign.Ptr (Ptr, castPtr)
-import Foreign.Storable (Storable)
 import System.IO.Unsafe (unsafePerformIO)
 import AI.CV.OpenCV.Core.CxCore
 import AI.CV.OpenCV.Core.HIplUtils
@@ -24,7 +23,7 @@ harris src dst blockSize aperture k =
 -- destination image. The parameters are the @blockSize@ and the
 -- source 'HIplImage'. The Sobel operator used as a preprocessing step
 -- is given an aperture size of 3.
-cornerHarris :: (ByteOrFloat d, HasDepth d, Storable d) => 
+cornerHarris :: ByteOrFloat d => 
                 Int -> HIplImage a MonoChromatic d -> 
                 HIplImage FreshImage MonoChromatic Float
 cornerHarris blockSize = cornerHarris' blockSize 3 0.04
@@ -37,7 +36,7 @@ cornerHarris blockSize = cornerHarris' blockSize 3 0.04
 -- @aperture@ size to be used by the Sobel operator that is run during
 -- corner evaluation, the value of @k@, and the source
 -- 'HIplImage'.
-cornerHarris' :: (ByteOrFloat d, HasDepth d, Storable d) => 
+cornerHarris' :: ByteOrFloat d => 
                  Int -> Int -> Double -> HIplImage a MonoChromatic d -> 
                  HIplImage FreshImage MonoChromatic Float
 cornerHarris' blockSize aperture k src = 
