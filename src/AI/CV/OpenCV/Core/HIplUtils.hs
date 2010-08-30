@@ -1,14 +1,14 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, BangPatterns #-}
 -- |Functions for working with 'HIplImage's.
 module AI.CV.OpenCV.Core.HIplUtils 
     (isColor, isMono, imgChannels, withPixels, pixels,
      fromPtr, fromFileColor, fromFileGray, toFile, 
      compatibleImage, duplicateImage, fromPixels, 
      withImagePixels, fromGrayPixels, fromColorPixels,
-     withDuplicateImage, withCompatibleImage, 
+     withDuplicateImage, withCompatibleImage, pipeline,
      HIplImage, mkHIplImage, width, height, mkBlackImage,
-     withHIplImage, FreshImage, MonoChromatic, 
-     TriChromatic, HasChannels, HasDepth(..), HasScalar(..), IsCvScalar(..),
+     withHIplImage, MonoChromatic, TriChromatic, HasChannels, 
+     HasDepth(..), HasScalar(..), IsCvScalar(..),
      ByteOrFloat, getROI) where
 import AI.CV.OpenCV.Core.CxCore (IplImage)
 import AI.CV.OpenCV.Core.HighGui (cvLoadImage, cvSaveImage, LoadColor(..))
@@ -27,12 +27,12 @@ import Unsafe.Coerce
 
 -- |This is a way to let the type checker know that you belieave an
 -- image to be tri-chromatic.
-isColor :: HIplImage a TriChromatic d -> HIplImage a TriChromatic d
+isColor :: HIplImage TriChromatic d -> HIplImage TriChromatic d
 isColor = id
 
 -- |This is a way to let the type checker know that you believe an
 -- image to be monochromatic.
-isMono :: HIplImage a MonoChromatic d -> HIplImage a MonoChromatic d
+isMono :: HIplImage MonoChromatic d -> HIplImage MonoChromatic d
 isMono = id
 
 {-# INLINE isMono #-}
@@ -40,36 +40,34 @@ isMono = id
 
 -- |Return the number of color channels a 'HIplImage' has as a runtime
 -- value.
-imgChannels :: forall a c d. HasChannels c => HIplImage a c d -> Int
+imgChannels :: forall c d. HasChannels c => HIplImage c d -> Int
 imgChannels _ = numChannels (undefined::c)
 
 -- |Return the number of bytes per pixel color component of an
 -- 'HIplImage'.
-colorDepth :: forall a c d. HasDepth d => HIplImage a c d -> Int
+colorDepth :: forall c d. HasDepth d => HIplImage c d -> Int
 colorDepth _ = bytesPerPixel (undefined::d)
 
 -- |Apply the supplied function to a 'V.Vector' containing the pixels
 -- that make up an 'HIplImage'. This does not copy the underlying
 -- data.
-withImagePixels :: HasDepth d => HIplImage a c d -> (V.Vector d -> r) -> r
+withImagePixels :: HasDepth d => HIplImage c d -> (V.Vector d -> r) -> r
 withImagePixels img f = f $ V.unsafeFromForeignPtr (imageData img) 0 n
     where n = imageSize img `div` colorDepth img
 
-doST :: IO a -> a
-doST x = runST (unsafeIOToST x)
-
 -- |Return a 'V.Vector' containing a copy of the pixels that make up a
 -- 'HIplImage'.
-pixels :: Storable d => HIplImage a c d -> V.Vector d
-pixels img = doST $ do ptr <- mallocForeignPtrBytes len
-                       withForeignPtr ptr $ \dst -> 
-                         withForeignPtr (imageData img) $ \src -> 
-                             copyBytes dst src len
-                       return $ V.unsafeFromForeignPtr ptr 0 len
+pixels :: Storable d => HIplImage c d -> V.Vector d
+pixels img = unsafePerformIO $ 
+             do ptr <- mallocForeignPtrBytes len
+                withForeignPtr ptr $ \dst -> 
+                    withForeignPtr (imageData img) $ \src -> 
+                        copyBytes dst src len
+                return $ V.unsafeFromForeignPtr ptr 0 len
     where len = imageSize img
 
 -- |Read a 'HIplImage' from a 'Ptr' 'IplImage'
-fromPtr :: (HasChannels c, HasDepth d) => Ptr IplImage -> IO (HIplImage () c d)
+fromPtr :: (HasChannels c, HasDepth d) => Ptr IplImage -> IO (HIplImage c d)
 fromPtr = peek . castPtr
 
 -- Ensure that a file exists.
@@ -79,29 +77,29 @@ checkFile f = do e <- doesFileExist f
 
 -- |Load a color 'HIplImage' from an 8-bit image file. If the image
 -- file is grayscale, it will be converted to color.
-fromFileColor :: FilePath -> IO (HIplImage FreshImage TriChromatic Word8)
+fromFileColor :: FilePath -> IO (HIplImage TriChromatic Word8)
 fromFileColor fileName = do checkFile fileName
                             ptr <- cvLoadImage fileName LoadColor
-                            img <- fromPtr ptr :: IO (HIplImage () TriChromatic Word8)
+                            img <- fromPtr ptr :: IO (HIplImage TriChromatic Word8)
                             return $ unsafeCoerce img
 
 -- |Load a grayscale 'HIplImage' from an 8-bit image file. If the
 -- image file is color, it will be converted to grayscale.
-fromFileGray :: FilePath -> IO (HIplImage FreshImage MonoChromatic Word8)
+fromFileGray :: FilePath -> IO (HIplImage MonoChromatic Word8)
 fromFileGray fileName = do checkFile fileName
                            ptr <- cvLoadImage fileName LoadGray
-                           img <- fromPtr ptr :: IO (HIplImage () MonoChromatic Word8)
+                           img <- fromPtr ptr :: IO (HIplImage MonoChromatic Word8)
                            return $ unsafeCoerce img
 
 -- |Save a 'HIplImage' to the specified file.
-toFile :: (HasChannels c, HasDepth d) => FilePath -> HIplImage a c d -> IO ()
+toFile :: (HasChannels c, HasDepth d) => FilePath -> HIplImage c d -> IO ()
 toFile fileName img = withHIplImage img $ \ptr -> cvSaveImage fileName ptr
 
 
 -- |Allocate a new 'HIplImage' with the same dimensions, number of
 -- color channels, and color depth as an existing HIplImage. The pixel
 -- data of the original 'HIplImage' is not copied.
-compatibleImage :: HIplImage a c d -> IO (HIplImage FreshImage c d)
+compatibleImage :: HIplImage c d -> IO (HIplImage c d)
 compatibleImage img@(HIplImage _ _ _ _ _ _) = 
     do ptr <- mallocForeignPtrArray sz
        return $ HIplImage 0 w h sz ptr stride
@@ -112,7 +110,7 @@ compatibleImage img@(HIplImage _ _ _ _ _ _) =
 
 -- |Create an exact duplicate of the given HIplImage. This allocates a
 -- fresh array to store the copied pixels.
-duplicateImage :: HIplImage a c d -> IO (HIplImage FreshImage c d)
+duplicateImage :: HIplImage c d -> IO (HIplImage c d)
 duplicateImage img@(HIplImage _ _ _ _ _ _ ) =
     do fptr <- mallocForeignPtrArray sz
        withForeignPtr (imageData img) $ 
@@ -128,7 +126,7 @@ duplicateImage img@(HIplImage _ _ _ _ _ _ ) =
 -- pixel data is shared with the supplied 'V.Vector'.
 withPixels :: forall a c d r. 
               (HasChannels c, Integral a, HasDepth d) =>
-              a -> a -> V.Vector d -> (HIplImage () c d -> r) -> r
+              a -> a -> V.Vector d -> (HIplImage c d -> r) -> r
 withPixels w h pix f = if fromIntegral len == sz
                        then f $ HIplImage 0 w' h' sz fp (w'*nc)
                        else error "Length disagreement"
@@ -145,9 +143,10 @@ withPixels w h pix f = if fromIntegral len == sz
 -- 'V.Vector' of pixel values.
 fromPixels :: forall a c d. 
               (Integral a, HasChannels c, HasDepth d) =>
-              a -> a -> V.Vector d -> HIplImage FreshImage c d
-fromPixels w h pix = doST $ do fp <- copyData
-                               return $ HIplImage 0 w' h' sz fp (w'*nc)
+              a -> a -> V.Vector d -> HIplImage c d
+fromPixels w h pix = unsafePerformIO $ 
+                     do fp <- copyData
+                        return $ HIplImage 0 w' h' sz fp (w'*nc)
     where w' = fromIntegral w
           h' = fromIntegral h
           nc = numChannels (undefined::c)
@@ -165,14 +164,14 @@ fromPixels w h pix = doST $ do fp <- copyData
 -- data. Parameters are the output image's width, height, and pixel
 -- content.
 fromGrayPixels :: (HasDepth d, Integral a) => 
-                  a -> a -> V.Vector d -> HIplImage FreshImage MonoChromatic d
+                  a -> a -> V.Vector d -> HIplImage MonoChromatic d
 fromGrayPixels w h = isMono . fromPixels w h
 
 -- |Helper function to explicitly type a vector of trichromatic pixel
 -- data. Parameters are the output image's width, height, and pixel
 -- content.
 fromColorPixels :: (HasDepth d, Integral a) =>
-                   a -> a -> V.Vector d -> HIplImage FreshImage TriChromatic d
+                   a -> a -> V.Vector d -> HIplImage TriChromatic d
 fromColorPixels w h = isColor . fromPixels w h
 
 -- |Provides the supplied function with a 'Ptr' to the 'IplImage'
@@ -180,8 +179,8 @@ fromColorPixels w h = isColor . fromPixels w h
 -- given 'HIplImage'. Returns the duplicate 'HIplImage' after
 -- performing the given action along with the result of that action.
 withDuplicateImage :: (HasChannels c, HasDepth d) => 
-                      HIplImage a c d -> (Ptr IplImage -> IO b) -> 
-                      (HIplImage FreshImage c d, b)
+                      HIplImage c d -> (Ptr IplImage -> IO b) -> 
+                      (HIplImage c d, b)
 withDuplicateImage img1 f = unsafePerformIO $
                             do img2 <- duplicateImage img1
                                r <- withHIplImage img2 f
@@ -192,8 +191,8 @@ withDuplicateImage img1 f = unsafePerformIO $
 -- underlying a new 'HIplImage' of the same dimensions as the given
 -- 'HIplImage'.
 withCompatibleImage :: (HasChannels c, HasDepth d) => 
-                       HIplImage a c d -> (Ptr IplImage -> IO b) -> 
-                       (HIplImage FreshImage c d, b)
+                       HIplImage c d -> (Ptr IplImage -> IO b) -> 
+                       (HIplImage c d, b)
 withCompatibleImage img1 f = runST $ unsafeIOToST $
                              do img2 <- compatibleImage img1
                                 r <- withHIplImage img2 f
@@ -206,7 +205,7 @@ withCompatibleImage img1 f = runST $ unsafeIOToST $
 -- coordinates, the (width,height) of the ROI in pixels, and the
 -- source 'HIplImage'.
 getROI :: (HasChannels c, HasDepth d) =>
-          (Int,Int) -> (Int,Int) -> HIplImage a c d -> HIplImage FreshImage c d
+          (Int,Int) -> (Int,Int) -> HIplImage c d -> HIplImage c d
 getROI (rx,ry) (rw,rh) src = 
     unsafePerformIO $
     do img <- mkHIplImage rw rh
@@ -222,5 +221,12 @@ getROI (rx,ry) (rw,rh) src =
           bpp = imgChannels src * colorDepth src
           rowLen = rw*bpp
 
-pipeline :: (HIplImage FreshImage c1 d1 -> HIplImage FreshImage c2 d2) -> HIplImage a c1 d1 -> HIplImage FreshImage c2 d2
-pipeline f = unsafePerformIO . (return . f <=< duplicateImage)
+pipeline :: (HIplImage c d -> r) -> HIplImage c d -> r
+pipeline f = unsafePerformIO . (return . (f $!) <=< duplicateImage)
+
+{-# NOINLINE pipeline #-}
+
+{-# RULES
+"pipeline/join" forall f g h. pipeline f (pipeline g h) = pipeline (f . g) h
+"pipeline/compose" forall f g. pipeline f . pipeline g = pipeline (f. g)
+  #-}

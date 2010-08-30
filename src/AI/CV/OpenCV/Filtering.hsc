@@ -32,7 +32,7 @@ cvGaussian = #{const CV_GAUSSIAN}
 -- @smoothGaussian' width Nothing Nothing@. May be performed in-place
 -- under composition.
 smoothGaussian :: (ByteOrFloat d, HasChannels c) => 
-                  Int -> HIplImage a c d -> HIplImage FreshImage c d
+                  Int -> HIplImage c d -> HIplImage c d
 smoothGaussian w = smoothGaussian' w Nothing Nothing
 
 -- |Smooth a source 'HIplImage' using a linear convolution with a
@@ -42,8 +42,8 @@ smoothGaussian w = smoothGaussian' w Nothing Nothing
 -- calculated from the kernel size), and the source image. May be
 -- performed in-place under composition.
 smoothGaussian' :: (ByteOrFloat d, HasChannels c) => 
-                   Int -> Maybe Int -> Maybe Double -> HIplImage a c d -> 
-                   HIplImage FreshImage c d
+                   Int -> Maybe Int -> Maybe Double -> HIplImage c d -> 
+                   HIplImage c d
 smoothGaussian' w h sigma src = 
     unsafePerformIO $
     withHIplImage src $ \src' ->
@@ -54,7 +54,7 @@ smoothGaussian' w h sigma src =
 
 unsafeGaussian  :: (ByteOrFloat d, HasChannels c) => 
                    Int -> Maybe Int -> Maybe Double ->
-                   HIplImage FreshImage c d -> HIplImage FreshImage c d
+                   HIplImage c d -> HIplImage c d
 unsafeGaussian w h sigma src = unsafePerformIO $ 
                                withHIplImage src $ \src' ->
                                  do smooth src' src' cvGaussian w h' sigma' 0
@@ -64,12 +64,9 @@ unsafeGaussian w h sigma src = unsafePerformIO $
                      Just s -> realToFrac s
           h' = case h of { Nothing -> 0; Just jh -> jh }
 
-{-# RULES "smoothGaussian'/in-place"
-    forall w h sigma (g::a->HIplImage FreshImage c d). 
-    smoothGaussian' w h sigma . g = unsafeGaussian w h sigma . g 
-  #-}
-
-{-# RULES "smoothGaussian/in-place"
-    forall w (g::a->HIplImage FreshImage c d).
-    smoothGaussian w . g = unsafeGaussian w Nothing Nothing . g
+{-# RULES 
+"smoothGaussian'/in-place" forall w h sigma. 
+  smoothGaussian' w h sigma = pipeline (unsafeGaussian w h sigma)
+"smoothGaussian/in-place" forall w. 
+  smoothGaussian w = pipeline (unsafeGaussian w Nothing Nothing)
   #-}

@@ -19,11 +19,11 @@ foreign import ccall unsafe "opencv/cv.h cvCalcOpticalFlowBM"
 -- increments; the fifth is the size of the scanned neighborhood in
 -- pixels around the block. The result is a pair of the horizontal and
 -- vertical components of optical flow.
-calcOpticalFlowBM :: HIplImage a MonoChromatic Word8 -> 
-                     HIplImage b MonoChromatic Word8 -> 
+calcOpticalFlowBM :: HIplImage MonoChromatic Word8 -> 
+                     HIplImage MonoChromatic Word8 -> 
                      (Int,Int) -> (Int,Int) -> (Int,Int) -> 
-                     (HIplImage FreshImage MonoChromatic Float, 
-                      HIplImage FreshImage MonoChromatic Float)
+                     (HIplImage MonoChromatic Float, 
+                      HIplImage MonoChromatic Float)
 calcOpticalFlowBM prev curr blockSize shiftSize maxRange = 
     unsafePerformIO $
     do velX <- mkHIplImage w h 

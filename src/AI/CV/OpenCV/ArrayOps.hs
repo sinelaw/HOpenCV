@@ -17,7 +17,7 @@ foreign import ccall unsafe "opencv/cxcore.h cvSubRS"
 -- |Compute @value - src[i]@ for every pixel in the source 'HIplImage'.
 subRS :: (HasChannels c, HasDepth d, HasScalar c d, 
           IsCvScalar s, s ~ CvScalar c d) =>
-         s -> HIplImage a c d -> HIplImage FreshImage c d
+         s -> HIplImage c d -> HIplImage c d
 subRS value src = unsafePerformIO $ 
                   withHIplImage src $ \srcPtr ->
                     return . fst . withCompatibleImage src $ \dstPtr -> 
@@ -29,7 +29,7 @@ subRS value src = unsafePerformIO $
 -- scalar value.
 unsafeSubRS :: (HasChannels c, HasDepth d, HasScalar c d,
                 IsCvScalar s, s ~ CvScalar c d) =>
-               s -> HIplImage FreshImage c d -> HIplImage FreshImage c d
+               s -> HIplImage c d -> HIplImage c d
 unsafeSubRS value src = unsafePerformIO $
                         withHIplImage src $ \srcPtr ->
                             do c_cvSubRS (castPtr srcPtr) r g b a
@@ -37,8 +37,7 @@ unsafeSubRS value src = unsafePerformIO $
                                return src
     where (r,g,b,a) = toCvScalar value
 
-{-# RULES "subRS-in-place" forall v (f::a -> HIplImage FreshImage MonoChromatic d). 
-    subRS v . f = unsafeSubRS v . f
+{-# RULES "subRS/in-place" forall v. subRS v = pipeline (unsafeSubRS v)
   #-}
 
 foreign import ccall unsafe "opencv/cxcore.h cvAbsDiff"
@@ -46,7 +45,7 @@ foreign import ccall unsafe "opencv/cxcore.h cvAbsDiff"
 
 -- |Calculate the absolute difference between two images.
 absDiff :: (HasChannels c, HasDepth d) => 
-           HIplImage a c d -> HIplImage b c d -> HIplImage FreshImage c d
+           HIplImage c d -> HIplImage c d -> HIplImage c d
 absDiff src1 src2 = unsafePerformIO $
                     withHIplImage src1 $ \src1' ->
                       withHIplImage src2 $ \src2' ->
@@ -55,8 +54,7 @@ absDiff src1 src2 = unsafePerformIO $
                                       (castPtr dst)
 
 unsafeAbsDiff :: (HasChannels c, HasDepth d) => 
-                 HIplImage a c d -> HIplImage FreshImage c d -> 
-                 HIplImage FreshImage c d
+                 HIplImage c d -> HIplImage c d -> HIplImage c d
 unsafeAbsDiff src1 src2 = unsafePerformIO $
                           withHIplImage src1 $ \src1' ->
                             withHIplImage src2 $ \src2' ->
@@ -64,9 +62,7 @@ unsafeAbsDiff src1 src2 = unsafePerformIO $
                                                (castPtr src2')
                                    return src2
 
-{-# RULES "absDiff-inplace"
-  forall m1 (g::a -> HIplImage FreshImage c d). 
-  absDiff m1 . g = unsafeAbsDiff m1 . g
+{-# RULES "absDiff/in-place" forall m. absDiff m = pipeline (unsafeAbsDiff m) 
   #-}
 
 foreign import ccall unsafe "opencv/cxcore.h cvConvertScale"
@@ -80,8 +76,8 @@ foreign import ccall unsafe "opencv/cxcore.h cvConvertScale"
 -- independentally. Parameters are @scale@, @shift@, and the source
 -- 'HIplImage'.
 convertScale :: (HasChannels c, HasDepth d1, HasDepth d2) =>
-                Double -> Double -> HIplImage a c d1 -> 
-                HIplImage FreshImage c d2
+                Double -> Double -> HIplImage c d1 -> 
+                HIplImage c d2
 convertScale scale shift src = unsafePerformIO $
                                do dst <- mkHIplImage (width src) (height src)
                                   withHIplImage src $ \src' ->
@@ -105,8 +101,8 @@ cvAndAux src1 src2 dst mask = c_cvAnd (castPtr src1) (castPtr src2)
 -- conjunction, and those that will simply be copied from the third
 -- parameter.
 cvAndMask :: (HasChannels c, HasDepth d) => 
-             HIplImage q MonoChromatic Word8 -> HIplImage a c d ->  
-             HIplImage b c d -> HIplImage FreshImage c d
+             HIplImage MonoChromatic Word8 -> HIplImage c d ->  
+             HIplImage c d -> HIplImage c d
 cvAndMask mask src1 src2 = fst . withDuplicateImage src2 $ \dst ->
                              withHIplImage src1 $ \src1' ->
                                withHIplImage src2 $ \src2' ->
@@ -115,36 +111,31 @@ cvAndMask mask src1 src2 = fst . withDuplicateImage src2 $ \dst ->
 
 -- |Calculates the per-element bitwise conjunction of two arrays.
 cvAnd :: (HasChannels c, HasDepth d) => 
-          HIplImage a c d -> HIplImage b c d ->  HIplImage FreshImage c d
+          HIplImage c d -> HIplImage c d ->  HIplImage c d
 cvAnd src1 src2 = fst . withCompatibleImage src1 $ \dst ->
                     withHIplImage src1 $ \src1' ->
                       withHIplImage src2 $ \src2' ->
                         cvAndAux src1' src2' dst nullPtr
 
 unsafeAnd :: (HasChannels c, HasDepth d) => 
-             HIplImage a c d -> HIplImage FreshImage c d ->  
-             HIplImage FreshImage c d
+             HIplImage c d -> HIplImage c d -> HIplImage c d
 unsafeAnd src1 src2 = unsafePerformIO $
                       withHIplImage src1 $ \src1' ->
                         withHIplImage src2 $ \src2' ->
                           cvAndAux src1' src2' src2' nullPtr >> return src2
 
 unsafeAndMask :: (HasChannels c, HasDepth d) => 
-                 HIplImage q MonoChromatic Word8 -> HIplImage a c d ->  
-                 HIplImage FreshImage c d -> HIplImage FreshImage c d
+                 HIplImage MonoChromatic Word8 -> HIplImage c d ->  
+                 HIplImage c d -> HIplImage c d
 unsafeAndMask mask src1 src2 = unsafePerformIO $
                       withHIplImage src1 $ \src1' ->
                         withHIplImage src2 $ \src2' ->
                           withHIplImage mask $ \mask' ->
                             cvAndAux src1' src2' src2' mask' >> return src2
 
-{-# RULES "cvAnd/in-place"
-    forall s (g :: a -> HIplImage FreshImage c d). cvAnd s . g = unsafeAnd s . g
-  #-}
-
-{-# RULES "cvAndMask/in-place"
-    forall m s (g :: a -> HIplImage FreshImage c d).
-    cvAndMask m s . g = unsafeAndMask m s . g 
+{-# RULES 
+"cvAnd/in-place" forall s. cvAnd s = pipeline (unsafeAnd s)
+"cvAndMask/in-place" forall m s. cvAndMask m s = pipeline (unsafeAndMask m s)
   #-}
 
 foreign import ccall unsafe "opencv/cxcore.h cvAndS"
@@ -154,7 +145,7 @@ foreign import ccall unsafe "opencv/cxcore.h cvAndS"
 -- |Per-element bit-wise conjunction of an array and a scalar. 
 cvAndS :: (HasChannels c, HasDepth d, HasScalar c d, IsCvScalar s, 
            s ~ CvScalar c d) => 
-          s -> HIplImage a c d -> HIplImage FreshImage c d
+          s -> HIplImage c d -> HIplImage c d
 cvAndS s img = fst . withCompatibleImage img $ \dst ->
                  withHIplImage img $ \src ->
                    c_cvAndS (castPtr src) r g b a (castPtr dst) nullPtr
@@ -162,17 +153,14 @@ cvAndS s img = fst . withCompatibleImage img $ \dst ->
 
 unsafeAndS :: (HasChannels c, HasDepth d, HasScalar c d, IsCvScalar s, 
                s ~ CvScalar c d) => 
-              s -> HIplImage FreshImage c d -> HIplImage FreshImage c d
+              s -> HIplImage c d -> HIplImage c d
 unsafeAndS s img = unsafePerformIO $
                    do withHIplImage img $ \src ->
                         c_cvAndS (castPtr src) r g b a (castPtr src) nullPtr
                       return img
     where (r,g,b,a) = toCvScalar s
 
-{-# RULES "cvAndS/in-place"
-    forall s (g :: a -> HIplImage FreshImage c d). 
-    cvAndS s . g = unsafeAndS s . g
-  #-}
+{-# RULES "cvAndS/in-place" forall s. cvAndS s = pipeline (unsafeAndS s) #-}
 
 foreign import ccall unsafe "opencv/cxcore.h cvScaleAdd"
   c_cvScaleAdd :: Ptr CvArr -> CDouble -> CDouble -> CDouble -> CDouble -> 
@@ -180,8 +168,7 @@ foreign import ccall unsafe "opencv/cxcore.h cvScaleAdd"
 
 cvScaleAdd :: (HasScalar c d, HasDepth d, HasChannels c, 
                s ~ CvScalar c d, IsCvScalar s) => 
-              HIplImage a c d -> s -> HIplImage b c d -> 
-              HIplImage FreshImage c d
+              HIplImage c d -> s -> HIplImage c d -> HIplImage c d
 cvScaleAdd src1 s src2 = fst . withCompatibleImage src1 $ \dst ->
                            withHIplImage src1 $ \src1' ->
                              withHIplImage src2 $ \src2' ->
@@ -198,7 +185,7 @@ cvMulAux src1 src2 dst s = c_cvMul (castPtr src1) (castPtr src2)
 
 -- |Per-element product of two arrays.
 cvMul :: (HasChannels c, HasDepth d) => 
-         HIplImage a c d -> HIplImage b c d -> HIplImage FreshImage c d
+         HIplImage c d -> HIplImage c d -> HIplImage c d
 cvMul src1 src2 = fst . withCompatibleImage src1 $ \dst ->
                     withHIplImage src1 $ \src1' ->
                       withHIplImage src2 $ \src2' ->
@@ -207,16 +194,14 @@ cvMul src1 src2 = fst . withCompatibleImage src1 $ \dst ->
 -- |Per-element product of two arrays with an extra scale factor that
 -- is multiplied with each product.
 cvMul' :: (HasChannels c, HasDepth d) => 
-          Double -> HIplImage a c d -> HIplImage b c d -> 
-          HIplImage FreshImage c d
+          Double -> HIplImage c d -> HIplImage c d -> HIplImage c d
 cvMul' scale src1 src2 = fst . withCompatibleImage src1 $ \dst ->
                            withHIplImage src1 $ \src1' ->
                                withHIplImage src2 $ \src2' ->
                                    cvMulAux src1' src2' dst scale
 
 unsafeMul :: (HasChannels c, HasDepth d) => 
-             HIplImage a c d -> HIplImage FreshImage c d -> 
-             HIplImage FreshImage c d
+             HIplImage c d -> HIplImage c d -> HIplImage c d
 unsafeMul src1 src2 = unsafePerformIO $
                       do withHIplImage src1 $ \src1' ->
                              withHIplImage src2 $ \src2' ->
@@ -224,8 +209,7 @@ unsafeMul src1 src2 = unsafePerformIO $
                          return src2
 
 unsafeMul' :: (HasChannels c, HasDepth d) => 
-              Double -> HIplImage a c d -> HIplImage FreshImage c d -> 
-              HIplImage FreshImage c d
+              Double -> HIplImage c d -> HIplImage c d -> HIplImage c d
 unsafeMul' scale src1 src2 = unsafePerformIO $
                              do withHIplImage src1 $ \src1' ->
                                   withHIplImage src2 $ \src2' ->
@@ -233,10 +217,8 @@ unsafeMul' scale src1 src2 = unsafePerformIO $
                                 return src2
 
 {-# RULES 
-"cvMul/in-place" forall s1 (g::a->HIplImage FreshImage c d). 
-                     cvMul s1 . g = unsafeMul s1 . g
-"cvMul'/in-place" forall s s1 (g::a->HIplImage FreshImage c d). 
-                      cvMul' s s1 . g = unsafeMul' s s1 . g
+"cvMul/in-place" forall s1. cvMul s1 = pipeline (unsafeMul s1)
+"cvMul'/in-place" forall s s1. cvMul' s s1 = pipeline (unsafeMul' s s1)
   #-}
 
 foreign import ccall unsafe "opencv/cxcore.h cvAdd"
@@ -244,7 +226,7 @@ foreign import ccall unsafe "opencv/cxcore.h cvAdd"
 
 -- |Per-element sum of two arrays.
 cvAdd :: (HasChannels c, HasDepth d) => 
-         HIplImage a c d -> HIplImage b c d -> HIplImage FreshImage c d
+         HIplImage c d -> HIplImage c d -> HIplImage c d
 cvAdd src1 src2 = fst . withCompatibleImage src1 $ \dst ->
                     withHIplImage src1 $ \src1' ->
                       withHIplImage src2 $ \src2' ->
@@ -252,7 +234,7 @@ cvAdd src1 src2 = fst . withCompatibleImage src1 $ \dst ->
                                  (castPtr dst) nullPtr
 
 unsafeAdd  :: (HasChannels c, HasDepth d) => 
-              HIplImage a c d -> HIplImage FreshImage c d -> HIplImage FreshImage c d
+              HIplImage c d -> HIplImage c d -> HIplImage c d
 unsafeAdd src1 src2 = unsafePerformIO $
                       do withHIplImage src1 $ \src1' ->
                            withHIplImage src2 $ \src2' ->
@@ -265,14 +247,14 @@ foreign import ccall unsafe "opencv/cxcore.h cvAddS"
               Ptr CvArr -> Ptr CvArr -> IO ()
 
 cvAddS :: (HasChannels c, HasDepth d, IsCvScalar s, s ~ CvScalar c d) => 
-          s -> HIplImage a c d -> HIplImage FreshImage c d
+          s -> HIplImage c d -> HIplImage c d
 cvAddS scalar src = fst . withCompatibleImage src $ \dst ->
                       withHIplImage src $ \src' ->
                         c_cvAddS (castPtr src') r g b a (castPtr dst) nullPtr
     where (r,g,b,a) = toCvScalar scalar
 
 unsafeAddS :: (HasChannels c, HasDepth d, IsCvScalar s, s ~ CvScalar c d) => 
-              s -> HIplImage FreshImage c d -> HIplImage FreshImage c d
+              s -> HIplImage c d -> HIplImage c d
 unsafeAddS scalar src = unsafePerformIO $ do
                         withHIplImage src $ \src' ->
                           c_cvAddS (castPtr src') r g b a (castPtr src') nullPtr
@@ -280,8 +262,6 @@ unsafeAddS scalar src = unsafePerformIO $ do
     where (r,g,b,a) = toCvScalar scalar
 
 {-# RULES
-"cvAdd/in-place" forall s1 (g::a->HIplImage FreshImage c d). 
-                 cvAdd s1 . g = unsafeAdd s1 . g
-"cvAddS/in-place" forall s (g::a->HIplImage FreshImage c d).
-                  cvAddS s . g = unsafeAddS s . g
+"cvAdd/in-place" forall s. cvAdd s = pipeline (unsafeAdd s)
+"cvAddS/in-place" forall s. cvAddS s = pipeline (unsafeAddS s)
   #-}

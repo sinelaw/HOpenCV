@@ -24,8 +24,8 @@ harris src dst blockSize aperture k =
 -- source 'HIplImage'. The Sobel operator used as a preprocessing step
 -- is given an aperture size of 3.
 cornerHarris :: ByteOrFloat d => 
-                Int -> HIplImage a MonoChromatic d -> 
-                HIplImage FreshImage MonoChromatic Float
+                Int -> HIplImage MonoChromatic d -> 
+                HIplImage MonoChromatic Float
 cornerHarris blockSize = cornerHarris' blockSize 3 0.04
 
 -- |Harris corner detector. For each pixel, a 2x2 covariance matrix,
@@ -37,8 +37,8 @@ cornerHarris blockSize = cornerHarris' blockSize 3 0.04
 -- corner evaluation, the value of @k@, and the source
 -- 'HIplImage'.
 cornerHarris' :: ByteOrFloat d => 
-                 Int -> Int -> Double -> HIplImage a MonoChromatic d -> 
-                 HIplImage FreshImage MonoChromatic Float
+                 Int -> Int -> Double -> HIplImage MonoChromatic d -> 
+                 HIplImage MonoChromatic Float
 cornerHarris' blockSize aperture k src = 
     unsafePerformIO $ do dst <- mkHIplImage (width src) (height src)
                          withHIplImage src $ \src' ->
