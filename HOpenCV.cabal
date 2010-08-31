@@ -12,7 +12,9 @@ description:
    .
    /Installation/
    .
-   You must install OpenCV (development packages) prior to installing this package. Currently tested on Ubuntu Linux 10.04 and Mac OS 10.5 and 10.6.
+   You must install OpenCV (development packages) prior to installing this package. Currently tested on Ubuntu Linux 10.04, Mac OS 10.5 and 10.6, and Windows XP.
+   .
+   On Windows, OpenCV is assumed to be installed in the @C:\\OpenCV2.1@ directory.
    .
    /Usage/
    .
@@ -44,7 +46,12 @@ library
    c-sources:
       src/AI/CV/OpenCV/Core/HOpenCV_wrap.c
    hs-Source-Dirs: src
-   extra-libraries: cxcore,cv,highgui
+   if os(windows)
+     include-dirs: C:\\OpenCV2.1\\include
+     extra-lib-dirs:     C:\\OpenCV2.1\\bin
+     extra-libraries: cxcore210, cv210, highgui210
+   else
+     extra-libraries: cxcore,cv,highgui
    build-depends: base >=4 && <5, 
                   allocated-processor >= 0.0.1, 
                   vector-space,
