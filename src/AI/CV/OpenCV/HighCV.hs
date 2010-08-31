@@ -12,8 +12,8 @@ module AI.CV.OpenCV.HighCV (erode, dilate, houghStandard, houghProbabilistic,
                             createCameraCapture, resize, FourCC, getROI,
                             InterpolationMethod(..), MonoChromatic, 
                             TriChromatic, createVideoWriter, HasChannels,
-                            module AI.CV.OpenCV.ColorConversion, 
-                            createFileCaptureLoop)
+                            module AI.CV.OpenCV.ColorConversion, GrayImage,
+                            ColorImage, createFileCaptureLoop)
     where
 import AI.CV.OpenCV.Core.CxCore
 import AI.CV.OpenCV.Core.CV
@@ -30,6 +30,12 @@ import Foreign.ForeignPtr (withForeignPtr)
 import Foreign.Storable
 import System.IO.Unsafe (unsafePerformIO)
 import Unsafe.Coerce
+
+-- |Grayscale 8-bit (per-pixel) image type synonym.
+type GrayImage = HIplImage MonoChromatic Word8
+
+-- |Color 8-bit (per-color) image type synonym.
+type ColorImage = HIplImage TriChromatic Word8
 
 -- |Erode an 'HIplImage' with a 3x3 structuring element for the
 -- specified number of iterations.
