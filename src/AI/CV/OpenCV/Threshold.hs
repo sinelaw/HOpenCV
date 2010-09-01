@@ -1,5 +1,5 @@
 {-# LANGUAGE ForeignFunctionInterface, ScopedTypeVariables, 
-             MultiParamTypeClasses #-}
+             MultiParamTypeClasses, FlexibleInstances #-}
 -- |Image thresholding operations. These operations will perform
 -- destructive, in-place updates when composed with a producer of
 -- fresh images.
@@ -7,7 +7,7 @@ module AI.CV.OpenCV.Threshold (thresholdBinary, thresholdBinaryInv,
                                thresholdTruncate, 
                                thresholdToZero, thresholdToZeroInv,
                                thresholdBinaryOtsu, thresholdBinaryOtsuInv,
-                               thresholdTruncateOtsu, 
+                               thresholdTruncateOtsu, unsafeThreshBin,
                                thresholdToZeroOtsu, thresholdToZeroOtsuInv) where
 import Data.Bits ((.|.))
 import Data.Word (Word8)
@@ -31,8 +31,7 @@ data ThresholdType = ThreshBinary
 -- to 8-bit images during the thresholding process.
 class (HasDepth d1, HasDepth d2) => SameOrByte d1 d2 where
 instance SameOrByte Float Word8 where
-instance SameOrByte Float Float where
-instance SameOrByte Word8 Word8 where
+instance ByteOrFloat d => SameOrByte d d where
 
 foreign import ccall unsafe "opencv/cv.h cvThreshold"
   c_cvThreshold :: Ptr CvArr -> Ptr CvArr -> CDouble -> CDouble -> CInt -> 
@@ -77,13 +76,6 @@ unsafeCvThreshold1 :: ByteOrFloat d1 =>
                       IO (HIplImage MonoChromatic d1)
 unsafeCvThreshold1 th mv tt = fmap fst . unsafeCvThreshold th mv tt
 
-{-# RULES 
-"cvThreshold1/in-place" forall t mv tt.
-  cvThreshold1 t mv tt = pipeline (unsafeCvThreshold1 t mv tt)
-"cvThreshold/in-place" forall t mv tt.
-  cvThreshold t mv tt = pipeline (unsafeCvThreshold t mv tt)
-  #-}
-
 -- Use Otsu's method to determine an optimal threshold value which is
 -- returned along with the thresholded image.
 cvThresholdOtsu :: Word8 -> Int -> HIplImage MonoChromatic Word8 ->
@@ -107,6 +99,7 @@ thresholdBinary :: (ByteOrFloat d1, SameOrByte d1 d2) =>
                    d1 -> d1 -> HIplImage MonoChromatic d1 ->
                    HIplImage MonoChromatic d2
 thresholdBinary th maxValue = cvThreshold1 th maxValue (fromEnum ThreshBinary)
+{-# INLINE [0] thresholdBinary #-}
 
 -- |Inverse binary thresholding. Parameters are the @threshold@ value,
 -- the @maxValue@ passing pixels are mapped to, and the source
@@ -123,6 +116,7 @@ unsafeThreshBin :: ByteOrFloat d =>
                    IO (HIplImage MonoChromatic d)
 unsafeThreshBin th maxValue = unsafeCvThreshold1 th maxValue tType
     where tType = fromEnum ThreshBinary
+{-# INLINE [0] unsafeThreshBin #-}
 
 unsafeThreshBinInv :: ByteOrFloat d =>
                       d -> d -> HIplImage MonoChromatic d ->
@@ -130,11 +124,16 @@ unsafeThreshBinInv :: ByteOrFloat d =>
 unsafeThreshBinInv th maxValue = unsafeCvThreshold1 th maxValue tType
     where tType = fromEnum ThreshBinaryInv
 
+
 {-# RULES 
-"thresholdBinary/in-place" forall th mv. 
+"thresholdBinary/in-place" [~1] forall th mv.
   thresholdBinary th mv = pipeline (unsafeThreshBin th mv)
-"thresholdBinaryInv/in-place" forall th mv. 
+"thresholdBinary/unpipe" [1] forall th mv.
+  pipeline (unsafeThreshBin th mv) = thresholdBinary th mv
+"thresholdBinaryInv/in-place" [~1] forall th mv. 
   thresholdBinaryInv th mv = pipeline (unsafeThreshBinInv th mv)
+"thresholdBinaryInv/unpipe" [1] forall th mv.
+  pipeline (unsafeThreshBinInv th mv) = thresholdBinaryInv th mv
   #-}
 
 -- |Truncation thresholding (i.e. clamping). Parameters are the
@@ -151,8 +150,13 @@ unsafeThreshTrunc :: ByteOrFloat d1 =>
                      IO (HIplImage MonoChromatic d1)
 unsafeThreshTrunc th = unsafeCvThreshold1 th 0 (fromEnum ThreshTrunc)
 
-{-# RULES "thresholdTruncate/in-place" forall th. 
+{-# INLINE [0] thresholdTruncate #-}
+{-# INLINE [0] unsafeThreshTrunc #-}
+{-# RULES 
+"thresholdTruncate/in-place" [~1] forall th. 
   thresholdTruncate th = pipeline (unsafeThreshTrunc th)
+"thresholdTruncate/unpipe" [1] forall th.
+  pipeline (unsafeThreshTrunc th) = thresholdTruncate th
   #-}
 
 -- |Maps pixels that are less than or equal to @threshold@ to zero;
@@ -184,15 +188,20 @@ unsafeThresholdToZeroInv :: ByteOrFloat d =>
 unsafeThresholdToZeroInv th = unsafeCvThreshold1 th 0 tType
     where tType = fromEnum ThreshToZeroInv
 
-
-{-# RULES "thresholdToZero/in-place" forall th. 
+{-# INLINE [0] thresholdToZero #-}
+{-# INLINE [0] unsafeThresholdToZero #-}
+{-# INLINE [0] thresholdToZeroInv #-}
+{-# INLINE [0] unsafeThresholdToZeroInv #-}
+{-# RULES 
+"thresholdToZero/in-place" [~1] forall th. 
   thresholdToZero th = pipeline (unsafeThresholdToZero th)
-  #-}
-
-{-# RULES "thresholdToZeroInv/in-place" forall th. 
+"thresholdToZero/unpipe" [1] forall th.
+  pipeline (unsafeThresholdToZero th) = thresholdToZero th
+"thresholdToZeroInv/in-place" [~1] forall th. 
   thresholdToZeroInv th = pipeline (unsafeThresholdToZeroInv th)
+"thresholdToZeroInv/unpipe" [1] forall th.
+  pipeline (unsafeThresholdToZeroInv th) = thresholdToZeroInv th
   #-}
-
 
 -- |Binary thresholding using Otsu's method to determine an optimal
 -- threshold value. The chosen value is returned along with the
@@ -223,14 +232,20 @@ unsafeBinOtsuInv :: Word8 -> HIplImage MonoChromatic Word8 ->
 unsafeBinOtsuInv maxValue = unsafeCvThresholdOtsu maxValue tType
     where tType = fromEnum ThreshBinaryInv
 
-
+{-# INLINE [0] thresholdBinaryOtsu #-}
+{-# INLINE [0] unsafeBinOtsu #-}
+{-# INLINE [0] thresholdBinaryOtsuInv #-}
+{-# INLINE [0] unsafeBinOtsuInv #-}
 {-# RULES 
-"thresholdBinaryOtsu/in-place" forall mv. 
+"thresholdBinaryOtsu/in-place" [~1] forall mv. 
   thresholdBinaryOtsu mv = pipeline (unsafeBinOtsu mv)
-"thresholdBinaryOtsuInv/in-place" forall mv. 
+"thresholdBinaryOtsu/unpipe" [1] forall mv.
+  pipeline (unsafeBinOtsu mv) = thresholdBinaryOtsu mv
+"thresholdBinaryOtsuInv/in-place" [~1] forall mv. 
   thresholdBinaryOtsuInv mv = pipeline (unsafeBinOtsuInv mv)
+"thresholdBinaryOtsuInv/unpipe" [1] forall mv.
+  pipeline (unsafeBinOtsuInv mv) = thresholdBinaryOtsuInv mv
   #-}
-
 
 -- |Maps pixels that are greater than @threshold@ to the @threshold@
 -- value; leaves all other pixels unchanged. Takes the source
@@ -244,8 +259,13 @@ unsafeTruncOtsu :: HIplImage MonoChromatic Word8 ->
                    IO (HIplImage MonoChromatic Word8, Word8)
 unsafeTruncOtsu = unsafeCvThresholdOtsu 0 (fromEnum ThreshTrunc)
 
-{-# RULES "thresholdTruncateOtsu/in-place" 
+{-# INLINE [0] thresholdTruncateOtsu #-}
+{-# INLINE [0] unsafeTruncOtsu #-}
+{-# RULES 
+"thresholdTruncateOtsu/in-place" [~1] 
   thresholdTruncateOtsu = pipeline unsafeTruncOtsu
+"thresholdTruncateOtsu/unpipe" [1]
+  pipeline unsafeTruncOtsu = thresholdTruncateOtsu
   #-}
 
 -- |Maps pixels that are less than or equal to @threshold@ to zero;
@@ -272,9 +292,17 @@ unsafeToZeroOtsuInv :: HIplImage MonoChromatic Word8 ->
 unsafeToZeroOtsuInv = unsafeCvThresholdOtsu 0 tType
     where tType = fromEnum ThreshToZeroInv
 
+{-# INLINE [0] thresholdToZeroOtsu #-}
+{-# INLINE [0] unsafeToZeroOtsu #-}
+{-# INLINE [0] thresholdToZeroOtsuInv #-}
+{-# INLINE [0] unsafeToZeroOtsuInv #-}
 {-# RULES 
-"thresholdToZeroOtsu/in-place" 
+"thresholdToZeroOtsu/in-place" [~1]
   thresholdToZeroOtsu = pipeline unsafeToZeroOtsu
-"thresholdToZeroOtsuInv/in-place"
+"thresholdToZeroOtsu/unpipe" [1]
+  pipeline unsafeToZeroOtsu = thresholdToZeroOtsu
+"thresholdToZeroOtsuInv/in-place" [~1]
   thresholdToZeroOtsuInv = pipeline unsafeToZeroOtsuInv
+"thresholdToZeroOtsuInv/unpipe" [1]
+  pipeline unsafeToZeroOtsuInv = thresholdToZeroOtsuInv
   #-}

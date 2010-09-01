@@ -1,9 +1,10 @@
-{-# LANGUAGE ScopedTypeVariables, BangPatterns #-}
+{-# LANGUAGE ScopedTypeVariables, BangPatterns, MultiParamTypeClasses, 
+             FlexibleInstances #-}
 -- |Functions for working with 'HIplImage's.
 module AI.CV.OpenCV.Core.HIplUtils 
     (isColor, isMono, imgChannels, withPixels, pixels,
      fromPtr, fromFileColor, fromFileGray, toFile, 
-     compatibleImage, duplicateImage, fromPixels, 
+     compatibleImage, duplicateImage, fromPixels,
      withImagePixels, fromGrayPixels, fromColorPixels,
      withDuplicateImage, withCompatibleImage, pipeline,
      HIplImage, mkHIplImage, width, height, mkBlackImage,
@@ -137,7 +138,6 @@ withPixels w h pix f = if fromIntegral len == sz
           (fp,len) = case V.unsafeToForeignPtr (V.force pix) of
                          (fp,0,len) -> (fp,len)
                          _ -> error "fromPixels non-zero offset"
-{-# INLINE [0] withImagePixels #-}
 
 -- |Construct a fresh 'HIplImage' from a width, a height, and a
 -- 'V.Vector' of pixel values.
@@ -222,12 +222,12 @@ getROI (rx,ry) (rw,rh) src =
           rowLen = rw*bpp
 
 pipeline :: (HIplImage c d -> IO r) -> HIplImage c d -> r
---pipeline f = unsafePerformIO . ((f $!) <=< duplicateImage)
 pipeline f = unsafePerformIO . (f <=< duplicateImage)
-
-{-# NOINLINE pipeline #-}
+{-# INLINE [0] pipeline #-}
 
 {-# RULES
-"pipeline/join" forall f g h. pipeline f (pipeline g h) = pipeline (f <=< g) h
-"pipeline/compose" forall f g. pipeline f . pipeline g = pipeline (f <=< g)
+"pipeline/join" forall f g h.
+  pipeline f (pipeline g h) = pipeline (f <=< g) h
+"pipeline/compose" forall f g.
+  pipeline f . pipeline g = pipeline (f <=< g)
   #-}

@@ -45,6 +45,7 @@ library
       AI.CV.OpenCV.FeatureDetection
    c-sources:
       src/AI/CV/OpenCV/Core/HOpenCV_wrap.c
+   other-modules: AI.CV.OpenCV.Core.PipelineTH
    hs-Source-Dirs: src
    if os(windows)
      include-dirs: C:\\OpenCV2.1\\include
@@ -53,6 +54,7 @@ library
    else
      extra-libraries: cxcore,cv,highgui
    build-depends: base >=4 && <5, 
+                  template-haskell,
                   allocated-processor >= 0.0.1, 
                   vector-space,
                   directory >= 1.0.1.0 && < 1.1,

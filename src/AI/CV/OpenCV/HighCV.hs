@@ -13,7 +13,8 @@ module AI.CV.OpenCV.HighCV (erode, dilate, houghStandard, houghProbabilistic,
                             InterpolationMethod(..), MonoChromatic, 
                             TriChromatic, createVideoWriter, HasChannels,
                             module AI.CV.OpenCV.ColorConversion, GrayImage,
-                            ColorImage, createFileCaptureLoop)
+                            ColorImage, createFileCaptureLoop, 
+                            module AI.CV.OpenCV.Threshold)
     where
 import AI.CV.OpenCV.Core.CxCore
 import AI.CV.OpenCV.Core.CV
@@ -30,6 +31,7 @@ import Foreign.ForeignPtr (withForeignPtr)
 import Foreign.Storable
 import System.IO.Unsafe (unsafePerformIO)
 import Unsafe.Coerce
+import AI.CV.OpenCV.Threshold
 
 -- |Grayscale 8-bit (per-pixel) image type synonym.
 type GrayImage = HIplImage MonoChromatic Word8
@@ -45,6 +47,7 @@ erode n img = unsafePerformIO . withHIplImage img $
               \src -> return . fst . withCompatibleImage img $
                       \dst -> cvErode src dst n'
     where n' = fromIntegral n
+{-# INLINE [0] erode #-}
 
 -- |Dilate an 'HIplImage' with a 3x3 structuring element for the
 -- specified number of iterations.
@@ -54,6 +57,7 @@ dilate n img = unsafePerformIO . withHIplImage img $
                \src -> return . fst . withCompatibleImage img $
                        \dst -> cvDilate src dst n'
     where n' = fromIntegral n
+{-# INLINE [0] dilate #-}
 
 -- |Unsafe in-place erosion. This is a destructive update of the given
 -- image and is only used by the rewrite rules when there is no way to
@@ -63,6 +67,7 @@ unsafeErode :: (HasChannels c, HasDepth d) =>
 unsafeErode n img = withHIplImage img (\src -> cvErode src src n') >> 
                     return (unsafeCoerce img)
     where n' = fromIntegral n
+{-# INLINE [0] unsafeErode #-}
 
 -- |Unsafe in-place dilation. This is a destructive update of the
 -- given image and is only used by the rewrite rules when there is no
@@ -72,16 +77,13 @@ unsafeDilate :: (HasChannels c, HasDepth d) =>
 unsafeDilate n img = withHIplImage img (\src -> cvDilate src src n') >> 
                      return (unsafeCoerce img)
     where n' = fromIntegral n
-
--- Perform destructive in-place updates when such a change is
--- safe. Safety is indicated by the phantom type tag annotating
--- HIplImage. If we have a function yielding an HIplImage FreshImage,
--- then we can clobber it. That is the *only* time these in-place
--- operations are known to be safe.
+{-# INLINE [0] unsafeDilate #-}
 
 {-# RULES 
-"erode/in-place"  forall n. erode n = pipeline (unsafeErode n)
-"dilate/in-place" forall n. dilate n = pipeline (unsafeDilate n)
+"erode/in-place" [~1] forall n. erode n = pipeline (unsafeErode n)
+"erode/unpipe" [1] forall n. pipeline (unsafeErode n) = erode n
+"dilate/in-place" [~1] forall n. dilate n = pipeline (unsafeDilate n)
+"dilate/unpipe" [1] forall n. pipeline (unsafeDilate n) = dilate n
   #-}
 
 -- |Extract all the pixel values from an image along a line, including
@@ -171,6 +173,7 @@ drawLines col thick lineType lines img =
     fst $ withDuplicateImage img $ \ptr -> mapM_ (draw ptr) lines
     where draw ptr (pt1, pt2) = cvLine ptr pt1 pt2 col thick lineType'
           lineType' = lineTypeEnum lineType
+{-# INLINE [0] drawLines #-}
 
 -- |Unsafe in-place line drawing.
 unsafeDrawLines :: (HasChannels c, HasDepth d) =>
@@ -181,9 +184,13 @@ unsafeDrawLines col thick lineType lines img =
       mapM_ (draw ptr) lines >> return (unsafeCoerce img)
     where draw ptr (pt1,pt2) = cvLine ptr pt1 pt2 col thick lineType'
           lineType' = lineTypeEnum lineType
+{-# INLINE [0] unsafeDrawLines #-}
 
-{-# RULES "drawLines/in-place" forall c t lt lns. 
+{-# RULES 
+"drawLines/in-place" [~1] forall c t lt lns. 
   drawLines c t lt lns = pipeline (unsafeDrawLines c t lt lns)
+"drawLines/unpipe" [1] forall c t lt lns.
+  pipeline (unsafeDrawLines c t lt lns) = drawLines c t lt lns
   #-}
 
 -- |Find edges using the Canny algorithm. The smallest value between
@@ -198,6 +205,7 @@ cannyEdges threshold1 threshold2 aperture img =
     fst . withCompatibleImage img $ \dst -> 
         withHIplImage img $ \src -> 
             cvCanny src dst threshold1 threshold2 aperture
+{-# INLINE [0] cannyEdges #-}
 
 unsafeCanny :: HasDepth d =>
                Double -> Double -> Int -> HIplImage MonoChromatic d -> 
@@ -205,9 +213,13 @@ unsafeCanny :: HasDepth d =>
 unsafeCanny threshold1 threshold2 aperture img = 
     withHIplImage img $ \src -> 
         cvCanny src src threshold1 threshold2 aperture >> return img
+{-# INLINE [0] unsafeCanny #-}
 
-{-# RULES "canny/in-place" forall t1 t2 a.
+{-# RULES 
+"canny/in-place" [~1] forall t1 t2 a.
   cannyEdges t1 t2 a = pipeline (unsafeCanny t1 t2 a)
+"canny/unpipe" [1] forall t1 t2 a.
+  pipeline (unsafeCanny t1 t2 a) = cannyEdges t1 t2 a
   #-}
 
 {-
