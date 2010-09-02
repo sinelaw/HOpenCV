@@ -99,7 +99,7 @@ thresholdBinary :: (ByteOrFloat d1, SameOrByte d1 d2) =>
                    d1 -> d1 -> HIplImage MonoChromatic d1 ->
                    HIplImage MonoChromatic d2
 thresholdBinary th maxValue = cvThreshold1 th maxValue (fromEnum ThreshBinary)
-{-# INLINE [0] thresholdBinary #-}
+{-# INLINE [1] thresholdBinary #-}
 
 -- |Inverse binary thresholding. Parameters are the @threshold@ value,
 -- the @maxValue@ passing pixels are mapped to, and the source
@@ -116,14 +116,13 @@ unsafeThreshBin :: ByteOrFloat d =>
                    IO (HIplImage MonoChromatic d)
 unsafeThreshBin th maxValue = unsafeCvThreshold1 th maxValue tType
     where tType = fromEnum ThreshBinary
-{-# INLINE [0] unsafeThreshBin #-}
+{-# INLINE [1] unsafeThreshBin #-}
 
 unsafeThreshBinInv :: ByteOrFloat d =>
                       d -> d -> HIplImage MonoChromatic d ->
                       IO (HIplImage MonoChromatic d)
 unsafeThreshBinInv th maxValue = unsafeCvThreshold1 th maxValue tType
     where tType = fromEnum ThreshBinaryInv
-
 
 {-# RULES 
 "thresholdBinary/in-place" [~1] forall th mv.
