@@ -14,7 +14,8 @@ module AI.CV.OpenCV.HighCV (erode, dilate, houghStandard, houghProbabilistic,
                             TriChromatic, createVideoWriter, HasChannels,
                             module AI.CV.OpenCV.ColorConversion, GrayImage,
                             ColorImage, createFileCaptureLoop, 
-                            module AI.CV.OpenCV.Threshold)
+                            module AI.CV.OpenCV.Threshold,
+                            module AI.CV.OpenCV.FloodFill)
     where
 import AI.CV.OpenCV.Core.CxCore
 import AI.CV.OpenCV.Core.CV
@@ -32,6 +33,7 @@ import Foreign.Storable
 import System.IO.Unsafe (unsafePerformIO)
 import Unsafe.Coerce
 import AI.CV.OpenCV.Threshold
+import AI.CV.OpenCV.FloodFill
 
 -- |Grayscale 8-bit (per-pixel) image type synonym.
 type GrayImage = HIplImage MonoChromatic Word8

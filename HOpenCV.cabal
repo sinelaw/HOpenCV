@@ -35,6 +35,7 @@ library
       AI.CV.OpenCV.Core.HIplUtils
       AI.CV.OpenCV.Core.ColorConversion
       AI.CV.OpenCV.HighCV
+      AI.CV.OpenCV.FloodFill
       AI.CV.OpenCV.PixelUtils
       AI.CV.OpenCV.ColorConversion
       AI.CV.OpenCV.Motion
