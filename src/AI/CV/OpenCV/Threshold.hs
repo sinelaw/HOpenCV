@@ -33,7 +33,7 @@ class (HasDepth d1, HasDepth d2) => SameOrByte d1 d2 where
 instance SameOrByte Float Word8 where
 instance ByteOrFloat d => SameOrByte d d where
 
-foreign import ccall unsafe "opencv/cv.h cvThreshold"
+foreign import ccall unsafe "opencv2/imgproc/imgproc_c.h cvThreshold"
   c_cvThreshold :: Ptr CvArr -> Ptr CvArr -> CDouble -> CDouble -> CInt -> 
                    IO (CDouble)
 

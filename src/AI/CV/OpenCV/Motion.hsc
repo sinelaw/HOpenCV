@@ -1,5 +1,5 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
--- |Motion analysis functions.
+-- |Motion analysis functions. Possibly BROKEN in OpenCV 2.2.
 module AI.CV.OpenCV.Motion (calcOpticalFlowBM) where
 import Data.Word (Word8)
 import Foreign.C.Types (CInt)
@@ -8,7 +8,9 @@ import System.IO.Unsafe
 import AI.CV.OpenCV.Core.CxCore
 import AI.CV.OpenCV.Core.HIplImage
 
-foreign import ccall unsafe "opencv/cv.h cvCalcOpticalFlowBM"
+-- FIXME: This is missing from the C API of OpenCV 2.2
+--foreign import ccall unsafe "opencv/cv.h cvCalcOpticalFlowBM"
+foreign import ccall unsafe "opencv2/video/tracking.hpp cvCalcOpticalFlowBM"
   c_cvCalcOpticalFlowBM :: Ptr CvArr -> Ptr CvArr -> CInt -> CInt -> 
                            CInt -> CInt -> CInt -> CInt -> 
                            CInt -> Ptr CvArr -> Ptr CvArr -> IO ()
