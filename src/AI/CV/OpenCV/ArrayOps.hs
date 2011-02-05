@@ -10,7 +10,7 @@ import System.IO.Unsafe (unsafePerformIO)
 import AI.CV.OpenCV.Core.CxCore (CvArr, IplImage)
 import AI.CV.OpenCV.Core.HIplUtils
 
-foreign import ccall unsafe "opencv/cxcore.h cvSubRS"
+foreign import ccall unsafe "opencv2/core/core_c.h cvSubRS"
   c_cvSubRS :: Ptr CvArr -> CDouble -> CDouble -> CDouble -> CDouble -> 
                Ptr CvArr -> Ptr CvArr -> IO ()
 
@@ -41,7 +41,7 @@ unsafeSubRS value src = withHIplImage src $ \srcPtr ->
 "subRS/unpipe" [1] forall v. pipeline (unsafeSubRS v) = subRS v
   #-}
 
-foreign import ccall unsafe "opencv/cxcore.h cvAbsDiff"
+foreign import ccall unsafe "opencv2/core/core_c.h cvAbsDiff"
   c_cvAbsDiff :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> IO ()
 
 -- |Calculate the absolute difference between two images.
@@ -67,7 +67,7 @@ unsafeAbsDiff src1 src2 = withHIplImage src1 $ \src1' ->
 "absDiff/unpipe" [1] forall m. pipeline (unsafeAbsDiff m) = absDiff m
   #-}
 
-foreign import ccall unsafe "opencv/cxcore.h cvConvertScale"
+foreign import ccall unsafe "opencv2/core/core_c.h cvConvertScale"
   c_cvConvertScale :: Ptr CvArr -> Ptr CvArr -> CDouble -> CDouble -> IO ()
 
 -- |Converts one array to another with optional affine
@@ -90,7 +90,7 @@ convertScale scale shift src = unsafePerformIO $
                                                        (realToFrac shift)
                                   return dst
 
-foreign import ccall unsafe "opencv/cxcore.h cvAnd"
+foreign import ccall unsafe "opencv2/core/core_c.h cvAnd"
   c_cvAnd :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> IO ()
 
 cvAndHelper :: Ptr IplImage -> Ptr IplImage -> Ptr IplImage -> Ptr IplImage -> 
@@ -144,7 +144,7 @@ unsafeAndMask mask src1 src2 = withHIplImage src1 $ \src1' ->
   pipeline (unsafeAndMask m s) = cvAndMask m s
   #-}
 
-foreign import ccall unsafe "opencv/cxcore.h cvAndS"
+foreign import ccall unsafe "opencv2/core/core_c.h cvAndS"
    c_cvAndS :: Ptr CvArr -> CDouble -> CDouble -> CDouble -> CDouble -> 
                Ptr CvArr -> Ptr CvArr -> IO ()
 
@@ -170,7 +170,7 @@ unsafeAndS s img = do withHIplImage img $ \src ->
 "cvAndS/unpipe" [1] forall s. pipeline (unsafeAndS s) = cvAndS s
   #-}
 
-foreign import ccall unsafe "opencv/cxcore.h cvScaleAdd"
+foreign import ccall unsafe "opencv2/core/core_c.h cvScaleAdd"
   c_cvScaleAdd :: Ptr CvArr -> CDouble -> CDouble -> CDouble -> CDouble -> 
                   Ptr CvArr -> Ptr CvArr -> IO ()
 
@@ -184,7 +184,7 @@ cvScaleAdd src1 s src2 = fst . withCompatibleImage src1 $ \dst ->
                                             (castPtr src2') (castPtr dst)
     where (r,g,b,a) = toCvScalar s
 
-foreign import ccall unsafe "opencv/cxcore.h cvMul"
+foreign import ccall unsafe "opencv2/core/core_c.h cvMul"
   c_cvMul :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> CDouble -> IO ()
 
 cvMulHelper :: Ptr IplImage -> Ptr IplImage -> Ptr IplImage -> Double -> IO ()
@@ -229,7 +229,7 @@ unsafeMul' scale src1 src2 = do withHIplImage src1 $ \src1' ->
 "cvMul'/unpipe" [1] forall s s1. pipeline (unsafeMul' s s1) = cvMul' s s1
   #-}
 
-foreign import ccall unsafe "opencv/cxcore.h cvAdd"
+foreign import ccall unsafe "opencv2/core/core_c.h cvAdd"
   c_cvAdd :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> IO ()
 
 -- |Per-element sum of two arrays.
@@ -249,7 +249,7 @@ unsafeAdd src1 src2 = do withHIplImage src1 $ \src1' ->
                                      (castPtr src2') nullPtr
                          return src2
 
-foreign import ccall unsafe "opencv/cxcore.h cvAddS"
+foreign import ccall unsafe "opencv2/core/core_c.h cvAddS"
   c_cvAddS :: Ptr CvArr -> CDouble -> CDouble -> CDouble -> CDouble -> 
               Ptr CvArr -> Ptr CvArr -> IO ()
 

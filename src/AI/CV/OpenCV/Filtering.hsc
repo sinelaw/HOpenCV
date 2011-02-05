@@ -7,9 +7,9 @@ import System.IO.Unsafe (unsafePerformIO)
 import AI.CV.OpenCV.Core.CxCore
 import AI.CV.OpenCV.Core.HIplUtils
 
-#include <opencv/cv.h>
+#include <opencv2/imgproc/types_c.h>
 
-foreign import ccall unsafe "opencv/cv.h cvSmooth"
+foreign import ccall unsafe "opencv2/imgproc/imgproc_c.h cvSmooth"
   c_cvSmooth :: Ptr CvArr -> Ptr CvArr -> CInt -> CInt -> CInt -> CDouble -> 
                 CDouble -> IO ()
 

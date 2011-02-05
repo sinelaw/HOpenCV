@@ -54,7 +54,7 @@ library
      extra-lib-dirs:     C:\\OpenCV2.1\\bin
      extra-libraries: cxcore210, cv210, highgui210
    else
-     extra-libraries: cxcore,cv,highgui
+     extra-libraries: opencv_core,opencv_imgproc,opencv_highgui
    build-depends: base >=4 && <5, 
                   template-haskell,
                   allocated-processor >= 0.0.1, 

@@ -3,9 +3,9 @@
 module AI.CV.OpenCV.Core.HIplImage 
     ( TriChromatic, MonoChromatic, HasChannels(..), HasDepth(..), 
       HIplImage(..), mkHIplImage, mkBlackImage, withHIplImage, bytesPerPixel, 
-      ByteOrFloat, HasScalar(..), IsCvScalar(..)) where
+      ByteOrFloat, HasScalar(..), IsCvScalar(..), freeROI) where
 import AI.CV.OpenCV.Core.CxCore (IplImage,Depth(..),iplDepth8u, iplDepth16u,
-                                 iplDepth32f, iplDepth64f)
+                                 iplDepth32f, iplDepth64f, cvFree)
 import AI.CV.OpenCV.Core.CV (cvCvtColor)
 import AI.CV.OpenCV.Core.ColorConversion (cv_GRAY2BGR, cv_BGR2GRAY)
 import Control.Applicative ((<$>))
@@ -128,6 +128,7 @@ data HIplImage c d = (HasChannels c, HasDepth d) =>
                                , height    :: Int
                                , imageSize :: Int
                                , imageData :: ForeignPtr d
+                               , imageDataOrigin :: ForeignPtr d
                                , widthStep :: Int }
 
 -- |Prepare a 'HIplImage' of the given width and height. The pixel and
@@ -136,7 +137,7 @@ mkHIplImage :: forall c d. (HasChannels c, HasDepth d) =>
                Int -> Int -> IO (HIplImage c d)
 mkHIplImage w h = 
     do ptr <- mallocForeignPtrArray numBytes
-       return $ HIplImage 0 w h numBytes ptr stride
+       return $ HIplImage 0 w h numBytes ptr ptr stride
     where numBytes = stride * h
           bpp = bytesPerPixel (undefined::d)
           stride = w * (numChannels (undefined::c) :: Int) * bpp
@@ -161,13 +162,13 @@ withHIplImage :: (HasChannels c, HasDepth d) =>
 withHIplImage img f = alloca $ 
                       \p -> withForeignPtr (imageData img) 
                                            (\hp -> pokeIpl img p (castPtr hp) >>
-                                                   f (castPtr p))
+                                                   f p)
 
--- Poke a 'Ptr' 'HIplImage' with a specific imageData 'Ptr' that is
+-- Poke a 'Ptr' 'IplImage' with a specific imageData 'Ptr' that is
 -- currently valid. This is solely an auxiliary function to
 -- 'withHIplImage'.
 pokeIpl :: forall c d. (HasChannels c, HasDepth d) => 
-           HIplImage c d -> Ptr (HIplImage c d) -> Ptr Word8 -> IO ()
+           HIplImage c d -> Ptr IplImage -> Ptr Word8 -> IO ()
 pokeIpl himg ptr hp =
     do (#poke IplImage, nSize) ptr ((#size IplImage)::Int)
        (#poke IplImage, ID) ptr (0::Int)
@@ -186,6 +187,10 @@ pokeIpl himg ptr hp =
        (#poke IplImage, imageData) ptr hp
        (#poke IplImage, widthStep) ptr (widthStep himg)
        (#poke IplImage, imageDataOrigin) ptr hp
+
+freeROI :: Ptr IplImage -> IO ()
+freeROI ptr = do p <- (#peek IplImage, roi) ptr
+                 if (ptrToIntPtr p == 0) then return () else cvFree p
 
 -- |An 'HIplImage' in Haskell is isomorphic with OpenCV's 'IplImage'
 -- structure type. They share the same binary representation through
@@ -218,10 +223,12 @@ instance forall c d. (HasChannels c, HasDepth d) =>
                            else cv_BGR2GRAY
                     ptr' = castPtr ptr :: Ptr IplImage
                 withHIplImage img2 $ \dst -> cvCvtColor ptr' dst conv
+                (#peek IplImage, imageDataOrigin) ptr >>= cvFree
                 return $ unsafeCoerce img2
         else do origin' <- (#peek IplImage, origin) ptr
                 imageSize' <- (#peek IplImage, imageSize) ptr
                 imageData' <- (#peek IplImage, imageData) ptr >>= newForeignPtr_
+                imageDataOrigin' <- (#peek IplImage, imageDataOrigin) ptr >>= newForeignPtr_
                 widthStep' <- (#peek IplImage, widthStep) ptr
                 return $ HIplImage origin' width' height' imageSize' 
-                                   imageData' widthStep'
+                                   imageData' imageDataOrigin' widthStep'

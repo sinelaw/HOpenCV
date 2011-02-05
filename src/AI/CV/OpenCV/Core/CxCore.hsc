@@ -112,6 +112,10 @@ instance IplArrayType CvArr
 data IplImage
 instance IplArrayType IplImage
 
+instance Storable IplImage where
+  sizeOf _ = (#size IplImage)
+  alignment _ = alignment (undefined::CDouble)
+
 data CvMemStorage
 
 data CvSeq a
@@ -242,7 +246,10 @@ foreign import ccall unsafe "opencv/cxcore.h cvConvertScale"
                                 
 foreign import ccall unsafe "HOpenCV_wrap.h cv_free"
   cvFree :: Ptr a -> IO ()
-            
+
+foreign import ccall unsafe "HOpenCV_wrap.h &cv_free"
+  cvFreePtr :: FunPtr (Ptr a -> IO ())
+
 foreign import ccall unsafe "opencv2/core/core_c.h cvLoad"
   c_cvLoad :: CString -> Ptr CvMemStorage -> CString -> Ptr CString -> IO (Ptr a)
 

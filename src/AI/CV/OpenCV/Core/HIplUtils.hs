@@ -11,7 +11,7 @@ module AI.CV.OpenCV.Core.HIplUtils
      withHIplImage, MonoChromatic, TriChromatic, HasChannels, 
      HasDepth(..), HasScalar(..), IsCvScalar(..), colorDepth,
      ByteOrFloat, getROI) where
-import AI.CV.OpenCV.Core.CxCore (IplImage)
+import AI.CV.OpenCV.Core.CxCore (IplImage, cvFree, cvFreePtr)
 import AI.CV.OpenCV.Core.HighGui (cvLoadImage, cvSaveImage, LoadColor(..))
 import AI.CV.OpenCV.Core.HIplImage
 import Control.Monad ((<=<))
@@ -79,18 +79,24 @@ checkFile f = do e <- doesFileExist f
 -- |Load a color 'HIplImage' from an 8-bit image file. If the image
 -- file is grayscale, it will be converted to color.
 fromFileColor :: FilePath -> IO (HIplImage TriChromatic Word8)
-fromFileColor fileName = do checkFile fileName
-                            ptr <- cvLoadImage fileName LoadColor
-                            img <- fromPtr ptr :: IO (HIplImage TriChromatic Word8)
-                            return $ unsafeCoerce img
+fromFileColor fileName = 
+  do checkFile fileName
+     ptr <- cvLoadImage fileName LoadColor
+     img <- fromPtr ptr :: IO (HIplImage TriChromatic Word8)
+     addForeignPtrFinalizer cvFreePtr (imageDataOrigin img)
+     freeROI ptr
+     cvFree ptr
+     return $ unsafeCoerce img
 
 -- |Load a grayscale 'HIplImage' from an 8-bit image file. If the
 -- image file is color, it will be converted to grayscale.
 fromFileGray :: FilePath -> IO (HIplImage MonoChromatic Word8)
-fromFileGray fileName = do checkFile fileName
-                           ptr <- cvLoadImage fileName LoadGray
-                           img <- fromPtr ptr :: IO (HIplImage MonoChromatic Word8)
-                           return $ unsafeCoerce img
+fromFileGray fileName = 
+  do checkFile fileName
+     ptr <- cvLoadImage fileName LoadGray
+     img <- fromPtr ptr :: IO (HIplImage MonoChromatic Word8)
+     addForeignPtrFinalizer cvFreePtr (imageDataOrigin img)
+     return $ unsafeCoerce img
 
 -- |Save a 'HIplImage' to the specified file.
 toFile :: (HasChannels c, HasDepth d) => FilePath -> HIplImage c d -> IO ()
@@ -101,9 +107,9 @@ toFile fileName img = withHIplImage img $ \ptr -> cvSaveImage fileName ptr
 -- color channels, and color depth as an existing HIplImage. The pixel
 -- data of the original 'HIplImage' is not copied.
 compatibleImage :: HIplImage c d -> IO (HIplImage c d)
-compatibleImage img@(HIplImage _ _ _ _ _ _) = 
+compatibleImage img@(HIplImage _ _ _ _ _ _ _) = 
     do ptr <- mallocForeignPtrArray sz
-       return $ HIplImage 0 w h sz ptr stride
+       return $ HIplImage 0 w h sz ptr ptr stride
     where w = width img
           h = height img
           sz = imageSize img
@@ -112,11 +118,11 @@ compatibleImage img@(HIplImage _ _ _ _ _ _) =
 -- |Create an exact duplicate of the given HIplImage. This allocates a
 -- fresh array to store the copied pixels.
 duplicateImage :: HIplImage c d -> IO (HIplImage c d)
-duplicateImage img@(HIplImage _ _ _ _ _ _ ) =
+duplicateImage img@(HIplImage _ _ _ _ _ _ _ ) =
     do fptr <- mallocForeignPtrArray sz
        withForeignPtr (imageData img) $ 
            \src -> withForeignPtr fptr $ \dst -> copyBytes dst src sz
-       return $ HIplImage 0 w h sz fptr stride
+       return $ HIplImage 0 w h sz fptr fptr stride
     where w = width img
           h = height img
           sz = imageSize img
@@ -129,7 +135,7 @@ withPixels :: forall a c d r.
               (HasChannels c, Integral a, HasDepth d) =>
               a -> a -> V.Vector d -> (HIplImage c d -> r) -> r
 withPixels w h pix f = if fromIntegral len == sz
-                       then f $ HIplImage 0 w' h' sz fp (w'*nc)
+                       then f $ HIplImage 0 w' h' sz fp fp (w'*nc)
                        else error "Length disagreement"
     where w' = fromIntegral w
           h' = fromIntegral h
@@ -146,7 +152,7 @@ fromPixels :: forall a c d.
               a -> a -> V.Vector d -> HIplImage c d
 fromPixels w h pix = unsafePerformIO $ 
                      do fp <- copyData
-                        return $ HIplImage 0 w' h' sz fp (w'*nc)
+                        return $ HIplImage 0 w' h' sz fp fp (w'*nc)
     where w' = fromIntegral w
           h' = fromIntegral h
           nc = numChannels (undefined::c)

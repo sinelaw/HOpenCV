@@ -7,7 +7,7 @@ import System.IO.Unsafe (unsafePerformIO)
 import AI.CV.OpenCV.Core.CxCore
 import AI.CV.OpenCV.Core.HIplUtils
 
-foreign import ccall unsafe "opencv/cv.h cvCornerHarris"
+foreign import ccall unsafe "opencv2/imgproc/imgproc_c.h cvCornerHarris"
   c_cvHarris :: Ptr CvArr -> Ptr CvArr -> CInt -> CInt -> CDouble -> IO ()
 
 harris :: Ptr IplImage -> Ptr IplImage -> Int -> Int -> Double -> IO ()

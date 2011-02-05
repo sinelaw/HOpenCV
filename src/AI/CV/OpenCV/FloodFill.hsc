@@ -14,9 +14,9 @@ import AI.CV.OpenCV.Core.HIplUtils
 -- neighbors leads to a /floating/ range.
 data FloodRange = FloodFixed | FloodFloating
 
-#include <opencv/cv.h>
+#include <opencv2/imgproc/imgproc_c.h>
 
-foreign import ccall unsafe "opencv/cv.h cvFloodFill"
+foreign import ccall unsafe "opencv2/imgproc/imgproc_c.h cvFloodFill"
   c_cvFloodFill :: Ptr CvArr -> CInt -> CInt -> 
                    CDouble -> CDouble -> CDouble -> CDouble ->
                    CDouble -> CDouble -> CDouble -> CDouble ->
