@@ -1,6 +1,6 @@
-#include <opencv/cxcore.h>
-#include <opencv/cv.h>
-#include <opencv/highgui.h>
+#include <opencv2/core/core_c.h>
+#include <opencv2/imgproc/imgproc_c.h>
+#include <opencv2/highgui/highgui_c.h>
 
 #include <stdio.h>
 
@@ -160,7 +160,7 @@ int c_cvFindContours(CvArr *img, CvMemStorage *storage, CvSeq** first_contour,
 
 
 /****************************************************************************/
-
+/*
 CvSeq *c_cvHaarDetectObjects( const CvArr* image,
                               CvHaarClassifierCascade* cascade,
                               CvMemStorage* storage, double scale_factor,
@@ -170,4 +170,4 @@ CvSeq *c_cvHaarDetectObjects( const CvArr* image,
 {
     return cvHaarDetectObjects(image, cascade, storage, scale_factor, min_neighbors, flags, cvSize(min_width, min_height), cvSize(max_width, max_height));
 }
-
+*/

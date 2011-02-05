@@ -9,7 +9,7 @@ module AI.CV.OpenCV.Core.HIplUtils
      withDuplicateImage, withCompatibleImage, pipeline,
      HIplImage, mkHIplImage, width, height, mkBlackImage,
      withHIplImage, MonoChromatic, TriChromatic, HasChannels, 
-     HasDepth(..), HasScalar(..), IsCvScalar(..),
+     HasDepth(..), HasScalar(..), IsCvScalar(..), colorDepth,
      ByteOrFloat, getROI) where
 import AI.CV.OpenCV.Core.CxCore (IplImage)
 import AI.CV.OpenCV.Core.HighGui (cvLoadImage, cvSaveImage, LoadColor(..))

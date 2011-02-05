@@ -2,7 +2,7 @@
 module AI.CV.OpenCV.Core.ColorConversion where
 import Foreign.C.Types (CInt)
 
-#include <opencv/cv.h>
+#include <opencv2/imgproc/imgproc_c.h>
 
 newtype ColorConversion = ColorConversion { colorConv :: CInt } deriving Eq
 

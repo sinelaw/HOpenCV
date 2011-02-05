@@ -12,7 +12,7 @@ import System.IO.Unsafe (unsafePerformIO)
 
 import Data.VectorSpace as VectorSpace
 
-#include <opencv/cxcore.h>
+#include <opencv2/core/core_c.h>
 
 ------------------------------------------------------
 toFromIntegral :: (RealFrac c, Integral b, Integral a, Num b1) => (b1 -> c) -> a -> b
@@ -146,7 +146,7 @@ numToDepth x = lookup x depthsLookupList
 
 ---------------------------------------------------------------
 -- mem storage
-foreign import ccall unsafe "opencv/cxcore.h cvCreateMemStorage"
+foreign import ccall unsafe "opencv2/core/core_.h cvCreateMemStorage"
   c_cvCreateMemStorage :: CInt -> IO (Ptr CvMemStorage)
 
 cvCreateMemStorage :: CInt -> IO (Ptr CvMemStorage)
@@ -155,7 +155,7 @@ cvCreateMemStorage = errorName "Failed to create mem storage" . checkPtr . c_cvC
 -- foreign import ccall unsafe "HOpenCV_wrap.h release_mem_storage"
 --   cvReleaseMemStorage :: Ptr CvMemStorage -> IO ()
 
-foreign import ccall unsafe "opencv/cxcore.h cvReleaseMemStorage"
+foreign import ccall unsafe "opencv2/core/core_c.h cvReleaseMemStorage"
   c_cvReleaseMemStorage :: Ptr (Ptr CvMemStorage) -> IO ()
 
 cvReleaseMemStorage :: Ptr CvMemStorage -> IO ()
@@ -181,7 +181,7 @@ cvCreateImage size numChans depth =
 
 -- foreign import ccall unsafe "HOpenCV_wrap.h release_image"
 --   cvReleaseImage :: Ptr IplImage -> IO ()
-foreign import ccall unsafe "opencv/cxcore.h cvReleaseImage"
+foreign import ccall unsafe "opencv2/core/core_c.h cvReleaseImage"
   c_cvReleaseImage :: Ptr (Ptr IplImage) -> IO ()
 
 -- |Release the memory allocated to an 'IplImage'.
@@ -194,7 +194,7 @@ foreign import ccall unsafe "HOpenCV_wrap.h &release_image"
 createImageF :: CvSize -> CInt -> Depth -> IO (ForeignPtr IplImage)
 createImageF x y z = createForeignPtr cp_release_image $ cvCreateImage x y z
 
-foreign import ccall unsafe "opencv/cxcore.h cvCloneImage"
+foreign import ccall unsafe "opencv2/core/core_c.h cvCloneImage"
   c_cvCloneImage :: Ptr IplImage -> IO (Ptr IplImage)
 
 cvCloneImage :: Ptr IplImage -> IO (Ptr IplImage)
@@ -206,7 +206,7 @@ cloneImageF x = createForeignPtr cp_release_image $ cvCloneImage x
 foreign import ccall unsafe "HOpenCV_wrap.h get_size"
   c_get_size :: Ptr CvArr -> Ptr CvSize -> IO ()
 
-foreign import ccall unsafe "opencv/cxcore.h cvCopy"
+foreign import ccall unsafe "opencv2/core/core_c.h cvCopy"
   c_cvCopy :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> IO ()
                    
 -- todo add mask support
@@ -243,7 +243,7 @@ foreign import ccall unsafe "opencv/cxcore.h cvConvertScale"
 foreign import ccall unsafe "HOpenCV_wrap.h cv_free"
   cvFree :: Ptr a -> IO ()
             
-foreign import ccall unsafe "opencv/cxcore.h cvLoad"
+foreign import ccall unsafe "opencv2/core/core_c.h cvLoad"
   c_cvLoad :: CString -> Ptr CvMemStorage -> CString -> Ptr CString -> IO (Ptr a)
 
 cvLoad :: String -> Ptr CvMemStorage -> Maybe String -> IO (Ptr a, Maybe String)
@@ -261,7 +261,7 @@ cvLoad filename memstorage name = withCString filename cvLoad'
               cvFree realNameC
               return (ptrObj, realName)
               
-foreign import ccall unsafe "opencv/cxcore.h cvGetSeqElem"
+foreign import ccall unsafe "opencv2/core/core_c.h cvGetSeqElem"
   cvGetSeqElem :: Ptr (CvSeq a) -> CInt -> IO (Ptr a)
   
 -- foreign import ccall unsafe "HOpenCV_wrap.h c_rect_cvGetSeqElem"

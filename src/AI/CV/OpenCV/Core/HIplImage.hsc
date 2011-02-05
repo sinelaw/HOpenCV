@@ -19,7 +19,7 @@ import Foreign.Ptr
 import Foreign.Storable
 import Unsafe.Coerce
 
-#include <opencv/cxtypes.h>
+#include <opencv2/core/types_c.h>
 {-
 typedef struct _IplImage
 {

@@ -1,5 +1,5 @@
-#include <opencv/cv.h>
-#include <opencv/cxcore.h>
+#include <opencv2/imgproc/imgproc_c.h>
+#include <opencv2/core/core_c.h>
 
 void debug_print_image_header(IplImage *image);
 

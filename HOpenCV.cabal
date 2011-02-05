@@ -8,7 +8,7 @@ category: AI, Graphics
 synopsis: A binding for the OpenCV computer vision library.
 Tested-With:   GHC==6.12.1, GHC==6.12.3
 description:
-   Limited bindings to OpenCV 2.1. (See: <http://opencv.willowgarage.com/wiki/Welcome>)
+   Limited bindings to OpenCV 2.2. (See: <http://opencv.willowgarage.com/wiki/Welcome>)
    .
    /Installation/
    .
@@ -35,6 +35,7 @@ library
       AI.CV.OpenCV.Core.HIplUtils
       AI.CV.OpenCV.Core.ColorConversion
       AI.CV.OpenCV.HighCV
+      AI.CV.OpenCV.GUI
       AI.CV.OpenCV.FloodFill
       AI.CV.OpenCV.PixelUtils
       AI.CV.OpenCV.ColorConversion
