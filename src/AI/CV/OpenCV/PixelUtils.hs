@@ -65,7 +65,7 @@ isolateChannel ch img =
 {-# INLINE isolateChannel #-}
 
 -- |Convert an 'HIplImage' \'s pixel data to a 'V.Vector' of monochromatic bytes.
-toMono :: (HasChannels c, HasDepth d, Integral d) => HIplImage c d -> V.Vector d
-toMono img = if imgChannels img == 1 then packPixels img
-             else packPixels . convertRGBToGray . isColor $ unsafeCoerce img
+toMono :: (HasChannels c, HasDepth d, Integral d) => HIplImage c d -> IO (V.Vector d)
+toMono img = if imgChannels img == 1 then return $ packPixels img
+             else fmap packPixels (convertRGBToGray . isColor $ unsafeCoerce img)
 
