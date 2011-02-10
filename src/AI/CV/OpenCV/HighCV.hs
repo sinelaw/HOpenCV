@@ -6,15 +6,15 @@ module AI.CV.OpenCV.HighCV (erode, dilate, houghStandard, houghProbabilistic,
                             LineType(..), RGB, drawLines, HIplImage, width, 
                             height, pixels, withPixels, fromGrayPixels, 
                             fromColorPixels, fromFileGray, fromFileColor, 
-                            toFile, fromPtr, isColor, isMono, HasDepth, 
+                            fromPGM16, toFile, fromPtr, isColor, isMono,
                             withImagePixels, sampleLine, Connectivity(..), 
                             fromPixels, cannyEdges, createFileCapture, 
                             createCameraCapture, resize, FourCC, getROI,
                             InterpolationMethod(..), MonoChromatic, 
                             TriChromatic, createVideoWriter, HasChannels,
                             module AI.CV.OpenCV.ColorConversion, GrayImage,
-                            ColorImage, createFileCaptureLoop, 
-                            module AI.CV.OpenCV.Threshold,
+                            ColorImage, GrayImage16, createFileCaptureLoop, 
+                            HasDepth, module AI.CV.OpenCV.Threshold,
                             module AI.CV.OpenCV.FloodFill)
     where
 import AI.CV.OpenCV.Core.CxCore
@@ -26,7 +26,7 @@ import AI.CV.OpenCV.Core.HighGui (createFileCaptureF, cvQueryFrame,
 import AI.CV.OpenCV.Core.HIplUtils
 import AI.CV.OpenCV.ColorConversion
 --import AI.CV.OpenCV.Contours
-import Data.Word (Word8)
+import Data.Word (Word8, Word16)
 import Foreign.Ptr
 import Foreign.ForeignPtr (withForeignPtr)
 import Foreign.Storable
@@ -35,10 +35,13 @@ import Unsafe.Coerce
 import AI.CV.OpenCV.Threshold
 import AI.CV.OpenCV.FloodFill
 
--- |Grayscale 8-bit (per-pixel) image type synonym.
+-- |Grayscale 8-bit (per-pixel) image type.
 type GrayImage = HIplImage MonoChromatic Word8
 
--- |Color 8-bit (per-color) image type synonym.
+-- |Grayscale 16-bit (per-pixel) image type.
+type GrayImage16 = HIplImage MonoChromatic Word16
+
+-- |Color 8-bit (per-color) image type.
 type ColorImage = HIplImage TriChromatic Word8
 
 -- |Erode an 'HIplImage' with a 3x3 structuring element for the

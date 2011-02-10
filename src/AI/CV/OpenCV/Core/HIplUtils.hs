@@ -3,7 +3,7 @@
 -- |Functions for working with 'HIplImage's.
 module AI.CV.OpenCV.Core.HIplUtils 
     (isColor, isMono, imgChannels, withPixels, pixels,
-     fromPtr, fromFileColor, fromFileGray, toFile, 
+     fromPtr, fromFileColor, fromFileGray, fromPGM16, toFile, 
      compatibleImage, duplicateImage, fromPixels,
      withImagePixels, fromGrayPixels, fromColorPixels,
      withDuplicateImage, withCompatibleImage, pipeline,
@@ -14,17 +14,19 @@ module AI.CV.OpenCV.Core.HIplUtils
 import AI.CV.OpenCV.Core.CxCore (IplImage, cvFree, cvFreePtr)
 import AI.CV.OpenCV.Core.HighGui (cvLoadImage, cvSaveImage, LoadColor(..))
 import AI.CV.OpenCV.Core.HIplImage
-import Control.Monad ((<=<))
+import Control.Arrow (second, (***))
+import Control.Monad ((<=<), when)
 import Control.Monad.ST (runST, unsafeIOToST)
 import qualified Data.Vector.Storable as V
-import Data.Word (Word8)
+import Data.Word (Word8, Word16)
 import Foreign.ForeignPtr
 import Foreign.Marshal.Utils (copyBytes)
 import Foreign.Ptr
 import Foreign.Storable
 import System.Directory (doesFileExist)
+import System.IO (openFile, hGetLine, hGetBuf, hClose, hSetBinaryMode, 
+                  IOMode(..))
 import System.IO.Unsafe
-import Unsafe.Coerce
 
 -- |This is a way to let the type checker know that you belieave an
 -- image to be tri-chromatic.
@@ -86,7 +88,7 @@ fromFileColor fileName =
      addForeignPtrFinalizer cvFreePtr (imageDataOrigin img)
      freeROI ptr
      cvFree ptr
-     return $ unsafeCoerce img
+     return img
 
 -- |Load a grayscale 'HIplImage' from an 8-bit image file. If the
 -- image file is color, it will be converted to grayscale.
@@ -96,7 +98,32 @@ fromFileGray fileName =
      ptr <- cvLoadImage fileName LoadGray
      img <- fromPtr ptr :: IO (HIplImage MonoChromatic Word8)
      addForeignPtrFinalizer cvFreePtr (imageDataOrigin img)
-     return $ unsafeCoerce img
+     return img
+
+-- |Load a grayscale 'HIplImage' from a 16-bit image file. NOTE:
+-- OpenCV (as of v2.2) does not correctly handle 16-bit PGM loading,
+-- so this 16bpp loader is restricted to PGM.
+fromPGM16 :: FilePath -> IO (HIplImage MonoChromatic Word16)
+fromPGM16 fileName = 
+  do checkFile fileName
+     h <- openFile fileName ReadMode
+     magic <- hGetLine h
+     when (magic /= "P5") (hClose h >> 
+                           error (fileName ++" is not a PGM"))
+     (width, height) <- fmap ((read***read). second tail . break (==' '))
+                             (hGetLine h)
+     maxCol <- hGetLine h
+     when (maxCol /= "65535") (hClose h >>
+                               error (fileName ++" is not 16-bit"))
+     let numBytes = width*height*2
+     fp <- mallocForeignPtrArray numBytes
+     hSetBinaryMode h True
+     withForeignPtr fp $ \ptr ->
+       do n <- hGetBuf h ptr numBytes
+          when (n /= numBytes) (hClose h >> 
+                                error (fileName ++" unexpected EOF"))
+     hClose h
+     return $ HIplImage 0 width height numBytes fp fp (2*width)
 
 -- |Save a 'HIplImage' to the specified file.
 toFile :: (HasChannels c, HasDepth d) => FilePath -> HIplImage c d -> IO ()
