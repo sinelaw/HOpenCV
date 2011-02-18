@@ -102,7 +102,9 @@ fromFileGray fileName =
 
 -- |Load a grayscale 'HIplImage' from a 16-bit image file. NOTE:
 -- OpenCV (as of v2.2) does not correctly handle 16-bit PGM loading,
--- so this 16bpp loader is restricted to PGM.
+-- so this 16bpp loader is restricted to PGM. This loading routine
+-- converts from Most Significant Byte first (MSB) byte ordering (as
+-- per the PGM spec) to LSB byte ordering for x86 compatibility.
 fromPGM16 :: FilePath -> IO (HIplImage MonoChromatic Word16)
 fromPGM16 fileName = 
   do checkFile fileName
@@ -118,10 +120,19 @@ fromPGM16 fileName =
      let numBytes = width*height*2
      fp <- mallocForeignPtrArray numBytes
      hSetBinaryMode h True
-     withForeignPtr fp $ \ptr ->
-       do n <- hGetBuf h ptr numBytes
+     withForeignPtr fp $ \ptr' ->
+       do let ptr = castPtr ptr' :: Ptr Word8
+          n <- hGetBuf h ptr numBytes
           when (n /= numBytes) (hClose h >> 
                                 error (fileName ++" unexpected EOF"))
+          let swapBytes !offset
+                | offset == numBytes = return ()
+                | otherwise = do temp1 <- peekByteOff ptr offset :: IO Word8
+                                 temp2 <- peekByteOff ptr (offset+1) :: IO Word8
+                                 pokeByteOff ptr offset temp2
+                                 pokeByteOff ptr (offset+1) temp1
+                                 swapBytes (offset+2)
+          swapBytes 0
      hClose h
      return $ HIplImage 0 width height numBytes fp fp (2*width)
 
