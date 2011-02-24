@@ -58,7 +58,7 @@ library
    build-depends: base >=4 && <5, 
                   template-haskell,
                   allocated-processor >= 0.0.1, 
-                  vector-space,
+                  vector-space >= 0.7.2,
                   directory >= 1.0.1.0 && < 1.1,
                   vector == 0.7.*
    ghc-options: -Wall -fno-warn-type-defaults -fno-warn-name-shadowing
