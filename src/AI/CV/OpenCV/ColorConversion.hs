@@ -2,7 +2,8 @@
 -- |Type-safe color conversion functions. 
 module AI.CV.OpenCV.ColorConversion
     (convertGrayToRGB, convertGrayToBGR, 
-     convertBGRToGray, convertRGBToGray) where
+     convertBGRToGray, convertRGBToGray,
+     convertBayerBgToBGR, convertBayerBgToRGB) where
 import AI.CV.OpenCV.Core.CV
 import AI.CV.OpenCV.Core.HIplUtils
 import AI.CV.OpenCV.Core.ColorConversion
@@ -23,6 +24,15 @@ convertBGRToGray = convertColor cv_BGR2GRAY
 convertRGBToGray :: HasDepth d =>
                     HIplImage TriChromatic d -> IO (HIplImage MonoChromatic d)
 convertRGBToGray = convertBGRToGray
+
+convertBayerBgToBGR :: HasDepth d =>
+                       HIplImage MonoChromatic d -> IO (HIplImage TriChromatic d)
+convertBayerBgToBGR = convertColor cv_BayerBG2BGR
+
+convertBayerBgToRGB :: HasDepth d =>
+                       HIplImage MonoChromatic d -> IO (HIplImage TriChromatic d)
+convertBayerBgToRGB = convertColor cv_BayerBG2RGB
+
 
 -- |Convert the color model of an image.
 convertColor :: (HasChannels c1, HasChannels c2, HasDepth d) =>
