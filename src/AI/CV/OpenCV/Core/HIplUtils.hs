@@ -7,6 +7,7 @@ module AI.CV.OpenCV.Core.HIplUtils
      compatibleImage, duplicateImage, fromPixels,
      withImagePixels, fromGrayPixels, fromColorPixels,
      withDuplicateImage, withCompatibleImage, pipeline,
+     unsafeWithHIplImage,
      HIplImage, mkHIplImage, width, height, mkBlackImage,
      withHIplImage, MonoChromatic, TriChromatic, HasChannels, 
      HasDepth(..), HasScalar(..), IsCvScalar(..), colorDepth,
@@ -16,7 +17,6 @@ import AI.CV.OpenCV.Core.HighGui (cvLoadImage, cvSaveImage, LoadColor(..))
 import AI.CV.OpenCV.Core.HIplImage
 import Control.Arrow (second, (***))
 import Control.Monad ((<=<), when)
-import Control.Monad.ST (runST, unsafeIOToST)
 import qualified Data.Vector.Storable as V
 import Data.Word (Word8, Word16)
 import Foreign.ForeignPtr
@@ -237,11 +237,15 @@ withDuplicateImage img1 f = unsafePerformIO $
 withCompatibleImage :: (HasChannels c, HasDepth d) => 
                        HIplImage c d -> (Ptr IplImage -> IO b) -> 
                        (HIplImage c d, b)
-withCompatibleImage img1 f = runST $ unsafeIOToST $
+withCompatibleImage img1 f = unsafePerformIO $
                              do img2 <- compatibleImage img1
                                 r <- withHIplImage img2 f
                                 return (img2, r)
 {-# NOINLINE withCompatibleImage #-}
+
+unsafeWithHIplImage :: (HasChannels c, HasDepth d) =>
+                       HIplImage c d -> (Ptr IplImage -> a) -> a
+unsafeWithHIplImage img f = unsafePerformIO $ withHIplImage img (return . f)
 
 -- |Extract a rectangular region of interest from an image. Returns a
 -- new image whose pixel data is copied from the ROI of the source
