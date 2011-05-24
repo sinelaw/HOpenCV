@@ -15,7 +15,7 @@ import Foreign.C.Types (CDouble, CInt)
 import Foreign.Ptr (Ptr, castPtr)
 import System.IO.Unsafe (unsafePerformIO)
 import AI.CV.OpenCV.Core.CxCore 
-import AI.CV.OpenCV.Core.HIplUtils
+import AI.CV.OpenCV.Core.HIplUtil
 
 data ThresholdType = ThreshBinary
                    | ThreshBinaryInv

@@ -5,7 +5,7 @@
 -- bytes.
 module AI.CV.OpenCV.PixelUtils where
 import AI.CV.OpenCV.Core.HIplImage
-import AI.CV.OpenCV.Core.HIplUtils
+import AI.CV.OpenCV.Core.HIplUtil
 import AI.CV.OpenCV.ColorConversion (convertRGBToGray)
 import Control.Monad.ST (runST)
 import qualified Data.Vector.Storable as V

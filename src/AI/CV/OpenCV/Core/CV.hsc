@@ -16,7 +16,6 @@ import Foreign.Marshal.Alloc (allocaBytes)
 import Foreign.Marshal.Array (peekArray)
 import Foreign.Storable (Storable, sizeOf)
 import Foreign.Ptr
---import Data.Bits
 import AI.CV.OpenCV.Core.CxCore
 import AI.CV.OpenCV.Core.ColorConversion
 

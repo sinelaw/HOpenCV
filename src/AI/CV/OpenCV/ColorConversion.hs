@@ -5,9 +5,8 @@ module AI.CV.OpenCV.ColorConversion
      convertBGRToGray, convertRGBToGray,
      convertBayerBgToBGR, convertBayerBgToRGB) where
 import AI.CV.OpenCV.Core.CV
-import AI.CV.OpenCV.Core.HIplUtils
+import AI.CV.OpenCV.Core.HIplUtil
 import AI.CV.OpenCV.Core.ColorConversion
---import System.IO.Unsafe (unsafePerformIO)
 
 convertGrayToRGB :: HasDepth d =>
                     HIplImage MonoChromatic d -> IO (HIplImage TriChromatic d)

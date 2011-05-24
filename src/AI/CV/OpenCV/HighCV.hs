@@ -23,7 +23,7 @@ import AI.CV.OpenCV.Core.HighGui (createFileCaptureF, cvQueryFrame,
                                   setCapturePos, CapturePos(PosFrames), 
                                   CvCapture, createCameraCaptureF, 
                                   createVideoWriterF, cvWriteFrame, FourCC)
-import AI.CV.OpenCV.Core.HIplUtils
+import AI.CV.OpenCV.Core.HIplUtil
 import AI.CV.OpenCV.ColorConversion
 --import AI.CV.OpenCV.Contours
 import Data.Word (Word8, Word16)

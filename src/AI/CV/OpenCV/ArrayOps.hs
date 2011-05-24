@@ -8,7 +8,7 @@ import Foreign.C.Types (CDouble)
 import Foreign.Ptr (Ptr, castPtr, nullPtr)
 import System.IO.Unsafe (unsafePerformIO)
 import AI.CV.OpenCV.Core.CxCore (CvArr, IplImage)
-import AI.CV.OpenCV.Core.HIplUtils
+import AI.CV.OpenCV.Core.HIplUtil
 
 foreign import ccall unsafe "opencv2/core/core_c.h cvSubRS"
   c_cvSubRS :: Ptr CvArr -> CDouble -> CDouble -> CDouble -> CDouble -> 

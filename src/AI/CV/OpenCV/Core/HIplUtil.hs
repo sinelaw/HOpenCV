@@ -1,17 +1,16 @@
 {-# LANGUAGE ScopedTypeVariables, BangPatterns, MultiParamTypeClasses, 
              FlexibleInstances #-}
 -- |Functions for working with 'HIplImage's.
-module AI.CV.OpenCV.Core.HIplUtils 
+module AI.CV.OpenCV.Core.HIplUtil
     (isColor, isMono, imgChannels, withPixels, pixels,
      fromPtr, fromFileColor, fromFileGray, fromPGM16, toFile, 
      compatibleImage, duplicateImage, fromPixels,
      withImagePixels, fromGrayPixels, fromColorPixels,
      withDuplicateImage, withCompatibleImage, pipeline,
-     unsafeWithHIplImage,
      HIplImage, mkHIplImage, width, height, mkBlackImage,
      withHIplImage, MonoChromatic, TriChromatic, HasChannels, 
      HasDepth(..), HasScalar(..), IsCvScalar(..), colorDepth,
-     ByteOrFloat, getROI,imageData) where
+     ByteOrFloat, getROI, imageData, fromFile, unsafeWithHIplImage) where
 import AI.CV.OpenCV.Core.CxCore (IplImage, cvFree, cvFreePtr)
 import AI.CV.OpenCV.Core.HighGui (cvLoadImage, cvSaveImage, LoadColor(..))
 import AI.CV.OpenCV.Core.HIplImage
@@ -68,6 +67,7 @@ pixels img = unsafePerformIO $
                         copyBytes dst src len
                 return $ V.unsafeFromForeignPtr ptr 0 len
     where len = imageSize img
+{-# NOINLINE pixels #-}
 
 -- |Read a 'HIplImage' from a 'Ptr' 'IplImage'
 fromPtr :: (HasChannels c, HasDepth d) => Ptr IplImage -> IO (HIplImage c d)
@@ -99,6 +99,23 @@ fromFileGray fileName =
      img <- fromPtr ptr :: IO (HIplImage MonoChromatic Word8)
      addForeignPtrFinalizer cvFreePtr (imageDataOrigin img)
      return img
+
+class LoadableFormat c d where
+  loadFormat :: (c,d) -> FilePath -> IO (HIplImage c d)
+
+instance LoadableFormat MonoChromatic Word8 where
+  loadFormat _ = fromFileGray
+
+instance LoadableFormat TriChromatic Word8 where
+  loadFormat _ = fromFileColor
+
+instance LoadableFormat MonoChromatic Word16 where
+  loadFormat _ = fromPGM16
+
+-- |An overloaded image file loader. The number of color channels and
+-- color depth parts of the returned image's type must be inferrable.
+fromFile :: forall c d. LoadableFormat c d => FilePath -> IO (HIplImage c d)
+fromFile = loadFormat (undefined :: (c,d))
 
 -- |Load a grayscale 'HIplImage' from a 16-bit image file. NOTE:
 -- OpenCV (as of v2.2) does not correctly handle 16-bit PGM loading,
@@ -139,7 +156,6 @@ fromPGM16 fileName =
 -- |Save a 'HIplImage' to the specified file.
 toFile :: (HasChannels c, HasDepth d) => FilePath -> HIplImage c d -> IO ()
 toFile fileName img = withHIplImage img $ \ptr -> cvSaveImage fileName ptr
-
 
 -- |Allocate a new 'HIplImage' with the same dimensions, number of
 -- color channels, and color depth as an existing HIplImage. The pixel
@@ -253,9 +269,8 @@ unsafeWithHIplImage img f = unsafePerformIO $ withHIplImage img (return . f)
 -- coordinates, the (width,height) of the ROI in pixels, and the
 -- source 'HIplImage'.
 getROI :: (HasChannels c, HasDepth d) =>
-          (Int,Int) -> (Int,Int) -> HIplImage c d -> HIplImage c d
+          (Int,Int) -> (Int,Int) -> HIplImage c d -> IO (HIplImage c d)
 getROI (rx,ry) (rw,rh) src = 
-    unsafePerformIO $
     do img <- mkHIplImage rw rh
        withForeignPtr (imageData img) $ \dst ->
          withForeignPtr (imageData src) $ \src ->

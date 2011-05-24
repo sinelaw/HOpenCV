@@ -5,7 +5,7 @@ import Data.Bits ((.|.))
 import Foreign.C.Types (CDouble, CInt)
 import Foreign.Ptr (Ptr, nullPtr, castPtr)
 import AI.CV.OpenCV.Core.CxCore 
-import AI.CV.OpenCV.Core.HIplUtils
+import AI.CV.OpenCV.Core.HIplUtil
 
 -- |Flag used to indicate whether pixels under consideration for
 -- addition to a connected component should be compared to the seed
