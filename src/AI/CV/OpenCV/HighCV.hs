@@ -3,27 +3,32 @@
 -- example, @dilate 8 . erode 8@ will allocate one new image rather
 -- than two.
 module AI.CV.OpenCV.HighCV (erode, dilate, houghStandard, houghProbabilistic, 
-                            LineType(..), RGB, drawLines, HIplImage, width, 
-                            height, pixels, withPixels, fromGrayPixels, 
-                            fromColorPixels, fromFileGray, fromFileColor, 
-                            fromPGM16, toFile, fromPtr, isColor, isMono,
+                            LineType(..), RGB, drawLines, HIplImage, 
+                            width, height, isColor, isMono,
+                            pixels, withPixels, fromGrayPixels, fromColorPixels,
+                            fromFile, fromFileGray, fromFileColor, 
+                            fromPGM16, toFile, fromPtr, 
                             withImagePixels, sampleLine, Connectivity(..), 
-                            fromPixels, cannyEdges, createFileCapture, 
+                            fromPixels, createFileCapture, 
                             createCameraCapture, resize, FourCC, getROI,
                             InterpolationMethod(..), MonoChromatic, 
                             TriChromatic, createVideoWriter, HasChannels,
                             module AI.CV.OpenCV.ColorConversion, GrayImage,
                             ColorImage, GrayImage16, createFileCaptureLoop, 
                             HasDepth, module AI.CV.OpenCV.Threshold,
-                            module AI.CV.OpenCV.FloodFill)
+                            module AI.CV.OpenCV.FloodFill,
+                            module AI.CV.OpenCV.FeatureDetection,
+                            runWindow)
     where
 import AI.CV.OpenCV.Core.CxCore
 import AI.CV.OpenCV.Core.CV
-import AI.CV.OpenCV.Core.HighGui (createFileCaptureF, cvQueryFrame, 
+import AI.CV.OpenCV.Core.HighGui (createFileCaptureF, cvQueryFrame, cvInit,
                                   setCapturePos, CapturePos(PosFrames), 
                                   CvCapture, createCameraCaptureF, 
-                                  createVideoWriterF, cvWriteFrame, FourCC)
+                                  createVideoWriterF, cvWriteFrame, FourCC,
+                                  newWindow, delWindow, showImage, cvWaitKey)
 import AI.CV.OpenCV.Core.HIplUtil
+import AI.CV.OpenCV.Core.CVOp
 import AI.CV.OpenCV.ColorConversion
 --import AI.CV.OpenCV.Contours
 import Data.Word (Word8, Word16)
@@ -31,9 +36,9 @@ import Foreign.Ptr
 import Foreign.ForeignPtr (withForeignPtr)
 import Foreign.Storable
 import System.IO.Unsafe (unsafePerformIO)
-import Unsafe.Coerce
 import AI.CV.OpenCV.Threshold
 import AI.CV.OpenCV.FloodFill
+import AI.CV.OpenCV.FeatureDetection
 
 -- |Grayscale 8-bit (per-pixel) image type.
 type GrayImage = HIplImage MonoChromatic Word8
@@ -48,48 +53,15 @@ type ColorImage = HIplImage TriChromatic Word8
 -- specified number of iterations.
 erode :: (HasChannels c, HasDepth d) =>
          Int -> HIplImage c d -> HIplImage c d
-erode n img = unsafePerformIO . withHIplImage img $
-              \src -> return . fst . withCompatibleImage img $
-                      \dst -> cvErode src dst n'
-    where n' = fromIntegral n
-{-# INLINE [0] erode #-}
+erode n = cv2 $ \src dst -> cvErode src dst (fromIntegral n)
+{-# INLINE erode #-}
 
 -- |Dilate an 'HIplImage' with a 3x3 structuring element for the
 -- specified number of iterations.
 dilate :: (HasChannels c, HasDepth d) =>
           Int -> HIplImage c d -> HIplImage c d
-dilate n img = unsafePerformIO . withHIplImage img $
-               \src -> return . fst . withCompatibleImage img $
-                       \dst -> cvDilate src dst n'
-    where n' = fromIntegral n
-{-# INLINE [0] dilate #-}
-
--- |Unsafe in-place erosion. This is a destructive update of the given
--- image and is only used by the rewrite rules when there is no way to
--- observe the input image.
-unsafeErode :: (HasChannels c, HasDepth d) => 
-               Int -> HIplImage c d -> IO (HIplImage c d)
-unsafeErode n img = withHIplImage img (\src -> cvErode src src n') >> 
-                    return (unsafeCoerce img)
-    where n' = fromIntegral n
-{-# INLINE [0] unsafeErode #-}
-
--- |Unsafe in-place dilation. This is a destructive update of the
--- given image and is only used by the rewrite rules when there is no
--- way to observe the input image.
-unsafeDilate :: (HasChannels c, HasDepth d) =>
-                Int -> HIplImage c d-> IO (HIplImage c d)
-unsafeDilate n img = withHIplImage img (\src -> cvDilate src src n') >> 
-                     return (unsafeCoerce img)
-    where n' = fromIntegral n
-{-# INLINE [0] unsafeDilate #-}
-
-{-# RULES 
-"erode/in-place" [~1] forall n. erode n = pipeline (unsafeErode n)
-"erode/unpipe" [1] forall n. pipeline (unsafeErode n) = erode n
-"dilate/in-place" [~1] forall n. dilate n = pipeline (unsafeDilate n)
-"dilate/unpipe" [1] forall n. pipeline (unsafeDilate n) = dilate n
-  #-}
+dilate n = cv2 $ \src dst -> cvDilate src dst (fromIntegral n)
+{-# INLINE dilate #-}
 
 -- |Extract all the pixel values from an image along a line, including
 -- the end points. Parameters are the two endpoints, the line
@@ -99,6 +71,7 @@ sampleLine :: (HasChannels c, HasDepth d) =>
               (Int, Int) -> (Int, Int) -> Connectivity -> HIplImage c d -> [d]
 sampleLine pt1 pt2 conn img = unsafePerformIO . withHIplImage img $ 
                                 \p -> cvSampleLine p pt1 pt2 conn
+{-# NOINLINE sampleLine #-}
 
 -- |Line detection in a binary image using a standard Hough
 -- transform. Parameters are @rho@, the distance resolution in
@@ -128,6 +101,7 @@ houghStandard rho theta threshold img = unsafePerformIO $
                                    in ((x1,y1),(x2,y2))
           clampX x = max 0 (min (truncate x) (width img - 1))
           clampY y = max 0 (min (truncate y) (height img - 1))
+{-# NOINLINE houghStandard #-}
 
 -- |Line detection in a binary image using a probabilistic Hough
 -- transform. Parameters are @rho@, the distance resolution in pixels;
@@ -138,9 +112,9 @@ houghProbabilistic :: Double -> Double -> Int -> Double -> Double ->
 houghProbabilistic rho theta threshold minLength maxGap img = 
     unsafePerformIO $
     do storage <- cvCreateMemStorage (min 0 (fromIntegral threshold))
-       let cvSeq = snd $ withDuplicateImage img $
-                     \p -> cvHoughLines2 p storage 1 rho theta threshold
-                                         minLength maxGap
+       cvSeq <- fmap snd . withDuplicateImage img $
+                  \p -> cvHoughLines2 p storage 1 rho theta threshold
+                                      minLength maxGap
        hlines <- mapM (\p1 -> do x1 <- peek p1
                                  let p2 = plusPtr p1 step
                                      p3 = plusPtr p2 step
@@ -153,6 +127,7 @@ houghProbabilistic rho theta threshold minLength maxGap img =
        cvReleaseMemStorage storage
        return hlines
     where step = sizeOf (undefined::Int)
+{-# NOINLINE houghProbabilistic #-}
 
 -- |Type of line to draw.
 data LineType = EightConn -- ^8-connected line
@@ -174,58 +149,11 @@ lineTypeEnum AALine    = 16
 drawLines :: (HasChannels c, HasDepth d) =>
              RGB -> Int -> LineType -> [((Int,Int),(Int,Int))] -> 
              HIplImage c d -> HIplImage c d
-drawLines col thick lineType lines img = 
-    fst $ withDuplicateImage img $ \ptr -> mapM_ (draw ptr) lines
+drawLines col thick lineType lines = 
+    cv $ \img -> mapM_ (draw img) lines
     where draw ptr (pt1, pt2) = cvLine ptr pt1 pt2 col thick lineType'
           lineType' = lineTypeEnum lineType
-{-# INLINE [0] drawLines #-}
-
--- |Unsafe in-place line drawing.
-unsafeDrawLines :: (HasChannels c, HasDepth d) =>
-                   RGB -> Int -> LineType -> [((Int,Int),(Int,Int))] -> 
-                   HIplImage c d -> IO (HIplImage c d)
-unsafeDrawLines col thick lineType lines img = 
-    withHIplImage img $ \ptr -> 
-      mapM_ (draw ptr) lines >> return (unsafeCoerce img)
-    where draw ptr (pt1,pt2) = cvLine ptr pt1 pt2 col thick lineType'
-          lineType' = lineTypeEnum lineType
-{-# INLINE [0] unsafeDrawLines #-}
-
-{-# RULES 
-"drawLines/in-place" [~1] forall c t lt lns. 
-  drawLines c t lt lns = pipeline (unsafeDrawLines c t lt lns)
-"drawLines/unpipe" [1] forall c t lt lns.
-  pipeline (unsafeDrawLines c t lt lns) = drawLines c t lt lns
-  #-}
-
--- |Find edges using the Canny algorithm. The smallest value between
--- threshold1 and threshold2 (the first two parameters, respectively)
--- is used for edge linking, the largest value is used to find the
--- initial segments of strong edges. The third parameter is the
--- aperture parameter for the Sobel operator.
-cannyEdges :: HasDepth d =>
-              Double -> Double -> Int -> HIplImage MonoChromatic d -> 
-              HIplImage MonoChromatic d
-cannyEdges threshold1 threshold2 aperture img = 
-    fst . withCompatibleImage img $ \dst -> 
-        withHIplImage img $ \src -> 
-            cvCanny src dst threshold1 threshold2 aperture
-{-# INLINE [0] cannyEdges #-}
-
-unsafeCanny :: HasDepth d =>
-               Double -> Double -> Int -> HIplImage MonoChromatic d -> 
-               IO (HIplImage MonoChromatic d)
-unsafeCanny threshold1 threshold2 aperture img = 
-    withHIplImage img $ \src -> 
-        cvCanny src src threshold1 threshold2 aperture >> return img
-{-# INLINE [0] unsafeCanny #-}
-
-{-# RULES 
-"canny/in-place" [~1] forall t1 t2 a.
-  cannyEdges t1 t2 a = pipeline (unsafeCanny t1 t2 a)
-"canny/unpipe" [1] forall t1 t2 a.
-  pipeline (unsafeCanny t1 t2 a) = cannyEdges t1 t2 a
-  #-}
+{-# INLINE drawLines #-}
 
 {-
 -- |Find the 'CvContour's in an image.
@@ -279,7 +207,8 @@ createFileCaptureLoop fname = do capture <- createFileCaptureF fname
 -- query for the next available frame.
 createCameraCapture :: (HasChannels c, HasDepth d) =>
                        Maybe Int -> IO (IO (HIplImage c d))
-createCameraCapture cam = do capture <- createCameraCaptureF cam'
+createCameraCapture cam = do cvInit
+                             capture <- createCameraCaptureF cam'
                              return (withForeignPtr capture $ 
                                      (>>= fromPtr) . queryError)
     where cam' = maybe (-1) id cam
@@ -299,6 +228,12 @@ createVideoWriter fname codec fps sz =
                                 cvWriteFrame writer' img'
        return writeFrame
 
+-- FIXME: There is no fusion mechanism that can handle 'resize'. The
+-- problem is that the fusion combinators assume the output image is
+-- the same size as the input image as this information is not
+-- captured in the type. That said, it would be nice to be able to do
+-- in-place updates to the output of 'resize'.
+
 -- |Resize the supplied 'HIplImage' to the given width and height using
 -- the supplied 'InterpolationMethod'.
 resize :: (HasChannels c, HasDepth d) => 
@@ -310,3 +245,13 @@ resize method w h img =
               withHIplImage img' $ \dst ->
                 cvResize src dst method
        return img'
+{-# NOINLINE resize #-}
+
+--runWindow :: (HasChannels c, HasDepth d) => IO (HIplImage c d) -> IO ()
+runWindow :: HasChannels c => IO (HIplImage c Word8) -> IO ()
+runWindow mkImg = go
+    where go = do newWindow 0 True
+                  mkImg >>= flip withHIplImage (showImage 0)
+                  cvWaitKey 30 >>= bool (delWindow 0) go . (> 0)
+          bool t _ True = t
+          bool _ f False = f

@@ -7,39 +7,41 @@ module AI.CV.OpenCV.ColorConversion
 import AI.CV.OpenCV.Core.CV
 import AI.CV.OpenCV.Core.HIplUtil
 import AI.CV.OpenCV.Core.ColorConversion
+import System.IO.Unsafe
 
 convertGrayToRGB :: HasDepth d =>
-                    HIplImage MonoChromatic d -> IO (HIplImage TriChromatic d)
+                    HIplImage MonoChromatic d -> HIplImage TriChromatic d
 convertGrayToRGB = convertColor cv_GRAY2RGB
 
 convertGrayToBGR :: HasDepth d =>
-                    HIplImage MonoChromatic d -> IO (HIplImage TriChromatic d)
+                    HIplImage MonoChromatic d -> HIplImage TriChromatic d
 convertGrayToBGR = convertColor cv_GRAY2BGR
 
 convertBGRToGray :: HasDepth d =>
-                    HIplImage TriChromatic d -> IO (HIplImage MonoChromatic d)
+                    HIplImage TriChromatic d -> HIplImage MonoChromatic d
 convertBGRToGray = convertColor cv_BGR2GRAY
 
 convertRGBToGray :: HasDepth d =>
-                    HIplImage TriChromatic d -> IO (HIplImage MonoChromatic d)
+                    HIplImage TriChromatic d -> HIplImage MonoChromatic d
 convertRGBToGray = convertBGRToGray
 
 convertBayerBgToBGR :: HasDepth d =>
-                       HIplImage MonoChromatic d -> IO (HIplImage TriChromatic d)
+                       HIplImage MonoChromatic d -> HIplImage TriChromatic d
 convertBayerBgToBGR = convertColor cv_BayerBG2BGR
 
 convertBayerBgToRGB :: HasDepth d =>
-                       HIplImage MonoChromatic d -> IO (HIplImage TriChromatic d)
+                       HIplImage MonoChromatic d -> HIplImage TriChromatic d
 convertBayerBgToRGB = convertColor cv_BayerBG2RGB
 
 
 -- |Convert the color model of an image.
 convertColor :: (HasChannels c1, HasChannels c2, HasDepth d) =>
-                ColorConversion -> HIplImage c1 d -> IO (HIplImage c2 d)
-convertColor cc img = withHIplImage img $
+                ColorConversion -> HIplImage c1 d -> HIplImage c2 d
+convertColor cc img = unsafePerformIO . withHIplImage img $
                         \src -> do dst <- mkHIplImage w h
                                    withHIplImage dst $
                                      \dst' -> cvCvtColor src dst' cc
                                    return dst
     where w = width img
           h = height img
+{-# NOINLINE convertColor #-}

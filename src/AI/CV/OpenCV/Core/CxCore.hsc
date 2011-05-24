@@ -8,7 +8,7 @@ import Foreign.ForeignPtrWrap
 import Foreign.Marshal.Alloc
 import Foreign.Ptr
 import Foreign.Storable
-import System.IO.Unsafe (unsafePerformIO)
+--import System.IO.Unsafe (unsafePerformIO)
 
 import Data.VectorSpace as VectorSpace
 
@@ -217,9 +217,8 @@ foreign import ccall unsafe "opencv2/core/core_c.h cvCopy"
 cvCopy :: IplArrayType a => Ptr a -> Ptr a -> IO ()
 cvCopy src dst = c_cvCopy (fromArr src) (fromArr dst) nullPtr
 
-cvGetSize :: IplArrayType a => Ptr a -> CvSize
-cvGetSize p = unsafePerformIO $
-              alloca $ \cvSizePtr -> do
+cvGetSize :: IplArrayType a => Ptr a -> IO CvSize
+cvGetSize p = alloca $ \cvSizePtr -> do
                 c_get_size (castPtr p) cvSizePtr
                 size <- peek cvSizePtr
                 return size

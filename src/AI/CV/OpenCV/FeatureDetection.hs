@@ -3,9 +3,9 @@
 module AI.CV.OpenCV.FeatureDetection (cornerHarris, cornerHarris', canny) where
 import Foreign.C.Types (CInt, CDouble)
 import Foreign.Ptr (Ptr, castPtr)
-import System.IO.Unsafe (unsafePerformIO)
 import AI.CV.OpenCV.Core.CxCore
 import AI.CV.OpenCV.Core.HIplUtil
+import AI.CV.OpenCV.Core.CVOp
 
 foreign import ccall unsafe "opencv2/imgproc/imgproc_c.h cvCornerHarris"
   c_cvHarris :: Ptr CvArr -> Ptr CvArr -> CInt -> CInt -> CDouble -> IO ()
@@ -27,6 +27,7 @@ cornerHarris :: ByteOrFloat d =>
                 Int -> HIplImage MonoChromatic d -> 
                 HIplImage MonoChromatic Float
 cornerHarris blockSize = cornerHarris' blockSize 3 0.04
+{-# INLINE cornerHarris #-}
 
 -- |Harris corner detector. For each pixel, a 2x2 covariance matrix,
 -- @M@, is computed over a @blockSize x blockSize@ neighborhood. The
@@ -39,12 +40,9 @@ cornerHarris blockSize = cornerHarris' blockSize 3 0.04
 cornerHarris' :: ByteOrFloat d => 
                  Int -> Int -> Double -> HIplImage MonoChromatic d -> 
                  HIplImage MonoChromatic Float
-cornerHarris' blockSize aperture k src = 
-    unsafePerformIO $ do dst <- mkHIplImage (width src) (height src)
-                         withHIplImage src $ \src' ->
-                           withHIplImage dst $ \dst' ->
-                             harris src' dst' blockSize aperture k
-                         return dst
+cornerHarris' blockSize aperture k = 
+    cv2 $ \src dst -> harris src dst blockSize aperture k
+{-# INLINE cornerHarris' #-}
 
 foreign import ccall unsafe "opencv2/imgprog/imgproc_c.h cvCanny"
   c_cvCanny :: Ptr IplImage -> Ptr IplImage -> CDouble -> CDouble -> CInt -> IO ()
@@ -57,10 +55,8 @@ foreign import ccall unsafe "opencv2/imgprog/imgproc_c.h cvCanny"
 canny :: HasDepth d =>
          Double -> Double -> Int -> HIplImage MonoChromatic d -> 
          HIplImage MonoChromatic d
-canny t1 t2 aperture src = 
-  unsafeWithHIplImage src $ \src' ->
-    fst . withCompatibleImage src $ \dst ->
-          c_cvCanny src' dst (rf t1) (rf t2) (fi aperture)
+canny t1 t2 aperture = 
+    cv2 $ \src dst -> c_cvCanny src dst (rf t1) (rf t2) (fi aperture)
   where rf = realToFrac
         fi = fromIntegral
     

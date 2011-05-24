@@ -47,7 +47,7 @@ library
       AI.CV.OpenCV.FeatureDetection
    c-sources:
       src/AI/CV/OpenCV/Core/HOpenCV_wrap.c
-   other-modules: 
+   other-modules: AI.CV.OpenCV.Core.CVOp
    hs-Source-Dirs: src
    if os(windows)
      include-dirs: C:\\OpenCV2.1\\include

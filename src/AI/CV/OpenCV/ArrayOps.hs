@@ -9,6 +9,7 @@ import Foreign.Ptr (Ptr, castPtr, nullPtr)
 import System.IO.Unsafe (unsafePerformIO)
 import AI.CV.OpenCV.Core.CxCore (CvArr, IplImage)
 import AI.CV.OpenCV.Core.HIplUtil
+import AI.CV.OpenCV.Core.CVOp
 
 foreign import ccall unsafe "opencv2/core/core_c.h cvSubRS"
   c_cvSubRS :: Ptr CvArr -> CDouble -> CDouble -> CDouble -> CDouble -> 
@@ -18,28 +19,10 @@ foreign import ccall unsafe "opencv2/core/core_c.h cvSubRS"
 subRS :: (HasChannels c, HasDepth d, HasScalar c d, 
           IsCvScalar s, s ~ CvScalar c d) =>
          s -> HIplImage c d -> HIplImage c d
-subRS value src = unsafePerformIO $ 
-                  withHIplImage src $ \srcPtr ->
-                    return . fst . withCompatibleImage src $ \dstPtr -> 
-                      c_cvSubRS (castPtr srcPtr) r g b a (castPtr dstPtr) 
-                                nullPtr
+subRS value = cv2 $ \src dst -> 
+              c_cvSubRS (castPtr src) r g b a (castPtr dst) nullPtr
     where (r,g,b,a) = toCvScalar value
-
--- Unsafe in-place pointwise subtraction of each pixel from a given
--- scalar value.
-unsafeSubRS :: (HasChannels c, HasDepth d, HasScalar c d,
-                IsCvScalar s, s ~ CvScalar c d) =>
-               s -> HIplImage c d -> IO (HIplImage c d)
-unsafeSubRS value src = withHIplImage src $ \srcPtr ->
-                            do c_cvSubRS (castPtr srcPtr) r g b a
-                                         (castPtr srcPtr) nullPtr
-                               return src
-    where (r,g,b,a) = toCvScalar value
-
-{-# RULES 
-"subRS/in-place" [~1] forall v. subRS v = pipeline (unsafeSubRS v)
-"subRS/unpipe" [1] forall v. pipeline (unsafeSubRS v) = subRS v
-  #-}
+{-# INLINE subRS #-}
 
 foreign import ccall unsafe "opencv2/core/core_c.h cvAbsDiff"
   c_cvAbsDiff :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> IO ()
@@ -47,25 +30,10 @@ foreign import ccall unsafe "opencv2/core/core_c.h cvAbsDiff"
 -- |Calculate the absolute difference between two images.
 absDiff :: (HasChannels c, HasDepth d) => 
            HIplImage c d -> HIplImage c d -> HIplImage c d
-absDiff src1 src2 = unsafePerformIO $
-                    withHIplImage src1 $ \src1' ->
-                      withHIplImage src2 $ \src2' ->
-                        return . fst . withCompatibleImage src1 $ \dst ->
-                          c_cvAbsDiff (castPtr src1') (castPtr src2') 
-                                      (castPtr dst)
-
-unsafeAbsDiff :: (HasChannels c, HasDepth d) => 
-                 HIplImage c d -> HIplImage c d -> IO (HIplImage c d)
-unsafeAbsDiff src1 src2 = withHIplImage src1 $ \src1' ->
-                            withHIplImage src2 $ \src2' ->
-                                do c_cvAbsDiff (castPtr src1') (castPtr src2') 
-                                               (castPtr src2')
-                                   return src2
-
-{-# RULES 
-"absDiff/in-place" [~1] forall m. absDiff m = pipeline (unsafeAbsDiff m)
-"absDiff/unpipe" [1] forall m. pipeline (unsafeAbsDiff m) = absDiff m
-  #-}
+absDiff src1 = cv2 $ \src2 dst -> 
+               withHIplImage src1 $ \src1' ->
+                 c_cvAbsDiff (castPtr src1') (castPtr src2) (castPtr dst)
+{-# INLINE absDiff #-}
 
 foreign import ccall unsafe "opencv2/core/core_c.h cvConvertScale"
   c_cvConvertScale :: Ptr CvArr -> Ptr CvArr -> CDouble -> CDouble -> IO ()
@@ -89,6 +57,7 @@ convertScale scale shift src = unsafePerformIO $
                                                        (realToFrac scale) 
                                                        (realToFrac shift)
                                   return dst
+{-# NOINLIN convertScale #-}
 
 foreign import ccall unsafe "opencv2/core/core_c.h cvAnd"
   c_cvAnd :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> IO ()
@@ -106,43 +75,18 @@ cvAndHelper src1 src2 dst mask = c_cvAnd (castPtr src1) (castPtr src2)
 cvAndMask :: (HasChannels c, HasDepth d) => 
              HIplImage MonoChromatic Word8 -> HIplImage c d ->  
              HIplImage c d -> HIplImage c d
-cvAndMask mask src1 src2 = fst . withDuplicateImage src2 $ \dst ->
-                             withHIplImage src1 $ \src1' ->
-                               withHIplImage src2 $ \src2' ->
-                                 withHIplImage mask $ \mask' ->
-                                   cvAndHelper src1' src2' dst mask'
+cvAndMask mask src1 = cv2 $ \src2 dst -> 
+                      withHIplImage src1 $ \src1' -> 
+                          withHIplImage mask $ \mask' ->
+                              cvAndHelper src1' src2 dst mask'
+{-# INLINE cvAndMask #-}
 
 -- |Calculates the per-element bitwise conjunction of two arrays.
 cvAnd :: (HasChannels c, HasDepth d) => 
           HIplImage c d -> HIplImage c d ->  HIplImage c d
-cvAnd src1 src2 = fst . withCompatibleImage src1 $ \dst ->
-                    withHIplImage src1 $ \src1' ->
-                      withHIplImage src2 $ \src2' ->
-                        cvAndHelper src1' src2' dst nullPtr
-
-unsafeAnd :: (HasChannels c, HasDepth d) => 
-             HIplImage c d -> HIplImage c d -> IO (HIplImage c d)
-unsafeAnd src1 src2 = withHIplImage src1 $ \src1' ->
-                        withHIplImage src2 $ \src2' ->
-                          cvAndHelper src1' src2' src2' nullPtr >> return src2
-
-unsafeAndMask :: (HasChannels c, HasDepth d) => 
-                 HIplImage MonoChromatic Word8 -> HIplImage c d ->  
-                 HIplImage c d -> IO (HIplImage c d)
-unsafeAndMask mask src1 src2 = withHIplImage src1 $ \src1' ->
-                                 withHIplImage src2 $ \src2' ->
-                                   withHIplImage mask $ \mask' ->
-                                     cvAndHelper src1' src2' src2' mask' >> 
-                                     return src2
-
-{-# RULES 
-"cvAnd/in-place" [~1] forall s. cvAnd s = pipeline (unsafeAnd s)
-"cvAnd/unpipe" [1] forall s. pipeline (unsafeAnd s) = cvAnd s
-"cvAndMask/in-place" [~1] forall m s. 
-  cvAndMask m s = pipeline (unsafeAndMask m s)
-"cvAndMask/unpipe" [1] forall m s.
-  pipeline (unsafeAndMask m s) = cvAndMask m s
-  #-}
+cvAnd src1 = cv2 $ \src2 dst -> withHIplImage src1 $ \src1' -> 
+             cvAndHelper src1' src2 dst nullPtr
+{-# INLINE cvAnd #-}
 
 foreign import ccall unsafe "opencv2/core/core_c.h cvAndS"
    c_cvAndS :: Ptr CvArr -> CDouble -> CDouble -> CDouble -> CDouble -> 
@@ -152,23 +96,10 @@ foreign import ccall unsafe "opencv2/core/core_c.h cvAndS"
 cvAndS :: (HasChannels c, HasDepth d, HasScalar c d, IsCvScalar s, 
            s ~ CvScalar c d) => 
           s -> HIplImage c d -> HIplImage c d
-cvAndS s img = fst . withCompatibleImage img $ \dst ->
-                 withHIplImage img $ \src ->
-                   c_cvAndS (castPtr src) r g b a (castPtr dst) nullPtr
+cvAndS s = cv2 $ \img dst -> 
+           c_cvAndS (castPtr img) r g b a (castPtr dst) nullPtr
     where (r,g,b,a) = toCvScalar s
-
-unsafeAndS :: (HasChannels c, HasDepth d, HasScalar c d, IsCvScalar s, 
-               s ~ CvScalar c d) => 
-              s -> HIplImage c d -> IO (HIplImage c d)
-unsafeAndS s img = do withHIplImage img $ \src ->
-                        c_cvAndS (castPtr src) r g b a (castPtr src) nullPtr
-                      return img
-    where (r,g,b,a) = toCvScalar s
-
-{-# RULES 
-"cvAndS/in-place" [~1] forall s. cvAndS s = pipeline (unsafeAndS s)
-"cvAndS/unpipe" [1] forall s. pipeline (unsafeAndS s) = cvAndS s
-  #-}
+{-# INLINE cvAndS #-}
 
 foreign import ccall unsafe "opencv2/core/core_c.h cvScaleAdd"
   c_cvScaleAdd :: Ptr CvArr -> CDouble -> CDouble -> CDouble -> CDouble -> 
@@ -177,12 +108,12 @@ foreign import ccall unsafe "opencv2/core/core_c.h cvScaleAdd"
 cvScaleAdd :: (HasScalar c d, HasDepth d, HasChannels c, 
                s ~ CvScalar c d, IsCvScalar s) => 
               HIplImage c d -> s -> HIplImage c d -> HIplImage c d
-cvScaleAdd src1 s src2 = fst . withCompatibleImage src1 $ \dst ->
-                           withHIplImage src1 $ \src1' ->
-                             withHIplImage src2 $ \src2' ->
-                               c_cvScaleAdd (castPtr src1') r g b a 
-                                            (castPtr src2') (castPtr dst)
+cvScaleAdd src1 s = cv2 $ \src2 dst ->
+                    withHIplImage src1 $ \src1' ->
+                        c_cvScaleAdd (castPtr src1') r g b a 
+                                     (castPtr src2) (castPtr dst)
     where (r,g,b,a) = toCvScalar s
+{-# INLINE cvScaleAdd #-}
 
 foreign import ccall unsafe "opencv2/core/core_c.h cvMul"
   c_cvMul :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> CDouble -> IO ()
@@ -194,40 +125,19 @@ cvMulHelper src1 src2 dst s = c_cvMul (castPtr src1) (castPtr src2)
 -- |Per-element product of two arrays.
 cvMul :: (HasChannels c, HasDepth d) => 
          HIplImage c d -> HIplImage c d -> HIplImage c d
-cvMul src1 src2 = fst . withCompatibleImage src1 $ \dst ->
-                    withHIplImage src1 $ \src1' ->
-                      withHIplImage src2 $ \src2' ->
-                        cvMulHelper src1' src2' dst 1
+cvMul src1 = cv2 $ \src2 dst -> 
+             withHIplImage src1 $ \src1' ->
+                 cvMulHelper src1' src2 dst 1
+{-# INLINE cvMul #-}
 
 -- |Per-element product of two arrays with an extra scale factor that
 -- is multiplied with each product.
 cvMul' :: (HasChannels c, HasDepth d) => 
           Double -> HIplImage c d -> HIplImage c d -> HIplImage c d
-cvMul' scale src1 src2 = fst . withCompatibleImage src1 $ \dst ->
-                           withHIplImage src1 $ \src1' ->
-                               withHIplImage src2 $ \src2' ->
-                                   cvMulHelper src1' src2' dst scale
-
-unsafeMul :: (HasChannels c, HasDepth d) => 
-             HIplImage c d -> HIplImage c d -> IO (HIplImage c d)
-unsafeMul src1 src2 = do withHIplImage src1 $ \src1' ->
-                             withHIplImage src2 $ \src2' ->
-                                 cvMulHelper src1' src2' src2' 1
-                         return src2
-
-unsafeMul' :: (HasChannels c, HasDepth d) => 
-              Double -> HIplImage c d -> HIplImage c d -> IO (HIplImage c d)
-unsafeMul' scale src1 src2 = do withHIplImage src1 $ \src1' ->
-                                  withHIplImage src2 $ \src2' ->
-                                    cvMulHelper src1' src2' src2' scale
-                                return src2
-
-{-# RULES 
-"cvMul/in-place" [~1] forall s1. cvMul s1 = pipeline (unsafeMul s1)
-"cvMul/unpipe" [1] forall s1. pipeline (unsafeMul s1) = cvMul s1
-"cvMul'/in-place" [~1] forall s s1. cvMul' s s1 = pipeline (unsafeMul' s s1)
-"cvMul'/unpipe" [1] forall s s1. pipeline (unsafeMul' s s1) = cvMul' s s1
-  #-}
+cvMul' scale src1 = cv2 $ \src2 dst ->
+                    withHIplImage src1 $ \src1' ->
+                        cvMulHelper src1' src2 dst scale
+{-# INLINE cvMul' #-}
 
 foreign import ccall unsafe "opencv2/core/core_c.h cvAdd"
   c_cvAdd :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> IO ()
@@ -235,19 +145,10 @@ foreign import ccall unsafe "opencv2/core/core_c.h cvAdd"
 -- |Per-element sum of two arrays.
 cvAdd :: (HasChannels c, HasDepth d) => 
          HIplImage c d -> HIplImage c d -> HIplImage c d
-cvAdd src1 src2 = fst . withCompatibleImage src1 $ \dst ->
-                    withHIplImage src1 $ \src1' ->
-                      withHIplImage src2 $ \src2' ->
-                         c_cvAdd (castPtr src1') (castPtr src2') 
-                                 (castPtr dst) nullPtr
-
-unsafeAdd  :: (HasChannels c, HasDepth d) => 
-              HIplImage c d -> HIplImage c d -> IO (HIplImage c d)
-unsafeAdd src1 src2 = do withHIplImage src1 $ \src1' ->
-                           withHIplImage src2 $ \src2' ->
-                             c_cvAdd (castPtr src1') (castPtr src2') 
-                                     (castPtr src2') nullPtr
-                         return src2
+cvAdd src1 = cv2 $ \src2 dst ->
+             withHIplImage src1 $ \src1' ->
+                 c_cvAdd (castPtr src1') (castPtr src2) (castPtr dst) nullPtr
+{-# INLINE cvAdd #-}
 
 foreign import ccall unsafe "opencv2/core/core_c.h cvAddS"
   c_cvAddS :: Ptr CvArr -> CDouble -> CDouble -> CDouble -> CDouble -> 
@@ -255,21 +156,7 @@ foreign import ccall unsafe "opencv2/core/core_c.h cvAddS"
 
 cvAddS :: (HasChannels c, HasDepth d, IsCvScalar s, s ~ CvScalar c d) => 
           s -> HIplImage c d -> HIplImage c d
-cvAddS scalar src = fst . withCompatibleImage src $ \dst ->
-                      withHIplImage src $ \src' ->
-                        c_cvAddS (castPtr src') r g b a (castPtr dst) nullPtr
+cvAddS scalar = cv2 $ \src dst -> 
+                c_cvAddS (castPtr src) r g b a (castPtr dst) nullPtr
     where (r,g,b,a) = toCvScalar scalar
-
-unsafeAddS :: (HasChannels c, HasDepth d, IsCvScalar s, s ~ CvScalar c d) => 
-              s -> HIplImage c d -> IO (HIplImage c d)
-unsafeAddS scalar src = do withHIplImage src $ \src' ->
-                             c_cvAddS (castPtr src') r g b a (castPtr src') nullPtr
-                           return src
-    where (r,g,b,a) = toCvScalar scalar
-
-{-# RULES
-"cvAdd/in-place" [~1] forall s. cvAdd s = pipeline (unsafeAdd s)
-"cvAdd/unpipe" [1] forall s. pipeline (unsafeAdd s) = cvAdd s
-"cvAddS/in-place" [~1] forall s. cvAddS s = pipeline (unsafeAddS s)
-"cvAddS/unpipe" [1] forall s. pipeline (unsafeAddS s) = cvAddS s
-  #-}
+{-# INLINE cvAddS #-}

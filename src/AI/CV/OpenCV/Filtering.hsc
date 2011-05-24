@@ -3,9 +3,9 @@
 module AI.CV.OpenCV.Filtering (smoothGaussian, smoothGaussian') where
 import Foreign.C.Types (CInt, CDouble)
 import Foreign.Ptr (Ptr, castPtr)
-import System.IO.Unsafe (unsafePerformIO)
 import AI.CV.OpenCV.Core.CxCore
 import AI.CV.OpenCV.Core.HIplUtil
+import AI.CV.OpenCV.Core.CVOp
 
 #include <opencv2/imgproc/types_c.h>
 
@@ -34,7 +34,7 @@ cvGaussian = #{const CV_GAUSSIAN}
 smoothGaussian :: (ByteOrFloat d, HasChannels c) => 
                   Int -> HIplImage c d -> HIplImage c d
 smoothGaussian w = smoothGaussian' w Nothing Nothing
-{-# INLINE [0] smoothGaussian #-}
+{-# INLINE smoothGaussian #-}
 
 -- |Smooth a source 'HIplImage' using a linear convolution with a
 -- Gaussian kernel. Parameters are the kernel width, the kernel height
@@ -45,39 +45,8 @@ smoothGaussian w = smoothGaussian' w Nothing Nothing
 smoothGaussian' :: (ByteOrFloat d, HasChannels c) => 
                    Int -> Maybe Int -> Maybe Double -> HIplImage c d -> 
                    HIplImage c d
-smoothGaussian' w h sigma src = 
-    unsafePerformIO $
-    withHIplImage src $ \src' ->
-      return . fst . withCompatibleImage src $ \dst ->
-        smooth src' dst cvGaussian w h' sigma' 0
+smoothGaussian' w h sigma = 
+    cv2 $ \src dst -> smooth src dst cvGaussian w h' sigma' 0
     where sigma' = case sigma of { Nothing -> 0; Just s -> s }
           h' = case h of { Nothing -> 0; Just jh -> jh }
-{-# INLINE [0] smoothGaussian' #-}
-
-unsafeGaussian'  :: (ByteOrFloat d, HasChannels c) => 
-                    Int -> Maybe Int -> Maybe Double ->
-                    HIplImage c d -> IO (HIplImage c d)
-unsafeGaussian' w h sigma src = withHIplImage src $ \src' ->
-                                  do smooth src' src' cvGaussian w h' sigma' 0
-                                     return src
-    where sigma' = case sigma of
-                     Nothing -> 0
-                     Just s -> realToFrac s
-          h' = case h of { Nothing -> 0; Just jh -> jh }
-{-# INLINE [0] unsafeGaussian' #-}
-
-unsafeGaussian  :: (ByteOrFloat d, HasChannels c) => 
-                    Int -> HIplImage c d -> IO (HIplImage c d)
-unsafeGaussian w = unsafeGaussian' w Nothing Nothing
-{-# INLINE [0] unsafeGaussian #-}
-
-{-# RULES 
-"smoothGaussian'/in-place" [~1] forall w h sigma. 
-  smoothGaussian' w h sigma = pipeline (unsafeGaussian' w h sigma)
-"smoothGaussian'/unpipe" [1] forall w h sigma.
-  pipeline (unsafeGaussian' w h sigma) = smoothGaussian' w h sigma
-"smoothGaussian/in-place" [~1] forall w. 
-  smoothGaussian w = pipeline (unsafeGaussian w)
-"smoothGaussian/unpipe" [1] forall w.
-  pipeline (unsafeGaussian w) = smoothGaussian w
-  #-}
+{-# INLINE smoothGaussian' #-}

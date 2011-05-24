@@ -123,13 +123,13 @@ bytesPerPixel = (`div` 8) . fromIntegral . unSign . unDepth . depth
 -- color channels (i.e. 'MonoChromatic' or 'TriChromatic'), and the
 -- pixel depth (e.g. 'Word8', 'Float').
 data HIplImage c d = (HasChannels c, HasDepth d) => 
-                     HIplImage { origin    :: Int
-                               , width     :: Int
-                               , height    :: Int
-                               , imageSize :: Int
-                               , imageData :: ForeignPtr d
-                               , imageDataOrigin :: ForeignPtr d
-                               , widthStep :: Int }
+                     HIplImage { origin    :: !Int
+                               , width     :: !Int
+                               , height    :: !Int
+                               , imageSize :: !Int
+                               , imageData :: !(ForeignPtr d)
+                               , imageDataOrigin :: !(ForeignPtr d)
+                               , widthStep :: !Int }
 
 -- |Prepare a 'HIplImage' of the given width and height. The pixel and
 -- color depths are gleaned from the type, and may often be inferred.

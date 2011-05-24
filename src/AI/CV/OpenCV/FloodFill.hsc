@@ -6,6 +6,7 @@ import Foreign.C.Types (CDouble, CInt)
 import Foreign.Ptr (Ptr, nullPtr, castPtr)
 import AI.CV.OpenCV.Core.CxCore 
 import AI.CV.OpenCV.Core.HIplUtil
+import AI.CV.OpenCV.Core.CVOp
 
 -- |Flag used to indicate whether pixels under consideration for
 -- addition to a connected component should be compared to the seed
@@ -48,6 +49,7 @@ floodHelper (x,y) newVal loDiff upDiff range src =
 -- pixel; a flag indicating whether pixels under consideration for
 -- painting should be compared to the seed pixel ('FloodFixed') or to
 -- their neighbors ('FloodFloating'); the source image.
+{-
 floodFill :: (ByteOrFloat d, HasChannels c, HasScalar c d, 
               IsCvScalar s, s ~ CvScalar c d) => 
              (Int, Int) -> s -> s -> s -> FloodRange -> HIplImage c d -> 
@@ -66,13 +68,13 @@ unsafeFlood seed newVal loDiff upDiff range src =
         do floodHelper seed (toCvScalar newVal) (toCvScalar loDiff) 
                        (toCvScalar upDiff) range ptr
            return src
+-}
+floodFill :: (ByteOrFloat d, HasChannels c, HasScalar c d, 
+              IsCvScalar s, s ~ CvScalar c d) => 
+             (Int, Int) -> s -> s -> s -> FloodRange -> HIplImage c d -> 
+             HIplImage c d
+floodFill seed newVal loDiff upDiff range = 
+    cv $ floodHelper seed (toCvScalar newVal) (toCvScalar loDiff)
+                     (toCvScalar upDiff) range
 
 {-# INLINE [1] floodFill #-}
-{-# INLINE [1] unsafeFlood #-}
-
-{-# RULES 
-"floodFill/in-place" [~1] forall s nv ld ud r.
-  floodFill s nv ld ud r = pipeline (unsafeFlood s nv ld ud r)
-"floodFill/unpipe" [1] forall s nv ld ud r.
-  pipeline (unsafeFlood s nv ld ud r) = floodFill s nv ld ud r
-  #-}

@@ -10,12 +10,16 @@ module AI.CV.OpenCV.Core.HIplUtil
      HIplImage, mkHIplImage, width, height, mkBlackImage,
      withHIplImage, MonoChromatic, TriChromatic, HasChannels, 
      HasDepth(..), HasScalar(..), IsCvScalar(..), colorDepth,
-     ByteOrFloat, getROI, imageData, fromFile, unsafeWithHIplImage) where
-import AI.CV.OpenCV.Core.CxCore (IplImage, cvFree, cvFreePtr)
+     ByteOrFloat, getROI, imageData, fromFile, unsafeWithHIplImage,
+     duplicateImagePtr, compatibleImagePtr, compatibleImagePtrPtr) where
+import AI.CV.OpenCV.Core.CxCore (IplImage, cvFree, cvFreePtr, createImageF, 
+                                 CvSize(..), cloneImageF, cvCreateImage, 
+                                 getNumChannels, getDepth, cvGetSize)
 import AI.CV.OpenCV.Core.HighGui (cvLoadImage, cvSaveImage, LoadColor(..))
 import AI.CV.OpenCV.Core.HIplImage
+import Control.Applicative
 import Control.Arrow (second, (***))
-import Control.Monad ((<=<), when)
+import Control.Monad ((<=<), when, join)
 import qualified Data.Vector.Storable as V
 import Data.Word (Word8, Word16)
 import Foreign.ForeignPtr
@@ -169,6 +173,21 @@ compatibleImage img@(HIplImage _ _ _ _ _ _ _) =
           sz = imageSize img
           stride = widthStep img
 
+-- |Allocate a new 'IplImage' with the same dimensions, number of
+-- color channels, and color depth as an existing 'HIplImage'. The
+-- pixel data of the original 'HIplImage' is not copied.
+compatibleImagePtr :: forall c d. (HasChannels c, HasDepth d) =>
+                      HIplImage c d -> IO (ForeignPtr IplImage)
+compatibleImagePtr img = createImageF (CvSize w' h') c d
+    where w' = fromIntegral . width $ img
+          h' = fromIntegral . height $ img
+          c = fromIntegral . numChannels $ (undefined::c)
+          d = depth (undefined::d)
+
+compatibleImagePtrPtr :: Ptr IplImage -> IO (Ptr IplImage)
+compatibleImagePtrPtr = 
+    join . (liftA3 cvCreateImage <$> cvGetSize <*> getNumChannels <*> getDepth)
+
 -- |Create an exact duplicate of the given HIplImage. This allocates a
 -- fresh array to store the copied pixels.
 duplicateImage :: HIplImage c d -> IO (HIplImage c d)
@@ -181,6 +200,12 @@ duplicateImage img@(HIplImage _ _ _ _ _ _ _ ) =
           h = height img
           sz = imageSize img
           stride = widthStep img
+
+-- |Clone an 'HIplImage', returning the 'Ptr' 'IplImage' underlying
+-- the clone.
+duplicateImagePtr :: (HasChannels c, HasDepth d) =>
+                     HIplImage c d -> IO (ForeignPtr IplImage)
+duplicateImagePtr = flip withHIplImage cloneImageF
 
 -- |Pass the given function a 'HIplImage' constructed from a width, a
 -- height, and a 'V.Vector' of pixel values. The new 'HIplImage' \'s
@@ -240,24 +265,20 @@ fromColorPixels w h = isColor . fromPixels w h
 -- performing the given action along with the result of that action.
 withDuplicateImage :: (HasChannels c, HasDepth d) => 
                       HIplImage c d -> (Ptr IplImage -> IO b) -> 
-                      (HIplImage c d, b)
-withDuplicateImage img1 f = unsafePerformIO $
-                            do img2 <- duplicateImage img1
+                      IO (HIplImage c d, b)
+withDuplicateImage img1 f = do img2 <- duplicateImage img1
                                r <- withHIplImage img2 f
                                return (img2, r)
-{-# NOINLINE withDuplicateImage #-}
 
 -- |Provides the supplied function with a 'Ptr' to the 'IplImage'
 -- underlying a new 'HIplImage' of the same dimensions as the given
 -- 'HIplImage'.
 withCompatibleImage :: (HasChannels c, HasDepth d) => 
                        HIplImage c d -> (Ptr IplImage -> IO b) -> 
-                       (HIplImage c d, b)
-withCompatibleImage img1 f = unsafePerformIO $
-                             do img2 <- compatibleImage img1
+                       IO (HIplImage c d, b)
+withCompatibleImage img1 f = do img2 <- compatibleImage img1
                                 r <- withHIplImage img2 f
                                 return (img2, r)
-{-# NOINLINE withCompatibleImage #-}
 
 unsafeWithHIplImage :: (HasChannels c, HasDepth d) =>
                        HIplImage c d -> (Ptr IplImage -> a) -> a
