@@ -9,7 +9,7 @@ import AI.CV.OpenCV.Core.CVOp
 
 #include <opencv2/imgproc/types_c.h>
 
-foreign import ccall safe "opencv2/imgproc/imgproc_c.h cvSmooth"
+foreign import ccall unsafe "opencv2/imgproc/imgproc_c.h cvSmooth"
   c_cvSmooth :: Ptr CvArr -> Ptr CvArr -> CInt -> CInt -> CInt -> CDouble -> 
                 CDouble -> IO ()
 

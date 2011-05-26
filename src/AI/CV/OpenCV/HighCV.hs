@@ -6,39 +6,37 @@ module AI.CV.OpenCV.HighCV (erode, dilate, houghStandard, houghProbabilistic,
                             HIplImage, width, height, isColor, isMono,
                             pixels, withPixels, fromGrayPixels, fromColorPixels,
                             fromFile, fromFileGray, fromFileColor, 
-                            fromPGM16, toFile, fromPtr, 
+                            fromPGM16, toFile, fromPtr, normalize,
                             withImagePixels, sampleLine, Connectivity(..), 
-                            fromPixels, createFileCapture, 
-                            createCameraCapture, resize, FourCC, getROI,
+                            fromPixels, resize, getROI, CvRect(..),
+                            cv_L2, cv_MinMax,
                             InterpolationMethod(..), MonoChromatic, 
-                            TriChromatic, createVideoWriter, HasChannels,
-                            module AI.CV.OpenCV.ColorConversion, GrayImage,
-                            ColorImage, GrayImage16, createFileCaptureLoop, 
-                            HasDepth, module AI.CV.OpenCV.Threshold,
+                            TriChromatic, HasChannels, HasDepth,
+                            GrayImage, ColorImage, GrayImage16, 
+                            module AI.CV.OpenCV.ColorConversion,
+                            module AI.CV.OpenCV.Threshold,
                             module AI.CV.OpenCV.FloodFill,
                             module AI.CV.OpenCV.FeatureDetection,
-                            runWindow, module AI.CV.OpenCV.Drawing)
+                            module AI.CV.OpenCV.Drawing,
+                            module AI.CV.OpenCV.GUI,
+                            module AI.CV.OpenCV.Video)
     where
 import AI.CV.OpenCV.Core.CxCore
 import AI.CV.OpenCV.Core.CV
-import AI.CV.OpenCV.Core.HighGui (createFileCaptureF, cvQueryFrame, cvInit,
-                                  setCapturePos, CapturePos(PosFrames), 
-                                  CvCapture, createCameraCaptureF, 
-                                  createVideoWriterF, cvWriteFrame, FourCC,
-                                  newWindow, delWindow, showImage, cvWaitKey)
 import AI.CV.OpenCV.Drawing
 import AI.CV.OpenCV.Core.HIplUtil
 import AI.CV.OpenCV.Core.CVOp
 import AI.CV.OpenCV.ColorConversion
---import AI.CV.OpenCV.Contours
 import Data.Word (Word8, Word16)
+import Foreign.C.Types (CDouble)
 import Foreign.Ptr
-import Foreign.ForeignPtr (withForeignPtr)
 import Foreign.Storable
 import System.IO.Unsafe (unsafePerformIO)
+import AI.CV.OpenCV.GUI
 import AI.CV.OpenCV.Threshold
 import AI.CV.OpenCV.FloodFill
 import AI.CV.OpenCV.FeatureDetection
+import AI.CV.OpenCV.Video
 
 -- |Grayscale 8-bit (per-pixel) image type.
 type GrayImage = HIplImage MonoChromatic Word8
@@ -136,72 +134,6 @@ findContours img = snd $ withDuplicateImage img $
                      \src -> cvFindContours src CV_RETR_CCOMP CV_CHAIN_APPROX_SIMPLE
 -}
 
--- |Raise an error if 'cvQueryFrame' returns 'Nothing'; otherwise
--- returns a 'Ptr' 'IplImage'.
-queryError :: Ptr CvCapture -> IO (Ptr IplImage)
-queryError = (maybe (error "Unable to capture frame") id `fmap`) . cvQueryFrame
-
--- |If 'cvQueryFrame' returns 'Nothing', try rewinding the video and
--- querying again. If it still fails, raise an error. When a non-null
--- frame is obtained, return it.
-queryFrameLoop :: Ptr CvCapture -> IO (Ptr IplImage)
-queryFrameLoop cap = do f <- cvQueryFrame cap
-                        case f of
-                          Nothing -> do setCapturePos cap (PosFrames 0)
-                                        queryError cap
-                          Just f' -> return f'
-
--- |Open a capture stream from a movie file. The returned action may
--- be used to query for the next available frame. If no frame is
--- available either due to error or the end of the video sequence,
--- 'Nothing' is returned.
-createFileCapture :: (HasChannels c, HasDepth d) => 
-                     FilePath -> IO (IO (Maybe (HIplImage c d)))
-createFileCapture fname = do capture <- createFileCaptureF fname
-                             return (withForeignPtr capture $ \cap ->
-                                       do f <- cvQueryFrame cap
-                                          case f of
-                                            Nothing -> return Nothing
-                                            Just f' -> Just `fmap` fromPtr f')
-
--- |Open a capture stream from a movie file. The returned action may
--- be used to query for the next available frame. The sequence of
--- frames will return to its beginning when the end of the video is
--- encountered.
-createFileCaptureLoop :: (HasChannels c, HasDepth d) =>
-                         FilePath -> IO (IO (HIplImage c d))
-createFileCaptureLoop fname = do capture <- createFileCaptureF fname
-                                 return (withForeignPtr capture $ 
-                                         (>>= fromPtr) . queryFrameLoop)
-
-
--- |Open a capture stream from a connected camera. The parameter is
--- the index of the camera to be used, or 'Nothing' if it does not
--- matter what camera is used. The returned action may be used to
--- query for the next available frame.
-createCameraCapture :: (HasChannels c, HasDepth d) =>
-                       Maybe Int -> IO (IO (HIplImage c d))
-createCameraCapture cam = do cvInit
-                             capture <- createCameraCaptureF cam'
-                             return (withForeignPtr capture $ 
-                                     (>>= fromPtr) . queryError)
-    where cam' = maybe (-1) id cam
-
--- |Create a video file writer. The parameters are the file name, the
--- 4-character code (of the codec used to compress the frames
--- (e.g. @(\'F\',\'M\',\'P\',\'4\')@ for MPEG-4), the framerate of the
--- created video stream, and the size of the video frames. The
--- returned action may be used to add frames to the video stream.
-createVideoWriter :: (HasChannels c, HasDepth d) =>
-                     FilePath -> FourCC -> Double -> (Int,Int) -> 
-                     IO (HIplImage c d -> IO ())
-createVideoWriter fname codec fps sz = 
-    do writer <- createVideoWriterF fname codec fps sz
-       let writeFrame img = withForeignPtr writer $ \writer' ->
-                              withHIplImage img $ \img' ->
-                                cvWriteFrame writer' img'
-       return writeFrame
-
 -- FIXME: There is no fusion mechanism that can handle 'resize'. The
 -- problem is that the fusion combinators assume the output image is
 -- the same size as the input image as this information is not
@@ -221,11 +153,10 @@ resize method w h img =
        return img'
 {-# NOINLINE resize #-}
 
---runWindow :: (HasChannels c, HasDepth d) => IO (HIplImage c d) -> IO ()
-runWindow :: HasChannels c => IO (HIplImage c Word8) -> IO ()
-runWindow mkImg = go
-    where go = do newWindow 0 True
-                  mkImg >>= flip withHIplImage (showImage 0)
-                  cvWaitKey 1 >>= bool (delWindow 0) go . (> 0)
-          bool t _ True = t
-          bool _ f False = f
+normalize :: (HasChannels c, HasDepth d) => 
+             ArrayNorm -> CDouble -> CDouble -> HIplImage c d -> HIplImage c d
+normalize ntype a b = cv2 $ \img dst -> 
+                      cvNormalize (castPtr img) (castPtr dst) a b (unNorm ntype) 
+                                  nullPtr
+{-# INLINE normalize #-}
+             

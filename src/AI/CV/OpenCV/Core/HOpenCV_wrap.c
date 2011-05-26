@@ -171,6 +171,10 @@ int c_cvFindContours(CvArr *img, CvMemStorage *storage, CvSeq** first_contour,
                           method, cvPoint(offset_x,offset_y));
 }
 
+void c_cvSetRoi(IplImage* img, int x, int y, int width, int height)
+{
+  cvSetImageROI(img, cvRect(x,y,width,height));
+}
 
 
 /****************************************************************************/

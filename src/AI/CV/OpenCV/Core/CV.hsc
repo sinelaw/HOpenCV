@@ -2,7 +2,7 @@
 -- |Support for features from the OpenCV Image Filtering library.
 module AI.CV.OpenCV.Core.CV 
     ( InterpolationMethod(..),
-      cvCanny, cvResize, cvDilate, cvErode, cvPyrDown, cvHoughLines2, 
+      cvResize, cvDilate, cvErode, cvPyrDown, cvHoughLines2, 
       --CvHaarClassifierCascade, HaarDetectFlag,
       --cvHaarFlagNone, cvHaarDoCannyPruning, 
       --cvHaarScaleImage, cvHaarFindBiggestObject, cvHaarDoRoughSearch,
@@ -21,30 +21,19 @@ import AI.CV.OpenCV.Core.ColorConversion
 
 #include <opencv/cv.h>
 
-foreign import ccall unsafe "opencv2/imgproc/imgproc_c.h cvCanny"
-  c_cvCanny :: Ptr CvArr -> Ptr CvArr -> CDouble -> CDouble -> CInt -> IO ()
-
--- Canny 
-cvCanny :: (IplArrayType i1, IplArrayType i2) =>
-           Ptr i1 -> Ptr i2 -> Double -> Double -> Int -> IO ()
-cvCanny src dst threshold1 threshold2 apertureSize = 
-  c_cvCanny (fromArr src) (fromArr dst) (realToFrac threshold1) 
-            (realToFrac threshold2) (fromIntegral apertureSize)
-
-
 data InterpolationMethod = CV_INTER_NN 
                          | CV_INTER_LINEAR 
                          | CV_INTER_CUBIC
                          | CV_INTER_AREA
                            deriving (Enum,Eq)
 
-foreign import ccall unsafe "opencv2/imgproc/imgproc_c.h cvResize"
+foreign import ccall "opencv2/imgproc/imgproc_c.h cvResize"
   c_cvResize :: Ptr CvArr -> Ptr CvArr -> CInt -> IO ()
 
 cvResize :: (IplArrayType i1, IplArrayType i2) => Ptr i1 -> Ptr i2 -> InterpolationMethod -> IO ()
 cvResize src dst interp = c_cvResize (fromArr src) (fromArr dst) (fromIntegral . fromEnum $ interp)
 
-foreign import ccall safe "opencv2/imgproc/imgproc_c.h cvDilate"
+foreign import ccall "opencv2/imgproc/imgproc_c.h cvDilate"
   c_dilate :: Ptr CvArr -> Ptr CvArr -> Ptr () -> CInt -> IO ()
 
 -- |Dilate the first image using a 3x3 rectangular structuring element
@@ -53,7 +42,7 @@ foreign import ccall safe "opencv2/imgproc/imgproc_c.h cvDilate"
 cvDilate :: (IplArrayType i1, IplArrayType i2) => Ptr i1 -> Ptr i2  -> CInt -> IO ()
 cvDilate src dst iter = c_dilate (fromArr src) (fromArr dst) nullPtr iter
 
-foreign import ccall unsafe "opencv2/imgproc/imgproc_c.h cvErode"
+foreign import ccall "opencv2/imgproc/imgproc_c.h cvErode"
   c_erode :: Ptr CvArr -> Ptr CvArr -> Ptr () -> CInt -> IO ()
 
 -- |Erode the first image using a 3x3 rectangular structuring element
@@ -62,7 +51,7 @@ foreign import ccall unsafe "opencv2/imgproc/imgproc_c.h cvErode"
 cvErode :: (IplArrayType i1, IplArrayType i2) => Ptr i1 -> Ptr i2 -> CInt -> IO ()
 cvErode src dst iter = c_erode (fromArr src) (fromArr dst) nullPtr iter
 
-foreign import ccall unsafe "opencv2/imgproc/imgproc_c.h cvHoughLines2"
+foreign import ccall "opencv2/imgproc/imgproc_c.h cvHoughLines2"
         c_cvHoughLines2 :: Ptr CvArr -> Ptr CvMemStorage -> CInt -> CDouble -> CDouble -> CInt -> CDouble -> CDouble -> IO (Ptr (CvSeq a))
 
 cvHoughLines2 :: IplArrayType i => Ptr i -> Ptr CvMemStorage -> CInt -> Double -> Double -> Int -> Double -> Double -> IO (Ptr (CvSeq a))
@@ -71,10 +60,10 @@ cvHoughLines2 img storage method rho theta threshold param1 param2 =
                     (realToFrac theta) (fromIntegral threshold) 
                     (realToFrac param1) (realToFrac param2)
 
-foreign import ccall safe "opencv2/imgproc/imgproc_c.h cvCvtColor"
+foreign import ccall "opencv2/imgproc/imgproc_c.h cvCvtColor"
   c_cvCvtColor :: Ptr CvArr -> Ptr CvArr -> CInt -> IO ()
 
-foreign import ccall unsafe "opencv2/imgproc/imgproc_c.h cvSampleLine"
+foreign import ccall "opencv2/imgproc/imgproc_c.h cvSampleLine"
   c_cvSampleLine :: Ptr CvArr -> CInt -> CInt -> CInt -> CInt -> Ptr a -> 
                     CInt -> IO CInt
 
@@ -107,7 +96,7 @@ cvCvtColor :: (IplArrayType a, IplArrayType b) =>
               Ptr a -> Ptr b -> ColorConversion -> IO ()
 cvCvtColor src dst code = c_cvCvtColor (fromArr src) (fromArr dst) (colorConv code)
 
-foreign import ccall unsafe "opencv2/imgproc/imgproc_c.h cvPyrDown"
+foreign import ccall "opencv2/imgproc/imgproc_c.h cvPyrDown"
   c_cvPyrDown :: Ptr CvArr -> Ptr CvArr -> CInt -> IO ()
 
 -- for now only one filter type is supported so no need for the CInt (filter type)

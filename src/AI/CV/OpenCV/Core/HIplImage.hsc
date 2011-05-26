@@ -1,6 +1,6 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, ScopedTypeVariables, 
              TypeFamilies, MultiParamTypeClasses, FlexibleInstances, GADTs, 
-             BangPatterns #-}
+             BangPatterns, FlexibleContexts #-}
 module AI.CV.OpenCV.Core.HIplImage 
     ( TriChromatic, MonoChromatic, HasChannels(..), HasDepth(..), 
       HIplImage(..), mkHIplImage, mkBlackImage, withHIplImage, bytesPerPixel, 
@@ -83,6 +83,11 @@ instance HasDepth Double where
 class HasDepth a => ByteOrFloat a where
 instance ByteOrFloat Word8 where
 instance ByteOrFloat Float where
+
+-- FIXME: Perhaps it would be better to use a distinct type for the
+-- scalar type of color images? I'm having some trouble getting this
+-- type to fit in, though.
+--data RGB d = RGB !d !d !d
 
 -- |An image with a particular number of channels have an associated
 -- scalar type built from the type of its pixels. This class lets us

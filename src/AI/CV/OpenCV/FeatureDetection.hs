@@ -7,7 +7,7 @@ import AI.CV.OpenCV.Core.CxCore
 import AI.CV.OpenCV.Core.HIplUtil
 import AI.CV.OpenCV.Core.CVOp
 
-foreign import ccall unsafe "opencv2/imgproc/imgproc_c.h cvCornerHarris"
+foreign import ccall "opencv2/imgproc/imgproc_c.h cvCornerHarris"
   c_cvHarris :: Ptr CvArr -> Ptr CvArr -> CInt -> CInt -> CDouble -> IO ()
 
 harris :: Ptr IplImage -> Ptr IplImage -> Int -> Int -> Double -> IO ()
@@ -16,13 +16,8 @@ harris src dst blockSize aperture k =
     where fi = fromIntegral
           rf = realToFrac
 
--- |Harris corner detector. For each pixel, a 2x2 covariance matrix,
--- @M@, is computed over a @blockSize x blockSize@ neighborhood. The
--- value of @det(M) - 0.04*trace(M)^2@ is stored in the destination
--- image. Corners in the image correspond to local maxima of the
--- destination image. The parameters are the @blockSize@ and the
--- source 'HIplImage'. The Sobel operator used as a preprocessing step
--- is given an aperture size of 3.
+-- |Equivalent to 'cornerHarris'' with an @aperture@ of @3@ and a @k@
+-- of @0.04@.
 cornerHarris :: ByteOrFloat d => 
                 Int -> HIplImage MonoChromatic d -> 
                 HIplImage MonoChromatic Float
@@ -44,7 +39,7 @@ cornerHarris' blockSize aperture k =
     cv2 $ \src dst -> harris src dst blockSize aperture k
 {-# INLINE cornerHarris' #-}
 
-foreign import ccall safe "opencv2/imgprog/imgproc_c.h cvCanny"
+foreign import ccall "opencv2/imgprog/imgproc_c.h cvCanny"
   c_cvCanny :: Ptr IplImage -> Ptr IplImage -> CDouble -> CDouble -> CInt -> IO ()
 
 -- |Canny edge detector. @canny threshold1 threshold2 aperture src@
@@ -59,4 +54,3 @@ canny t1 t2 aperture =
     cv2 $ \src dst -> c_cvCanny src dst (rf t1) (rf t2) (fi aperture)
   where rf = realToFrac
         fi = fromIntegral
-    

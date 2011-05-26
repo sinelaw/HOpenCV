@@ -1,8 +1,7 @@
 {-# LANGUAGE ForeignFunctionInterface, ScopedTypeVariables, 
              MultiParamTypeClasses, FlexibleInstances #-}
 -- |Image thresholding operations. These operations will perform
--- destructive, in-place updates when composed with a producer of
--- fresh images.
+-- destructive, in-place updates when used in compositions.
 module AI.CV.OpenCV.Threshold (thresholdBinary, thresholdBinaryInv,
                                thresholdTruncate, 
                                thresholdToZero, thresholdToZeroInv,
@@ -33,7 +32,7 @@ class (HasDepth d1, HasDepth d2) => SameOrByte d1 d2 where
 instance SameOrByte Float Word8 where
 instance ByteOrFloat d => SameOrByte d d where
 
-foreign import ccall unsafe "opencv2/imgproc/imgproc_c.h cvThreshold"
+foreign import ccall "opencv2/imgproc/imgproc_c.h cvThreshold"
   c_cvThreshold :: Ptr CvArr -> Ptr CvArr -> CDouble -> CDouble -> CInt -> 
                    IO (CDouble)
 

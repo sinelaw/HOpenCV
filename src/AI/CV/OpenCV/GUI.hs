@@ -1,19 +1,43 @@
+-- |Very simple tools for showing images in a window. The 'runWindow'
+-- and 'runNamedWindow' interfaces are the recommended entrypoints.
 module AI.CV.OpenCV.GUI (namedWindow, WindowFlag(..), MouseCallback, 
-                         waitKey, cvInit) where
+                         waitKey, cvInit, runWindow, runNamedWindow) where
 import AI.CV.OpenCV.Core.HIplImage
 import AI.CV.OpenCV.Core.HighGui
 import AI.CV.OpenCV.Core.CxCore (fromArr)
 import Control.Monad ((>=>))
+import Data.Word (Word8)
+import Foreign.Ptr (castPtr)
 import Foreign.C.String (newCString)
 
---type KeyboardCallback = Int -> IO ()
+bool :: a -> a -> Bool -> a
+bool t _ True = t
+bool _ f False = f
+
+-- |Simple window runner. Exits when any key is pressed.
+runWindow :: HasChannels c => IO (HIplImage c Word8) -> IO ()
+runWindow mkImg = newWindow 0 True >> go
+    where go = do mkImg >>= flip withHIplImage (showImage 0)
+                  cvWaitKey 1 >>= bool (delWindow 0) go . (> 0)
+
+-- |Simple named window runner. Exits when any key is pressed. The
+-- name is shown in the window's title bar.
+runNamedWindow :: HasChannels c => String -> IO (HIplImage c Word8) -> IO ()
+runNamedWindow name mkImg = 
+    do name' <- newCString name
+       cvNamedWindow name' (windowFlagsToEnum [AutoSize])
+       let showImg = cvShowImage name' . castPtr
+           go = do mkImg >>= flip withHIplImage showImg
+                   cvWaitKey 1 >>= bool (cvDestroyWindow name') go . (> 0)
+       go
 
 -- |Create a new window with the given title. The return value is an
--- action for destroying the window.
+-- action for showing an image, and an action for destroying the
+-- window. Be sure to repeatedly invoke 'waitKey' to keep the system
+-- alive.
 namedWindow :: (HasChannels c, HasDepth d) => 
                String -> [WindowFlag] -> 
                Maybe MouseCallback -> 
-               --Maybe KeyboardCallback ->
                IO (HIplImage c d -> IO (), IO ())
 namedWindow name flags _cb =
   do cstr <- newCString name

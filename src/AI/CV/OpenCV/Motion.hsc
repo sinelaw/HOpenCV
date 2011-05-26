@@ -1,5 +1,5 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
--- |Motion analysis functions. Possibly BROKEN in OpenCV 2.2.
+-- |Motion analysis functions.
 module AI.CV.OpenCV.Motion (calcOpticalFlowBM) where
 import Data.Word (Word8)
 import Foreign.C.Types (CInt)
@@ -8,8 +8,6 @@ import System.IO.Unsafe
 import AI.CV.OpenCV.Core.CxCore
 import AI.CV.OpenCV.Core.HIplImage
 
--- FIXME: This is missing from the C API of OpenCV 2.2
---foreign import ccall unsafe "opencv/cv.h cvCalcOpticalFlowBM"
 foreign import ccall unsafe "opencv2/video/tracking.hpp cvCalcOpticalFlowBM"
   c_cvCalcOpticalFlowBM :: Ptr CvArr -> Ptr CvArr -> CInt -> CInt -> 
                            CInt -> CInt -> CInt -> CInt -> 
@@ -44,3 +42,4 @@ calcOpticalFlowBM prev curr blockSize shiftSize maxRange =
           h = (height prev - snd blockSize) `div` snd shiftSize
           sw = fromIntegral . fst -- size width
           sh = fromIntegral . snd -- size height
+{-# NOINLINE calcOpticalFlowBM #-}
