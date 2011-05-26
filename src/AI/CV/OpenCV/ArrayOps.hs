@@ -2,16 +2,16 @@
 -- |Array operations.
 module AI.CV.OpenCV.ArrayOps (subRS, absDiff, convertScale, 
                               cvAnd, cvAndMask, cvScaleAdd, cvAndS,
-                              cvMul, cvMul', cvAdd, cvAddS) where
+                              cvMul, cvMul', cvAdd, cvAddS, cvSub,
+                              cvSubMask) where
 import Data.Word (Word8)
 import Foreign.C.Types (CDouble)
 import Foreign.Ptr (Ptr, castPtr, nullPtr)
-import System.IO.Unsafe (unsafePerformIO)
 import AI.CV.OpenCV.Core.CxCore (CvArr, IplImage)
 import AI.CV.OpenCV.Core.HIplUtil
 import AI.CV.OpenCV.Core.CVOp
 
-foreign import ccall unsafe "opencv2/core/core_c.h cvSubRS"
+foreign import ccall "opencv2/core/core_c.h cvSubRS"
   c_cvSubRS :: Ptr CvArr -> CDouble -> CDouble -> CDouble -> CDouble -> 
                Ptr CvArr -> Ptr CvArr -> IO ()
 
@@ -24,7 +24,7 @@ subRS value = cv2 $ \src dst ->
     where (r,g,b,a) = toCvScalar value
 {-# INLINE subRS #-}
 
-foreign import ccall unsafe "opencv2/core/core_c.h cvAbsDiff"
+foreign import ccall "opencv2/core/core_c.h cvAbsDiff"
   c_cvAbsDiff :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> IO ()
 
 -- |Calculate the absolute difference between two images.
@@ -35,7 +35,7 @@ absDiff src1 = cv2 $ \src2 dst ->
                  c_cvAbsDiff (castPtr src1') (castPtr src2) (castPtr dst)
 {-# INLINE absDiff #-}
 
-foreign import ccall unsafe "opencv2/core/core_c.h cvConvertScale"
+foreign import ccall "opencv2/core/core_c.h cvConvertScale"
   c_cvConvertScale :: Ptr CvArr -> Ptr CvArr -> CDouble -> CDouble -> IO ()
 
 -- |Converts one array to another with optional affine
@@ -48,18 +48,14 @@ foreign import ccall unsafe "opencv2/core/core_c.h cvConvertScale"
 convertScale :: (HasChannels c, HasDepth d1, HasDepth d2) =>
                 Double -> Double -> HIplImage c d1 -> 
                 HIplImage c d2
-convertScale scale shift src = unsafePerformIO $
-                               do dst <- mkHIplImage (width src) (height src)
-                                  withHIplImage src $ \src' ->
-                                    withHIplImage dst $ \dst' ->
-                                      c_cvConvertScale (castPtr src') 
-                                                       (castPtr dst') 
-                                                       (realToFrac scale) 
-                                                       (realToFrac shift)
-                                  return dst
-{-# NOINLIN convertScale #-}
+convertScale scale shift  = cv2 $ \src dst ->
+                            c_cvConvertScale (castPtr src) 
+                                             (castPtr dst) 
+                                             (realToFrac scale) 
+                                             (realToFrac shift)
+{-# INLINE convertScale #-}
 
-foreign import ccall unsafe "opencv2/core/core_c.h cvAnd"
+foreign import ccall "opencv2/core/core_c.h cvAnd"
   c_cvAnd :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> IO ()
 
 cvAndHelper :: Ptr IplImage -> Ptr IplImage -> Ptr IplImage -> Ptr IplImage -> 
@@ -101,7 +97,7 @@ cvAndS s = cv2 $ \img dst ->
     where (r,g,b,a) = toCvScalar s
 {-# INLINE cvAndS #-}
 
-foreign import ccall unsafe "opencv2/core/core_c.h cvScaleAdd"
+foreign import ccall "opencv2/core/core_c.h cvScaleAdd"
   c_cvScaleAdd :: Ptr CvArr -> CDouble -> CDouble -> CDouble -> CDouble -> 
                   Ptr CvArr -> Ptr CvArr -> IO ()
 
@@ -115,7 +111,7 @@ cvScaleAdd src1 s = cv2 $ \src2 dst ->
     where (r,g,b,a) = toCvScalar s
 {-# INLINE cvScaleAdd #-}
 
-foreign import ccall unsafe "opencv2/core/core_c.h cvMul"
+foreign import ccall "opencv2/core/core_c.h cvMul"
   c_cvMul :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> CDouble -> IO ()
 
 cvMulHelper :: Ptr IplImage -> Ptr IplImage -> Ptr IplImage -> Double -> IO ()
@@ -139,7 +135,7 @@ cvMul' scale src1 = cv2 $ \src2 dst ->
                         cvMulHelper src1' src2 dst scale
 {-# INLINE cvMul' #-}
 
-foreign import ccall unsafe "opencv2/core/core_c.h cvAdd"
+foreign import ccall "opencv2/core/core_c.h cvAdd"
   c_cvAdd :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> IO ()
 
 -- |Per-element sum of two arrays.
@@ -150,7 +146,7 @@ cvAdd src1 = cv2 $ \src2 dst ->
                  c_cvAdd (castPtr src1') (castPtr src2) (castPtr dst) nullPtr
 {-# INLINE cvAdd #-}
 
-foreign import ccall unsafe "opencv2/core/core_c.h cvAddS"
+foreign import ccall "opencv2/core/core_c.h cvAddS"
   c_cvAddS :: Ptr CvArr -> CDouble -> CDouble -> CDouble -> CDouble -> 
               Ptr CvArr -> Ptr CvArr -> IO ()
 
@@ -160,3 +156,29 @@ cvAddS scalar = cv2 $ \src dst ->
                 c_cvAddS (castPtr src) r g b a (castPtr dst) nullPtr
     where (r,g,b,a) = toCvScalar scalar
 {-# INLINE cvAddS #-}
+
+foreign import ccall "opencv2/core/core_c.h cvSub"
+  c_cvSub :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> IO ()
+
+cvSub :: (HasChannels c, HasDepth d) =>
+         HIplImage c d -> HIplImage c d -> HIplImage c d
+cvSub img1 = cv2 $ \img2 dst ->
+             withHIplImage img1 $ \img1' -> 
+                 c_cvSub (castPtr img1') (castPtr img2) (castPtr dst) nullPtr
+{-# INLINE cvSub #-}
+
+-- FIXME: This isn't really what one typically wants. If a mask is
+-- given, the destination array should be a clone of img1, which makes
+-- composition hard.
+
+-- |WARNING: Argument order is reversed here! @cvSubMask img2 mask
+-- img1@ computes @dest[i] = img1[i] - img2[i] if mask[i]@.
+cvSubMask :: (HasChannels c, HasDepth d) =>
+             HIplImage c d -> HIplImage MonoChromatic Word8 -> HIplImage c d -> 
+             HIplImage c d
+cvSubMask img2 mask = cv $ \img1 ->
+                      withHIplImage mask $ \mask' -> 
+                          withHIplImage img2 $ \img2' ->
+                              c_cvSub (castPtr img1) (castPtr img2') 
+                                      (castPtr img1) (castPtr mask')
+{-# INLINE cvSubMask #-}
