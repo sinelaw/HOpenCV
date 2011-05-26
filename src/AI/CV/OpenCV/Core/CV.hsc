@@ -44,7 +44,7 @@ foreign import ccall unsafe "opencv2/imgproc/imgproc_c.h cvResize"
 cvResize :: (IplArrayType i1, IplArrayType i2) => Ptr i1 -> Ptr i2 -> InterpolationMethod -> IO ()
 cvResize src dst interp = c_cvResize (fromArr src) (fromArr dst) (fromIntegral . fromEnum $ interp)
 
-foreign import ccall unsafe "opencv2/imgproc/imgproc_c.h cvDilate"
+foreign import ccall safe "opencv2/imgproc/imgproc_c.h cvDilate"
   c_dilate :: Ptr CvArr -> Ptr CvArr -> Ptr () -> CInt -> IO ()
 
 -- |Dilate the first image using a 3x3 rectangular structuring element
@@ -71,7 +71,7 @@ cvHoughLines2 img storage method rho theta threshold param1 param2 =
                     (realToFrac theta) (fromIntegral threshold) 
                     (realToFrac param1) (realToFrac param2)
 
-foreign import ccall unsafe "opencv2/imgproc/imgproc_c.h cvCvtColor"
+foreign import ccall safe "opencv2/imgproc/imgproc_c.h cvCvtColor"
   c_cvCvtColor :: Ptr CvArr -> Ptr CvArr -> CInt -> IO ()
 
 foreign import ccall unsafe "opencv2/imgproc/imgproc_c.h cvSampleLine"

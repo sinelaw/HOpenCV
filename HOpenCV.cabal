@@ -47,7 +47,7 @@ library
       AI.CV.OpenCV.FeatureDetection
    c-sources:
       src/AI/CV/OpenCV/Core/HOpenCV_wrap.c
-   other-modules: AI.CV.OpenCV.Core.CVOp
+   other-modules: AI.CV.OpenCV.Core.CVOp AI.CV.OpenCV.Drawing
    hs-Source-Dirs: src
    if os(windows)
      include-dirs: C:\\OpenCV2.1\\include
@@ -61,4 +61,4 @@ library
                   vector-space >= 0.7.2,
                   directory >= 1.0.1.0 && < 2,
                   vector == 0.7.*
-   ghc-options: -Wall -fno-warn-type-defaults -fno-warn-name-shadowing
+   ghc-options: -Wall -fno-warn-type-defaults -fno-warn-name-shadowing -O3 -funbox-strict-fields

@@ -88,7 +88,7 @@ cvAnd src1 = cv2 $ \src2 dst -> withHIplImage src1 $ \src1' ->
              cvAndHelper src1' src2 dst nullPtr
 {-# INLINE cvAnd #-}
 
-foreign import ccall unsafe "opencv2/core/core_c.h cvAndS"
+foreign import ccall safe "opencv2/core/core_c.h cvAndS"
    c_cvAndS :: Ptr CvArr -> CDouble -> CDouble -> CDouble -> CDouble -> 
                Ptr CvArr -> Ptr CvArr -> IO ()
 

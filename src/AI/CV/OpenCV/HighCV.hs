@@ -3,8 +3,7 @@
 -- example, @dilate 8 . erode 8@ will allocate one new image rather
 -- than two.
 module AI.CV.OpenCV.HighCV (erode, dilate, houghStandard, houghProbabilistic, 
-                            LineType(..), RGB, drawLines, HIplImage, 
-                            width, height, isColor, isMono,
+                            HIplImage, width, height, isColor, isMono,
                             pixels, withPixels, fromGrayPixels, fromColorPixels,
                             fromFile, fromFileGray, fromFileColor, 
                             fromPGM16, toFile, fromPtr, 
@@ -18,7 +17,7 @@ module AI.CV.OpenCV.HighCV (erode, dilate, houghStandard, houghProbabilistic,
                             HasDepth, module AI.CV.OpenCV.Threshold,
                             module AI.CV.OpenCV.FloodFill,
                             module AI.CV.OpenCV.FeatureDetection,
-                            runWindow)
+                            runWindow, module AI.CV.OpenCV.Drawing)
     where
 import AI.CV.OpenCV.Core.CxCore
 import AI.CV.OpenCV.Core.CV
@@ -27,6 +26,7 @@ import AI.CV.OpenCV.Core.HighGui (createFileCaptureF, cvQueryFrame, cvInit,
                                   CvCapture, createCameraCaptureF, 
                                   createVideoWriterF, cvWriteFrame, FourCC,
                                   newWindow, delWindow, showImage, cvWaitKey)
+import AI.CV.OpenCV.Drawing
 import AI.CV.OpenCV.Core.HIplUtil
 import AI.CV.OpenCV.Core.CVOp
 import AI.CV.OpenCV.ColorConversion
@@ -129,32 +129,6 @@ houghProbabilistic rho theta threshold minLength maxGap img =
     where step = sizeOf (undefined::Int)
 {-# NOINLINE houghProbabilistic #-}
 
--- |Type of line to draw.
-data LineType = EightConn -- ^8-connected line
-              | FourConn  -- ^4-connected line
-              | AALine    -- ^antialiased line
-
--- |An RGB triple. 
-type RGB = (Double, Double, Double)
-
--- |Convert a LineType into an integer.
-lineTypeEnum :: LineType -> Int
-lineTypeEnum EightConn = 8
-lineTypeEnum FourConn  = 4
-lineTypeEnum AALine    = 16
-
--- |Draw each line, defined by its endpoints, on a duplicate of the
--- given 'HIplImage' using the specified RGB color, line thickness,
--- and aliasing style.
-drawLines :: (HasChannels c, HasDepth d) =>
-             RGB -> Int -> LineType -> [((Int,Int),(Int,Int))] -> 
-             HIplImage c d -> HIplImage c d
-drawLines col thick lineType lines = 
-    cv $ \img -> mapM_ (draw img) lines
-    where draw ptr (pt1, pt2) = cvLine ptr pt1 pt2 col thick lineType'
-          lineType' = lineTypeEnum lineType
-{-# INLINE drawLines #-}
-
 {-
 -- |Find the 'CvContour's in an image.
 findContours :: HIplImage a MonoChromatic Word8 -> [CvContour]
@@ -252,6 +226,6 @@ runWindow :: HasChannels c => IO (HIplImage c Word8) -> IO ()
 runWindow mkImg = go
     where go = do newWindow 0 True
                   mkImg >>= flip withHIplImage (showImage 0)
-                  cvWaitKey 30 >>= bool (delWindow 0) go . (> 0)
+                  cvWaitKey 1 >>= bool (delWindow 0) go . (> 0)
           bool t _ True = t
           bool _ f False = f

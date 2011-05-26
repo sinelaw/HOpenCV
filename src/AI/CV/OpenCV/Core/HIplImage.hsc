@@ -1,5 +1,6 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, ScopedTypeVariables, 
-             TypeFamilies, MultiParamTypeClasses, FlexibleInstances, GADTs #-}
+             TypeFamilies, MultiParamTypeClasses, FlexibleInstances, GADTs, 
+             BangPatterns #-}
 module AI.CV.OpenCV.Core.HIplImage 
     ( TriChromatic, MonoChromatic, HasChannels(..), HasDepth(..), 
       HIplImage(..), mkHIplImage, mkBlackImage, withHIplImage, bytesPerPixel, 

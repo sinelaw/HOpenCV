@@ -308,7 +308,7 @@ foreign import ccall unsafe "HOpenCV_wrap.h c_cvLine"
                     CDouble -> CDouble -> CDouble -> CInt -> 
                     CInt -> CInt -> IO ()
 
-cvLine :: IplArrayType a => Ptr a -> (Int, Int)  -> (Int, Int) -> 
+cvLine :: IplArrayType a => Ptr a -> (Int, Int) -> (Int, Int) -> 
                     (Double, Double, Double) -> Int -> 
                     Int -> IO ()
 cvLine dst (x1,y1) (x2,y2) (r,g,b) thickness lineType =
@@ -316,6 +316,10 @@ cvLine dst (x1,y1) (x2,y2) (r,g,b) thickness lineType =
              (fr r) (fr g) (fr b) (fi thickness) (fi lineType) 0 
         where fi = fromIntegral
               fr = realToFrac
+
+foreign import ccall unsafe "HOpenCV_wrap.h c_cvPutText"
+  c_cvPutText :: Ptr CvArr -> CString -> CInt -> CInt -> 
+                 CDouble -> CDouble -> CDouble -> IO ()
 
 -- |Convert null pointers to 'Nothing' and non-null pointers to 'Just'
 -- values.

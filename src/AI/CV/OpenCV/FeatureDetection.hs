@@ -44,7 +44,7 @@ cornerHarris' blockSize aperture k =
     cv2 $ \src dst -> harris src dst blockSize aperture k
 {-# INLINE cornerHarris' #-}
 
-foreign import ccall unsafe "opencv2/imgprog/imgproc_c.h cvCanny"
+foreign import ccall safe "opencv2/imgprog/imgproc_c.h cvCanny"
   c_cvCanny :: Ptr IplImage -> Ptr IplImage -> CDouble -> CDouble -> CInt -> IO ()
 
 -- |Canny edge detector. @canny threshold1 threshold2 aperture src@

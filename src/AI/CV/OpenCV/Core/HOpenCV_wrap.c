@@ -149,6 +149,20 @@ void c_cvLine(CvArr *img, int x1, int y1, int x2, int y2, double r, double g,
            lineType, shift);
 }
 
+CvFont defaultFont;
+unsigned char defaultFontInitialized = 0;
+
+void c_cvPutText(CvArr *img, const char* msg, int x, int y, 
+                 double r, double g, double b)
+{
+  if(!defaultFontInitialized)
+  {
+    cvInitFont(&defaultFont, CV_FONT_HERSHEY_SIMPLEX, 1.0, 1.0, 0.0, 1, 8);
+    defaultFontInitialized = 1;
+  }
+  cvPutText(img, msg, cvPoint(x,y), &defaultFont, CV_RGB(r,g,b));
+}
+
 int c_cvFindContours(CvArr *img, CvMemStorage *storage, CvSeq** first_contour, 
                      int header_size, int mode, int method, int offset_x, 
                      int offset_y)
