@@ -55,3 +55,9 @@ main = do rater <- trackRate
                 . canny 50 90 3 . convertRGBToGray
           smooth = smoothGaussian 25
           showFPS s = putText (s++" FPS") (300,450) (0,255,0)
+
+-- Unsharp mask.
+main5 = createCameraCapture (Just 0) >>= runWindow . fmap proc
+    where proc x = let d = convertScale 2 0 (absDiff x (smoothGaussian 5 x))
+                       m = thresholdBinary 20 255 (convertRGBToGray d)
+                   in cvSubMask d m x
