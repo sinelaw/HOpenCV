@@ -34,11 +34,16 @@ main3 = createCameraCapture (Just 0) >>= runWindow . fmap proc
 main5 = createCameraCapture (Just 0) >>= runWindow . fmap proc
     where proc x = let g = convertRGBToGray x :: GrayImage
                    in halvsies (convertGrayToRGB . normalize cv_MinMax 200 50 $ g)
-                               (convertGrayToRGB g) 
+                               (convertGrayToRGB . contrastBoost $ g) 
     --where proc x = halvsies (sub x . sub x . smoothGaussian 5 $ x) x
     -- where proc x = let d = convertScale 5 0 (absDiff x (smoothGaussian 5 x))
     --                    m = thresholdBinary 50 255 (convertRGBToGray d)
     --               in halvsies (subMask d m x) x
+
+contrastBoost :: GrayImage -> GrayImage
+contrastBoost = normalize cv_MinMax 255 0 
+              . thresholdTruncate (200::Word8)
+              . thresholdToZero 20
 
 halvsies :: ColorImage -> ColorImage -> ColorImage
 halvsies l r = cvOr l' r'
