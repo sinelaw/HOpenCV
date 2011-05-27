@@ -8,7 +8,7 @@ trackRate = do numFrames <- newIORef 0
                oldRate <- newIORef ""
                startTime <- getCurrentTime >>= newIORef
                return $ do n <- readIORef numFrames
-                           if n == 30 then
+                           if n == 29 then
                              do t <- getCurrentTime
                                 s <- readIORef startTime
                                 let dt = realToFrac $ diffUTCTime t s :: Float

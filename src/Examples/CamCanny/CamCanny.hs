@@ -141,4 +141,4 @@ main11 = do rater <- trackRate
                        . canny 70 110 3 $ g
               in g' `par` neon `pseq` msg (add neon g')
 
-main = main5
+main = main10

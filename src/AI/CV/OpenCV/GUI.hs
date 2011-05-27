@@ -37,9 +37,9 @@ runNamedWindow name mkImg =
 -- alive.
 namedWindow :: (HasChannels c, HasDepth d) => 
                String -> [WindowFlag] -> 
-               Maybe MouseCallback -> 
+               --Maybe MouseCallback -> 
                IO (HIplImage c d -> IO (), IO ())
-namedWindow name flags _cb =
+namedWindow name flags =
   do cstr <- newCString name
      let showImg img = withHIplImage img $ \imgPtr ->
                          cvShowImage cstr (fromArr imgPtr)
