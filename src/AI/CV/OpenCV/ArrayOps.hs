@@ -3,12 +3,17 @@
 module AI.CV.OpenCV.ArrayOps (subRS, absDiff, convertScale, 
                               cvAnd, andMask, scaleAdd, cvAndS,
                               cvOr, cvOrS, set, setROI, resetROI,
-                              mul, mulS, add, addS, sub,
-                              subMask) where
+                              mul, mulS, add, addS, sub, subMask,
+                              cmpS, avg, avgMask, cvNot,
+                              ComparisonOp(..)) where
 import Data.Word (Word8)
 import Foreign.C.Types (CDouble, CInt)
 import Foreign.Ptr (Ptr, castPtr, nullPtr)
-import AI.CV.OpenCV.Core.CxCore (CvArr, IplImage, CvRect(..))
+import Foreign.Marshal.Array
+import System.IO.Unsafe (unsafePerformIO)
+import AI.CV.OpenCV.Core.CxCore (CvArr, IplImage, CvRect(..), CmpOp(..), 
+                                 IplArrayType, cmpEq, cmpGT, cmpGE, cmpLT, 
+                                 cmpLE, cmpNE)
 import AI.CV.OpenCV.Core.HIplUtil
 import AI.CV.OpenCV.Core.CVOp
 
@@ -227,11 +232,66 @@ foreign import ccall "HOpenCV_wrap.h c_cvSetRoi"
 foreign import ccall "opencv2/core/core_c.h cvResetImageROI"
   c_cvResetImageROI :: Ptr IplImage -> IO ()
 
+-- |Set an image's region-of-interest.
 setROI :: (HasChannels c, HasDepth d) => 
           CvRect -> HIplImage c d -> HIplImage c d
 setROI (CvRect x y w h) = cv $ \img -> c_cvSetImageROI img x y w h
 {-# INLINE setROI #-}
 
+-- |Clear any region-of-interest set for an image.
 resetROI :: (HasChannels c, HasDepth d) => HIplImage c d -> HIplImage c d
 resetROI = cv $ \img -> c_cvResetImageROI img
 {-# INLINE resetROI #-}
+
+foreign import ccall "opencv2/core/core_c.h cvCmpS"
+  c_cvCmpS :: Ptr CvArr -> CDouble -> Ptr CvArr -> CInt -> IO ()
+
+data ComparisonOp = CmpEq | CmpGT | CmpGE | CmpLT | CmpLE | CmpNE
+
+cmpToCmp :: ComparisonOp -> CInt
+cmpToCmp CmpEq = unCmpOp $ cmpEq
+cmpToCmp CmpGT = unCmpOp $ cmpGT
+cmpToCmp CmpGE = unCmpOp $ cmpGE
+cmpToCmp CmpLT = unCmpOp $ cmpLT
+cmpToCmp CmpLE = unCmpOp $ cmpLE
+cmpToCmp CmpNE = unCmpOp $ cmpNE
+
+-- |Per-element comparison of an array and a scalar.
+cmpS :: HasDepth d => 
+        ComparisonOp -> d -> HIplImage MonoChromatic d -> 
+        HIplImage MonoChromatic Word8
+cmpS op v = cv2 $ \src dst ->
+            c_cvCmpS (castPtr src) v' (castPtr dst) (cmpToCmp op)
+    where v' = realToFrac . toDouble $ v
+{-# INLINE cmpS #-}
+
+foreign import ccall "HOpenCV_wrap.h c_cvAvg"
+  c_cvAvg :: Ptr CvArr -> Ptr CvArr -> Ptr CDouble -> IO ()
+
+avgWorker :: (IplArrayType a, IsCvScalar b) => Ptr a -> Ptr a -> IO b
+avgWorker img mask = allocaArray 4 $ 
+                     \arr -> do c_cvAvg (castPtr img) (castPtr mask) arr
+                                [r,g,b,a] <- peekArray 4 arr
+                                return $ fromCvScalar (r,g,b,a)
+
+-- |Calculates the mean independently for each channel.
+avg :: (HasChannels c, HasDepth d, IsCvScalar s, s ~ CvScalar c d) => 
+       HIplImage c d -> CvScalar c d
+avg img = unsafePerformIO . withHIplImage img $ flip avgWorker nullPtr
+{-# NOINLINE avg #-}
+
+-- |@avgMask img mask@ calculates the mean independently for each
+-- channel for each element of the source array whose entry in @mask@
+-- is non-zero.
+avgMask :: (HasChannels c, HasDepth d, IsCvScalar s, s ~ CvScalar c d) => 
+           HIplImage c d -> HIplImage MonoChromatic Word8 -> CvScalar c d
+avgMask img mask = unsafePerformIO . withHIplImage img $ \src ->
+                   withHIplImage mask $ avgWorker src
+{-# NOINLINE avgMask #-}
+
+foreign import ccall "opencv2/core/core_c.h cvNot"
+  c_cvNot :: Ptr CvArr -> Ptr CvArr -> IO ()
+
+-- |Per-element bit-wise inversion.
+cvNot :: (HasChannels c, HasDepth d) => HIplImage c d -> HIplImage c d
+cvNot = cv2 $ \src dst -> c_cvNot (castPtr src) (castPtr dst)

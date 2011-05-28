@@ -348,6 +348,15 @@ foreign import ccall "opencv2/core/core_c.h cvNormalize"
   cvNormalize :: Ptr CvArr -> Ptr CvArr -> CDouble -> CDouble -> CInt -> 
                  Ptr CvArr -> IO ()
 
+newtype CmpOp = CmpOp { unCmpOp :: CInt }
+#{enum CmpOp, CmpOp
+  , cmpEq = CV_CMP_EQ
+  , cmpGT = CV_CMP_GT
+  , cmpGE = CV_CMP_GE
+  , cmpLT = CV_CMP_LT
+  , cmpLE = CV_CMP_LE
+  , cmpNE = CV_CMP_NE }
+
 -- |Convert null pointers to 'Nothing' and non-null pointers to 'Just'
 -- values.
 ptrToMaybe :: Ptr a -> Maybe (Ptr a)

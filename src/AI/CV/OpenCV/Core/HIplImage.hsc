@@ -104,14 +104,29 @@ instance HasDepth d => HasScalar TriChromatic d where
 
 class IsCvScalar x where
     toCvScalar :: x -> (CDouble, CDouble, CDouble, CDouble)
+    fromCvScalar :: (CDouble, CDouble, CDouble, CDouble) -> x
 
-instance IsCvScalar Word8 where toCvScalar = depthToScalar
-instance IsCvScalar Word16 where toCvScalar = depthToScalar
-instance IsCvScalar Float where toCvScalar = depthToScalar
-instance IsCvScalar Double where toCvScalar = depthToScalar
+instance IsCvScalar Word8 where
+    toCvScalar = depthToScalar
+    fromCvScalar (r,_,_,_) = floor r
+
+instance IsCvScalar Word16 where
+    toCvScalar = depthToScalar
+    fromCvScalar (r,_,_,_) = floor r
+
+instance IsCvScalar Float where
+    toCvScalar = depthToScalar
+    fromCvScalar (r,_,_,_) = realToFrac r
+
+instance IsCvScalar Double where
+    toCvScalar = depthToScalar
+    fromCvScalar (r,_,_,_) = realToFrac r
+
 instance (HasDepth d, IsCvScalar d) => IsCvScalar (d,d,d) where
     toCvScalar (r,g,b) = let f = realToFrac . toDouble
                          in (f r, f g, f b, 0)
+    fromCvScalar (r,g,b,_) = let f = fromDouble . realToFrac 
+                             in (f r, f g, f b)
 
 depthToScalar :: HasDepth d => d -> (CDouble, CDouble, CDouble, CDouble)
 depthToScalar x = let x' = realToFrac (toDouble x)
