@@ -20,3 +20,25 @@ trackRate = do numFrames <- newIORef 0
                            else
                              do writeIORef numFrames (n+1)
                                 readIORef oldRate
+
+perfMon :: IO (IO (), IO String, IO ())
+perfMon = do numFrames <- newIORef 0
+             oldRate <- newIORef ""
+             startTime <- getCurrentTime >>= newIORef
+             totalTime <- newIORef 0
+             let start = getCurrentTime >>= writeIORef startTime
+                 stop = do t <- getCurrentTime
+                           s <- readIORef startTime
+                           let dt = realToFrac $ diffUTCTime t s :: Double
+                           modifyIORef totalTime (($!) (+ dt))
+                           n <- readIORef numFrames
+                           if n == 29 then
+                             do oy <- readIORef totalTime
+                                msg <- readIORef totalTime >>= 
+                                       return . printf "%d" . (round::Double->Int) . (30.0 /)
+                                writeIORef numFrames 0
+                                writeIORef totalTime 0
+                                writeIORef oldRate msg
+                           else writeIORef numFrames (n+1)
+
+             return (start, readIORef oldRate, stop)
