@@ -17,6 +17,11 @@ data FloodRange = FloodFixed | FloodFloating
 
 #include <opencv2/imgproc/imgproc_c.h>
 
+-- FIXME: This method of pushing structs onto the stack by value is
+-- potentially risky as it assumes there are no packing issues
+-- (e.g. bytes inserted between fields or at the end of the struct to
+-- ensure a desired alignment).
+
 foreign import ccall "opencv2/imgproc/imgproc_c.h cvFloodFill"
   c_cvFloodFill :: Ptr CvArr -> CInt -> CInt -> 
                    CDouble -> CDouble -> CDouble -> CDouble ->
@@ -49,26 +54,6 @@ floodHelper (x,y) newVal loDiff upDiff range src =
 -- pixel; a flag indicating whether pixels under consideration for
 -- painting should be compared to the seed pixel ('FloodFixed') or to
 -- their neighbors ('FloodFloating'); the source image.
-{-
-floodFill :: (ByteOrFloat d, HasChannels c, HasScalar c d, 
-              IsCvScalar s, s ~ CvScalar c d) => 
-             (Int, Int) -> s -> s -> s -> FloodRange -> HIplImage c d -> 
-             HIplImage c d
-floodFill seed newVal loDiff upDiff range src = 
-    fst . withDuplicateImage src $ \ptr ->
-        floodHelper seed (toCvScalar newVal) (toCvScalar loDiff) 
-                    (toCvScalar upDiff) range ptr
-
-unsafeFlood :: (ByteOrFloat d, HasChannels c, HasScalar c d, 
-                IsCvScalar s, s ~ CvScalar c d) => 
-               (Int, Int) -> s -> s -> s -> FloodRange -> HIplImage c d -> 
-               IO (HIplImage c d)
-unsafeFlood seed newVal loDiff upDiff range src = 
-    withHIplImage src $ \ptr ->
-        do floodHelper seed (toCvScalar newVal) (toCvScalar loDiff) 
-                       (toCvScalar upDiff) range ptr
-           return src
--}
 floodFill :: (ByteOrFloat d, HasChannels c, HasScalar c d, 
               IsCvScalar s, s ~ CvScalar c d) => 
              (Int, Int) -> s -> s -> s -> FloodRange -> HIplImage c d -> 
@@ -77,4 +62,4 @@ floodFill seed newVal loDiff upDiff range =
     cv $ floodHelper seed (toCvScalar newVal) (toCvScalar loDiff)
                      (toCvScalar upDiff) range
 
-{-# INLINE [1] floodFill #-}
+{-# INLINE floodFill #-}
