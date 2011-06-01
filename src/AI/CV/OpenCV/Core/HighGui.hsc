@@ -26,7 +26,7 @@ import AI.CV.OpenCV.Core.CxCore
 
 ------------------------------------------------
 -- General
-foreign import ccall unsafe "opencv2/highgui/highgui_c.h cvConvertImage"
+foreign import ccall "opencv2/highgui/highgui_c.h cvConvertImage"
   c_cvConvertImage :: Ptr CvArr -> Ptr CvArr -> CInt -> IO ()
 
 cvConvertImage :: (IplArrayType a, IplArrayType a1) => Ptr a -> Ptr a1 -> CInt -> IO ()
@@ -46,14 +46,14 @@ instance Enum LoadColor where
   toEnum (#const CV_LOAD_IMAGE_UNCHANGED) = LoadUnchanged
   toEnum x = error $ "Unknown LoadColor enum "++show x
 
-foreign import ccall unsafe "opencv2/highgui/highgui_c.h cvLoadImage"
+foreign import ccall "opencv2/highgui/highgui_c.h cvLoadImage"
   c_cvLoadImage :: CString -> CInt -> IO (Ptr IplImage)
 
 cvLoadImage :: String -> LoadColor -> IO (Ptr IplImage)
 cvLoadImage fileName col = withCString fileName (flip c_cvLoadImage col')
     where col' = fromIntegral $ fromEnum col
 
-foreign import ccall unsafe "HOpenCV_wrap.h debug_print_image_header"
+foreign import ccall "HOpenCV_wrap.h debug_print_image_header"
   c_debug_ipl :: Ptr IplImage -> IO ()
 
 foreign import ccall safe "opencv2/highgui/highgui_c.h cvSaveImage"
@@ -68,14 +68,14 @@ cvSaveImage fileName img = withCString fileName $
 data CvCapture
 
 
-foreign import ccall unsafe "opencv2/highgui/highgui_c.h cvCreateCameraCapture"
+foreign import ccall "opencv2/highgui/highgui_c.h cvCreateCameraCapture"
   c_cvCreateCameraCapture :: CInt -> IO (Ptr CvCapture)
                           
 cvCreateCameraCapture :: Int -> IO (Ptr CvCapture)
 cvCreateCameraCapture = errorName "Failed to create camera" . checkPtr . 
                         c_cvCreateCameraCapture . fromIntegral
   
-foreign import ccall unsafe "opencv2/highgui/highgui_c.h cvCreateFileCapture"
+foreign import ccall "opencv2/highgui/highgui_c.h cvCreateFileCapture"
   c_cvCreateFileCapture :: CString -> IO (Ptr CvCapture)
                           
 cvCreateFileCapture :: String -> IO (Ptr CvCapture)
@@ -83,7 +83,7 @@ cvCreateFileCapture filename = err' . checkPtr $
                                withCString filename c_cvCreateFileCapture
     where err' = errorName $ "Failed to capture from file: '" ++ filename ++ "'"
 
-foreign import ccall unsafe "opencv2/highgui/highgui_c.h cvSetCaptureProperty"
+foreign import ccall "opencv2/highgui/highgui_c.h cvSetCaptureProperty"
   c_cvSetCaptureProperty :: Ptr CvCapture -> CInt -> CDouble -> IO ()
 
 -- |The current position of a video capture.
@@ -103,10 +103,10 @@ posEnum (PosRatio r) = (#{const CV_CAP_PROP_POS_AVI_RATIO}, realToFrac r)
 setCapturePos :: Ptr CvCapture -> CapturePos -> IO ()
 setCapturePos cap pos = uncurry (c_cvSetCaptureProperty cap) $ posEnum pos
   
--- foreign import ccall unsafe "HOpenCV_wrap.h release_capture"
+-- foreign import ccall "HOpenCV_wrap.h release_capture"
 --   release_capture  :: Ptr CvCapture -> IO ()
 
-foreign import ccall unsafe "HOpenCV_wrap.h &release_capture"
+foreign import ccall "HOpenCV_wrap.h &release_capture"
   cp_release_capture  :: FunPtr (Ptr CvCapture -> IO ())
  
 createCameraCaptureF :: Int -> IO (ForeignPtr CvCapture)
@@ -115,7 +115,7 @@ createCameraCaptureF = createForeignPtr cp_release_capture . cvCreateCameraCaptu
 createFileCaptureF :: String -> IO (ForeignPtr CvCapture)
 createFileCaptureF = createForeignPtr cp_release_capture . cvCreateFileCapture
 
-foreign import ccall unsafe "opencv2/highgui/highgui_c.h cvQueryFrame"
+foreign import ccall "opencv2/highgui/highgui_c.h cvQueryFrame"
   c_cvQueryFrame :: Ptr CvCapture -> IO (Ptr IplImage)
 
 cvQueryFrame :: Ptr CvCapture -> IO (Maybe (Ptr IplImage))
@@ -130,11 +130,11 @@ fourCC (a,b,c,d) = (c1 .&. 255) + shiftL (c2 .&. 255) 8 +
                    shiftL (c3 .&. 255) 16 + shiftL (c4 .&. 255) 24
     where [c1,c2,c3,c4] = map (fromIntegral . fromEnum) [a,b,c,d]
 
-foreign import ccall unsafe "opencv2/highgui/highgui_c.h cvCreateVideoWriter"
+foreign import ccall "opencv2/highgui/highgui_c.h cvCreateVideoWriter"
   c_cvCreateVideoWriter :: CString -> CInt -> CDouble -> CInt -> CInt -> CInt ->
                            IO (Ptr CvVideoWriter)
 
-foreign import ccall unsafe "HOpenCV_wrap.h &release_video_writer"
+foreign import ccall "HOpenCV_wrap.h &release_video_writer"
   cp_release_writer :: FunPtr (Ptr CvVideoWriter -> IO ())
 
 cvCreateVideoWriter :: FilePath -> FourCC -> Double -> (Int, Int) -> 
@@ -150,46 +150,46 @@ createVideoWriterF :: FilePath -> FourCC -> Double -> (Int, Int) ->
 createVideoWriterF fname codec fps sz = createForeignPtr cp_release_writer $
                                         cvCreateVideoWriter fname codec fps sz
 
-foreign import ccall unsafe "opencv2/highgui/highgui_c.h cvWriteFrame"
+foreign import ccall "opencv2/highgui/highgui_c.h cvWriteFrame"
   cvWriteFrame :: Ptr CvVideoWriter -> Ptr IplImage -> IO ()
 
 -------------------------------------------------
 -- Windows
-foreign import ccall unsafe "HOpenCV_wrap.h new_window"
+foreign import ccall "HOpenCV_wrap.h new_window"
   c_newWindow :: CInt -> CInt -> IO ()
 
 newWindow :: CInt -> Bool -> IO ()
 newWindow num autoSize = c_newWindow num (if autoSize then 1 else 0)
 
-foreign import ccall unsafe "HOpenCV_wrap.h del_window"
+foreign import ccall "HOpenCV_wrap.h del_window"
   delWindow :: CInt -> IO ()
 
-foreign import ccall unsafe "HOpenCV_wrap.h show_image"
+foreign import ccall "HOpenCV_wrap.h show_image"
   showImage :: CInt -> Ptr IplImage -> IO ()
 
-foreign import ccall unsafe "opencv2/highgui/highgui_c.h cvWaitKey"
+foreign import ccall "opencv2/highgui/highgui_c.h cvWaitKey"
   cvWaitKey :: CInt -> IO CInt
 
 -- New Windowing Code
 
-foreign import ccall unsafe "opencv2/highgui/highgui_c.h cvInitSystem"
+foreign import ccall "opencv2/highgui/highgui_c.h cvInitSystem"
   cvInitSystem :: CInt -> Ptr CString -> IO ()
 
 cvInit :: IO ()
 cvInit = cvInitSystem 0 nullPtr
 
-foreign import ccall unsafe "opencv2/highgui/highgui_c.h cvNamedWindow"
+foreign import ccall "opencv2/highgui/highgui_c.h cvNamedWindow"
   cvNamedWindow :: CString -> CInt -> IO ()
 
-foreign import ccall unsafe "opencv2/highgui/highgui_c.h cvDestroyWindow"
+foreign import ccall "opencv2/highgui/highgui_c.h cvDestroyWindow"
   cvDestroyWindow :: CString -> IO ()
 
-foreign import ccall unsafe "opencv2/highgui/highgui_c.h cvShowImage"
+foreign import ccall "opencv2/highgui/highgui_c.h cvShowImage"
   cvShowImage :: CString -> Ptr CvArr -> IO ()
 
 type CMouseCallback = CInt -> CInt -> CInt -> CInt -> Ptr () -> IO ()
 
-foreign import ccall unsafe "opencv2/highgui/highgui_c.h cvSetMouseCallback"
+foreign import ccall "opencv2/highgui/highgui_c.h cvSetMouseCallback"
   cvSetMouseCallback :: CString -> FunPtr CMouseCallback -> Ptr () -> IO ()
 
 foreign import ccall "wrapper"

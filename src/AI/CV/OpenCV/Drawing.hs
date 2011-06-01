@@ -64,7 +64,7 @@ prepFontAlt face italic hscale vscale shear thickness ltype =
     do f <- initFont face italic hscale vscale shear thickness ltype
        let go (x,y) (r,g,b) msg = cv $ \dst -> 
                                   withCString msg $ \msg' ->
-                                      cvPutText (castPtr dst) msg' x y f r g b
+                                      cvPutText dst msg' x y f r g b
            {-# INLINE go #-}
        return $ go
 {-# INLINE prepFontAlt #-}
@@ -74,8 +74,7 @@ putText :: (HasChannels c, HasDepth d) =>
            HIplImage c d -> HIplImage c d
 putText (x,y) (r,g,b) msg = cv $ \dst ->
                             withCString msg $ \msg' ->
-                                cvPutText (castPtr dst) msg' x y defaultFont
-                                          r g b
+                                cvPutText dst msg' x y defaultFont r g b
                                 -- c_cvPutText (castPtr dst) msg' (fi x) (fi y) 
                                 --             (fr r) (fr g) (fr b)
     -- where fi = fromIntegral

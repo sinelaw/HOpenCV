@@ -156,7 +156,6 @@ resize method w h img =
 normalize :: (HasChannels c, HasDepth d) => 
              ArrayNorm -> CDouble -> CDouble -> HIplImage c d -> HIplImage c d
 normalize ntype a b = cv2 $ \img dst -> 
-                      cvNormalize (castPtr img) (castPtr dst) a b (unNorm ntype) 
-                                  nullPtr
+                      cvNormalize img dst a b (unNorm ntype) nullPtr
 {-# INLINE normalize #-}
              

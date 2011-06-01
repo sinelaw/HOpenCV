@@ -308,9 +308,8 @@ foreign import ccall "HOpenCV_wrap.h c_cvLine"
                     CDouble -> CDouble -> CDouble -> CInt -> 
                     CInt -> CInt -> IO ()
 
-cvLine :: IplArrayType a => Ptr a -> (Int, Int) -> (Int, Int) -> 
-                    (Double, Double, Double) -> Int -> 
-                    Int -> IO ()
+cvLine :: Ptr CvArr -> (Int, Int) -> (Int, Int) -> 
+          (Double, Double, Double) -> Int -> Int -> IO ()
 cvLine dst (x1,y1) (x2,y2) (r,g,b) thickness lineType =
     c_cvLine (fromArr dst) (fi x1) (fi y1) (fi x2) (fi y2) 
              (fr r) (fr g) (fr b) (fi thickness) (fi lineType) 0 

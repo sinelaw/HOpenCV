@@ -39,7 +39,7 @@ foreign import ccall "opencv2/imgproc/imgproc_c.h cvDilate"
 -- |Dilate the first image using a 3x3 rectangular structuring element
 -- and store the result in the second image. The third parameter is
 -- the number of dilation iterations to perform.
-cvDilate :: (IplArrayType i1, IplArrayType i2) => Ptr i1 -> Ptr i2  -> CInt -> IO ()
+cvDilate :: Ptr CvArr -> Ptr CvArr  -> CInt -> IO ()
 cvDilate src dst iter = c_dilate (fromArr src) (fromArr dst) nullPtr iter
 
 foreign import ccall "opencv2/imgproc/imgproc_c.h cvErode"
@@ -48,8 +48,8 @@ foreign import ccall "opencv2/imgproc/imgproc_c.h cvErode"
 -- |Erode the first image using a 3x3 rectangular structuring element
 -- and store the result in the second image. The third parameter is
 -- the number of erosion iterations to perform.
-cvErode :: (IplArrayType i1, IplArrayType i2) => Ptr i1 -> Ptr i2 -> CInt -> IO ()
-cvErode src dst iter = c_erode (fromArr src) (fromArr dst) nullPtr iter
+cvErode :: Ptr CvArr -> Ptr CvArr -> CInt -> IO ()
+cvErode src dst iter = c_erode src dst nullPtr iter
 
 foreign import ccall "opencv2/imgproc/imgproc_c.h cvHoughLines2"
         c_cvHoughLines2 :: Ptr CvArr -> Ptr CvMemStorage -> CInt -> CDouble -> CDouble -> CInt -> CDouble -> CDouble -> IO (Ptr (CvSeq a))
@@ -92,8 +92,7 @@ cvSampleLine img (x1,y1) (x2,y2) c =
 -- first and the same depth, but it's number of color channels may be
 -- different and must be compatible with the given 'ColorConversion'
 -- code.
-cvCvtColor :: (IplArrayType a, IplArrayType b) => 
-              Ptr a -> Ptr b -> ColorConversion -> IO ()
+cvCvtColor :: Ptr CvArr -> Ptr CvArr -> ColorConversion -> IO ()
 cvCvtColor src dst code = c_cvCvtColor (fromArr src) (fromArr dst) (colorConv code)
 
 foreign import ccall "opencv2/imgproc/imgproc_c.h cvPyrDown"
@@ -124,7 +123,7 @@ newtype HaarDetectFlag = HaarDetectFlag { unHaarDetectFlag :: CInt }
 combineHaarFlags :: [HaarDetectFlag] -> HaarDetectFlag
 combineHaarFlags = HaarDetectFlag . foldr ((.|.) . unHaarDetectFlag) 0
   
-foreign import ccall unsafe "HOpenCV_wrap.h c_cvHaarDetectObjects"
+foreign import ccall "HOpenCV_wrap.h c_cvHaarDetectObjects"
   c_cvHaarDetectObjects :: Ptr CvArr   -- ^ image
                         -> Ptr CvHaarClassifierCascade -- ^ cascade
                         -> Ptr CvMemStorage            -- ^ storage

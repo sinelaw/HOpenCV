@@ -11,7 +11,7 @@ module AI.CV.OpenCV.Threshold (thresholdBinary, thresholdBinaryInv,
 import Data.Bits ((.|.))
 import Data.Word (Word8)
 import Foreign.C.Types (CDouble, CInt)
-import Foreign.Ptr (Ptr, castPtr)
+import Foreign.Ptr (Ptr)
 import AI.CV.OpenCV.Core.CxCore 
 import AI.CV.OpenCV.Core.HIplUtil
 import AI.CV.OpenCV.Core.CVOp
@@ -42,8 +42,7 @@ cvThreshold :: (ByteOrFloat d1, SameOrByte d1 d2) =>
                HIplImage MonoChromatic d2
 cvThreshold threshold maxValue tType = 
     cv2 $ \src dst ->
-        do _r <- c_cvThreshold (castPtr src) (castPtr dst) 
-                               threshold' maxValue' tType'
+        do _r <- c_cvThreshold src dst threshold' maxValue' tType'
            return ()
            --return (fromDouble (realToFrac r)) -- FIXME: This is dropped by cv2!
     where threshold' = realToFrac . toDouble $ threshold

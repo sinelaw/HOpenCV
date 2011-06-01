@@ -12,8 +12,7 @@ import Foreign.Ptr (Ptr, castPtr, nullPtr)
 import Foreign.Marshal.Array
 import System.IO.Unsafe (unsafePerformIO)
 import AI.CV.OpenCV.Core.CxCore (CvArr, IplImage, CvRect(..), CmpOp(..), 
-                                 IplArrayType, cmpEq, cmpGT, cmpGE, cmpLT, 
-                                 cmpLE, cmpNE)
+                                 cmpEq, cmpGT, cmpGE, cmpLT, cmpLE, cmpNE)
 import AI.CV.OpenCV.Core.HIplUtil
 import AI.CV.OpenCV.Core.CVOp
 
@@ -25,8 +24,7 @@ foreign import ccall "opencv2/core/core_c.h cvSubRS"
 subRS :: (HasChannels c, HasDepth d, HasScalar c d, 
           IsCvScalar s, s ~ CvScalar c d) =>
          s -> HIplImage c d -> HIplImage c d
-subRS value = cv2 $ \src dst -> 
-              c_cvSubRS (castPtr src) r g b a (castPtr dst) nullPtr
+subRS value = cv2 $ \src dst -> c_cvSubRS src r g b a dst nullPtr
     where (r,g,b,a) = toCvScalar value
 {-# INLINE subRS #-}
 
@@ -38,7 +36,7 @@ absDiff :: (HasChannels c, HasDepth d) =>
            HIplImage c d -> HIplImage c d -> HIplImage c d
 absDiff src1 = cv2 $ \src2 dst -> 
                withHIplImage src1 $ \src1' ->
-                 c_cvAbsDiff (castPtr src1') (castPtr src2) (castPtr dst)
+                 c_cvAbsDiff (castPtr src1') src2 dst
 {-# INLINE absDiff #-}
 
 foreign import ccall "opencv2/core/core_c.h cvConvertScale"
@@ -55,8 +53,7 @@ convertScale :: (HasChannels c, HasDepth d1, HasDepth d2) =>
                 Double -> Double -> HIplImage c d1 -> 
                 HIplImage c d2
 convertScale scale shift  = cv2 $ \src dst ->
-                            c_cvConvertScale (castPtr src) 
-                                             (castPtr dst) 
+                            c_cvConvertScale src dst
                                              (realToFrac scale) 
                                              (realToFrac shift)
 {-# INLINE convertScale #-}
@@ -64,10 +61,9 @@ convertScale scale shift  = cv2 $ \src dst ->
 foreign import ccall "opencv2/core/core_c.h cvAnd"
   c_cvAnd :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> IO ()
 
-cvAndHelper :: Ptr IplImage -> Ptr IplImage -> Ptr IplImage -> Ptr IplImage -> 
+cvAndHelper :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> 
                IO ()
-cvAndHelper src1 src2 dst mask = c_cvAnd (castPtr src1) (castPtr src2)
-                                         (castPtr dst) (castPtr mask)
+cvAndHelper src1 src2 dst mask = c_cvAnd src1 src2 dst mask
 
 -- |Calculate the per-element bitwise conjunction of two
 -- arrays. Parameters are a mask and two source images. The mask
@@ -80,14 +76,14 @@ andMask :: (HasChannels c, HasDepth d) =>
 andMask mask src1 = cv2 $ \src2 dst -> 
                     withHIplImage src1 $ \src1' -> 
                         withHIplImage mask $ \mask' ->
-                            cvAndHelper src1' src2 dst mask'
+                            cvAndHelper (castPtr src1') src2 dst (castPtr mask')
 {-# INLINE andMask #-}
 
 -- |Calculates the per-element bitwise conjunction of two arrays.
 cvAnd :: (HasChannels c, HasDepth d) => 
           HIplImage c d -> HIplImage c d ->  HIplImage c d
 cvAnd src1 = cv2 $ \src2 dst -> withHIplImage src1 $ \src1' -> 
-             cvAndHelper src1' src2 dst nullPtr
+             cvAndHelper (castPtr src1') src2 dst nullPtr
 {-# INLINE cvAnd #-}
 
 foreign import ccall "opencv2/core/core_c.h cvAndS"
@@ -98,8 +94,7 @@ foreign import ccall "opencv2/core/core_c.h cvAndS"
 cvAndS :: (HasChannels c, HasDepth d, HasScalar c d, IsCvScalar s, 
            s ~ CvScalar c d) => 
           s -> HIplImage c d -> HIplImage c d
-cvAndS s = cv2 $ \img dst -> 
-           c_cvAndS (castPtr img) r g b a (castPtr dst) nullPtr
+cvAndS s = cv2 $ \img dst -> c_cvAndS img r g b a dst nullPtr
     where (r,g,b,a) = toCvScalar s
 {-# INLINE cvAndS #-}
 
@@ -114,24 +109,22 @@ scaleAdd :: (HasScalar c d, HasDepth d, HasChannels c,
               HIplImage c d -> s -> HIplImage c d -> HIplImage c d
 scaleAdd src1 s = cv2 $ \src2 dst ->
                   withHIplImage src1 $ \src1' ->
-                      c_cvScaleAdd (castPtr src1') r g b a 
-                                   (castPtr src2) (castPtr dst)
+                      c_cvScaleAdd (castPtr src1') r g b a src2 dst
     where (r,g,b,a) = toCvScalar s
 {-# INLINE scaleAdd #-}
 
 foreign import ccall "opencv2/core/core_c.h cvMul"
   c_cvMul :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> CDouble -> IO ()
 
-cvMulHelper :: Ptr IplImage -> Ptr IplImage -> Ptr IplImage -> Double -> IO ()
-cvMulHelper src1 src2 dst s = c_cvMul (castPtr src1) (castPtr src2) 
-                                      (castPtr dst) (realToFrac s)
+cvMulHelper :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> Double -> IO ()
+cvMulHelper src1 src2 dst s = c_cvMul src1 src2 dst (realToFrac s)
 
 -- |Per-element product of two arrays.
 mul :: (HasChannels c, HasDepth d) => 
        HIplImage c d -> HIplImage c d -> HIplImage c d
 mul src1 = cv2 $ \src2 dst -> 
            withHIplImage src1 $ \src1' ->
-               cvMulHelper src1' src2 dst 1
+               cvMulHelper (castPtr src1') src2 dst 1
 {-# INLINE mul #-}
 
 -- |Per-element product of two arrays with an extra scale factor that
@@ -140,7 +133,7 @@ mulS :: (HasChannels c, HasDepth d) =>
         Double -> HIplImage c d -> HIplImage c d -> HIplImage c d
 mulS scale src1 = cv2 $ \src2 dst ->
                   withHIplImage src1 $ \src1' ->
-                      cvMulHelper src1' src2 dst scale
+                      cvMulHelper (castPtr src1') src2 dst scale
 {-# INLINE mulS #-}
 
 foreign import ccall "opencv2/core/core_c.h cvAdd"
@@ -151,7 +144,7 @@ add :: (HasChannels c, HasDepth d) =>
        HIplImage c d -> HIplImage c d -> HIplImage c d
 add src1 = cv2 $ \src2 dst ->
            withHIplImage src1 $ \src1' ->
-               c_cvAdd (castPtr src1') (castPtr src2) (castPtr dst) nullPtr
+               c_cvAdd (castPtr src1') src2 dst nullPtr
 {-# INLINE add #-}
 
 foreign import ccall "opencv2/core/core_c.h cvAddS"
@@ -161,8 +154,7 @@ foreign import ccall "opencv2/core/core_c.h cvAddS"
 -- |Computes the sum of an array and a scalar.
 addS :: (HasChannels c, HasDepth d, IsCvScalar s, s ~ CvScalar c d) => 
         s -> HIplImage c d -> HIplImage c d
-addS scalar = cv2 $ \src dst -> 
-              c_cvAddS (castPtr src) r g b a (castPtr dst) nullPtr
+addS scalar = cv2 $ \src dst -> c_cvAddS src r g b a dst nullPtr
     where (r,g,b,a) = toCvScalar scalar
 {-# INLINE addS #-}
 
@@ -174,7 +166,7 @@ sub :: (HasChannels c, HasDepth d) =>
        HIplImage c d -> HIplImage c d -> HIplImage c d
 sub img1 = cv2 $ \img2 dst ->
            withHIplImage img1 $ \img1' -> 
-               c_cvSub (castPtr img1') (castPtr img2) (castPtr dst) nullPtr
+               c_cvSub (castPtr img1') img2 dst nullPtr
 {-# INLINE sub #-}
 
 -- |WARNING: Argument order may be confusing! @cvSubMask img2 mask
@@ -187,8 +179,7 @@ subMask :: (HasChannels c, HasDepth d) =>
 subMask img2 mask = cv $ \img1 ->
                     withHIplImage mask $ \mask' -> 
                         withHIplImage img2 $ \img2' ->
-                            c_cvSub (castPtr img1) (castPtr img2') 
-                                    (castPtr img1) (castPtr mask')
+                            c_cvSub img1 (castPtr img2') img1 (castPtr mask')
 {-# INLINE subMask #-}
 
 foreign import ccall "opencv2/core/core_c.h cvOr"
@@ -198,8 +189,8 @@ foreign import ccall "opencv2/core/core_c.h cvOr"
 cvOr :: (HasChannels c, HasDepth d) =>
         HIplImage c d -> HIplImage c d -> HIplImage c d
 cvOr img1 = cv2 $ \img2 dst ->
-            withHIplImage img1 $ \img1' ->
-                c_cvOr (castPtr img1') (castPtr img2) (castPtr dst) nullPtr
+            withHIplImage img1 $ \img1' -> 
+                c_cvOr (castPtr img1') img2 dst nullPtr
 {-# INLINE cvOr #-}
 
 foreign import ccall "opencv2/core/core_c.h cvOrS"
@@ -209,8 +200,7 @@ foreign import ccall "opencv2/core/core_c.h cvOrS"
 -- |Per-element bit-wise disjunction of an array and a scalar.
 cvOrS :: (HasChannels c, HasDepth d, IsCvScalar s, s ~ CvScalar c d) => 
          s -> HIplImage c d -> HIplImage c d
-cvOrS scalar = cv2 $ \src dst ->
-               c_cvOrS (castPtr src) r g b a (castPtr dst) nullPtr
+cvOrS scalar = cv2 $ \src dst -> c_cvOrS src r g b a dst nullPtr
     where (r,g,b,a) = toCvScalar scalar
 {-# INLINE cvOrS #-}
 
@@ -221,8 +211,7 @@ foreign import ccall "opencv2/core/core_c.h cvSet"
 -- |Per-element bit-wise disjunction of an array and a scalar.
 set :: (HasChannels c, HasDepth d, IsCvScalar s, s ~ CvScalar c d) => 
        s -> HIplImage c d -> HIplImage c d
-set scalar = cv $ \src ->
-             c_cvSet (castPtr src) r g b a nullPtr
+set scalar = cv $ \src -> c_cvSet src r g b a nullPtr
     where (r,g,b,a) = toCvScalar scalar
 {-# INLINE set #-}
 
@@ -261,23 +250,23 @@ cmpS :: HasDepth d =>
         ComparisonOp -> d -> HIplImage MonoChromatic d -> 
         HIplImage MonoChromatic Word8
 cmpS op v = cv2 $ \src dst ->
-            c_cvCmpS (castPtr src) v' (castPtr dst) (cmpToCmp op)
+            c_cvCmpS src v' dst (cmpToCmp op)
     where v' = realToFrac . toDouble $ v
 {-# INLINE cmpS #-}
 
 foreign import ccall "HOpenCV_wrap.h c_cvAvg"
   c_cvAvg :: Ptr CvArr -> Ptr CvArr -> Ptr CDouble -> IO ()
 
-avgWorker :: (IplArrayType a, IsCvScalar b) => Ptr a -> Ptr a -> IO b
+avgWorker :: IsCvScalar b => Ptr CvArr -> Ptr CvArr -> IO b
 avgWorker img mask = allocaArray 4 $ 
-                     \arr -> do c_cvAvg (castPtr img) (castPtr mask) arr
+                     \arr -> do c_cvAvg img mask arr
                                 [r,g,b,a] <- peekArray 4 arr
                                 return $ fromCvScalar (r,g,b,a)
 
 -- |Calculates the mean independently for each channel.
 avg :: (HasChannels c, HasDepth d, IsCvScalar s, s ~ CvScalar c d) => 
        HIplImage c d -> CvScalar c d
-avg img = unsafePerformIO . withHIplImage img $ flip avgWorker nullPtr
+avg img = unsafePerformIO . withHIplImage img $ flip avgWorker nullPtr . castPtr
 {-# NOINLINE avg #-}
 
 -- |@avgMask img mask@ calculates the mean independently for each
@@ -286,7 +275,7 @@ avg img = unsafePerformIO . withHIplImage img $ flip avgWorker nullPtr
 avgMask :: (HasChannels c, HasDepth d, IsCvScalar s, s ~ CvScalar c d) => 
            HIplImage c d -> HIplImage MonoChromatic Word8 -> CvScalar c d
 avgMask img mask = unsafePerformIO . withHIplImage img $ \src ->
-                   withHIplImage mask $ avgWorker src
+                   withHIplImage mask $ avgWorker (castPtr src) . castPtr
 {-# NOINLINE avgMask #-}
 
 foreign import ccall "opencv2/core/core_c.h cvNot"
@@ -294,4 +283,5 @@ foreign import ccall "opencv2/core/core_c.h cvNot"
 
 -- |Per-element bit-wise inversion.
 cvNot :: (HasChannels c, HasDepth d) => HIplImage c d -> HIplImage c d
-cvNot = cv2 $ \src dst -> c_cvNot (castPtr src) (castPtr dst)
+cvNot = cv2 $ \src dst -> c_cvNot src dst
+{-# INLINE cvNot #-}

@@ -163,7 +163,7 @@ mkHIplImage w h =
           bpp = bytesPerPixel (undefined::d)
           stride = w * (numChannels (undefined::c) :: Int) * bpp
 
-foreign import ccall unsafe "memset"
+foreign import ccall "memset"
   memset :: Ptr Word8 -> Word8 -> CInt -> IO ()
 
 -- |Prepare a 'HIplImage' of the given width and height. Set all
@@ -243,7 +243,9 @@ instance forall c d. (HasChannels c, HasDepth d) =>
                            then cv_GRAY2BGR
                            else cv_BGR2GRAY
                     ptr' = castPtr ptr :: Ptr IplImage
-                withHIplImage img2 $ \dst -> cvCvtColor ptr' dst conv
+                withHIplImage img2 $ \dst -> cvCvtColor (castPtr ptr') 
+                                                        (castPtr dst) 
+                                                        conv
                 (#peek IplImage, imageDataOrigin) ptr >>= cvFree
                 return $ unsafeCoerce img2
         else do origin' <- (#peek IplImage, origin) ptr

@@ -10,7 +10,7 @@ import Foreign.Marshal.Alloc (alloca)
 
 #include <opencv2/core/types_c.h>
 
-foreign import ccall unsafe "HOpenCV_wrap.h c_cvFindContours"
+foreign import ccall "HOpenCV_wrap.h c_cvFindContours"
   c_cvFindContours :: Ptr CvArr -> Ptr CvMemStorage -> Ptr (Ptr (CvSeq a)) -> 
                       Int -> Int -> Int -> Int -> Int -> IO Int
 

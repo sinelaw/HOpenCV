@@ -25,7 +25,7 @@ blueprint x = toned `par` neon `pseq` add neon toned
         light = cvAndS (255,0,0) . convertGrayToRGB $ t
         dark = cvAndS (180,0,0) . convertGrayToRGB 
              . cvNot $ t
-        toned = light `par` dark `pseq` cvOr light dark
+        toned = cvOr light dark
         neon = convertGrayToRGB . smoothGaussian 3 . dilate 1
              . canny 70 110 3 $ g
 {-# INLINE blueprint #-}

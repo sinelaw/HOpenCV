@@ -8,7 +8,7 @@ import System.IO.Unsafe
 import AI.CV.OpenCV.Core.CxCore
 import AI.CV.OpenCV.Core.HIplImage
 
-foreign import ccall unsafe "opencv2/video/tracking.hpp cvCalcOpticalFlowBM"
+foreign import ccall "opencv2/video/tracking.hpp cvCalcOpticalFlowBM"
   c_cvCalcOpticalFlowBM :: Ptr CvArr -> Ptr CvArr -> CInt -> CInt -> 
                            CInt -> CInt -> CInt -> CInt -> 
                            CInt -> Ptr CvArr -> Ptr CvArr -> IO ()
