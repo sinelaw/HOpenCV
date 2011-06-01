@@ -1,7 +1,7 @@
 HOpenCV
 -------
 
-OpenCV 2.1 bindings for Haskell.
+OpenCV 2.2 bindings for Haskell.
 
 - Image color channel count and color depth are statically checked.
 
@@ -9,7 +9,12 @@ OpenCV 2.1 bindings for Haskell.
 
 - When operations are directly composed, they will be performed
   in-place where possible as the intermediate images are not
-  observable. GHC's optimizations must be enabled (e.g. -Odph).
+  observable. GHC's optimizations must be enabled (e.g. -O2).
+
+- See `src/Examples` for example programs. In particular, the
+  `VideoFunhouse` executable demonstrates realtime image processing on
+  the video feed from a webcam. Fusion of in-place operations is
+  demonstrated along with light-weight parallelism.
 
 NOTE: Only a small part of OpenCV is currently wrapped.
 

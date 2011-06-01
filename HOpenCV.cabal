@@ -1,20 +1,20 @@
 name: HOpenCV
-version: 0.1.2.2.1
+version: 0.2.2.2.1
 license: BSD3
 author: Noam Lewis <jones.noamle@gmail.com>
 maintainer: Anthony Cowley <acowley@gmail.com>
 stability: experimental
 category: AI, Graphics
 synopsis: A binding for the OpenCV computer vision library.
-Tested-With:   GHC==6.12.1, GHC==6.12.3
+Tested-With:   GHC==7.0.3
 description:
    Limited bindings to OpenCV 2.2. (See: <http://opencv.willowgarage.com/wiki/Welcome>)
    .
    /Installation/
    .
-   You must install OpenCV (development packages) prior to installing this package. Currently tested on Ubuntu Linux 10.04, Mac OS 10.5 and 10.6, and Windows XP.
+   You must install OpenCV (development packages) prior to installing this package. Currently tested on Ubuntu Linux 10.04, Mac OS 10.5 and 10.6. Windows support is untested.
    .
-   On Windows, OpenCV is assumed to be installed in the @C:\\OpenCV2.1@ directory.
+   On Windows, OpenCV is assumed to be installed in the @C:\\OpenCV2.2@ directory.
    .
    /Usage/
    .
@@ -51,9 +51,9 @@ library
    other-modules: AI.CV.OpenCV.Core.CVOp AI.CV.OpenCV.Drawing
    hs-Source-Dirs: src
    if os(windows)
-     include-dirs: C:\\OpenCV2.1\\include
-     extra-lib-dirs:     C:\\OpenCV2.1\\bin
-     extra-libraries: cxcore210, cv210, highgui210
+     include-dirs: C:\\OpenCV2.2\\include
+     extra-lib-dirs:     C:\\OpenCV2.2\\bin
+     extra-libraries: cxcore220, cv220, highgui220
    else
      extra-libraries: opencv_core,opencv_imgproc,opencv_highgui
    build-depends: base >=4 && <5, 
