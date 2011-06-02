@@ -19,7 +19,7 @@ import AI.CV.OpenCV.Core.HighGui (cvLoadImage, cvSaveImage, LoadColor(..))
 import AI.CV.OpenCV.Core.HIplImage
 import Control.Applicative
 import Control.Arrow (second, (***))
-import Control.Monad ((<=<), when, join)
+import Control.Monad ((<=<), when, unless, join)
 import qualified Data.Vector.Storable as V
 import Data.Word (Word8, Word16)
 import Foreign.ForeignPtr
@@ -47,7 +47,7 @@ isMono = id
 -- |Return the number of color channels a 'HIplImage' has as a runtime
 -- value.
 imgChannels :: forall c d. HasChannels c => HIplImage c d -> Int
-imgChannels _ = numChannels (undefined::c)
+imgChannels _ = fromIntegral $ numChannels (undefined::c)
 
 -- |Return the number of bytes per pixel color component of an
 -- 'HIplImage'.
@@ -59,7 +59,7 @@ colorDepth _ = bytesPerPixel (undefined::d)
 -- data.
 withImagePixels :: HasDepth d => HIplImage c d -> (V.Vector d -> r) -> r
 withImagePixels img f = f $ V.unsafeFromForeignPtr (imageData img) 0 n
-    where n = imageSize img `div` colorDepth img
+    where n = fromIntegral (imageSize img) `div` colorDepth img
 
 -- |Return a 'V.Vector' containing a copy of the pixels that make up a
 -- 'HIplImage'.
@@ -70,7 +70,7 @@ pixels img = unsafePerformIO $
                     withForeignPtr (imageData img) $ \src -> 
                         copyBytes dst src len
                 return $ V.unsafeFromForeignPtr ptr 0 len
-    where len = imageSize img
+    where len = fromIntegral $ imageSize img
 {-# NOINLINE pixels #-}
 
 -- |Read a 'HIplImage' from a 'Ptr' 'IplImage'
@@ -80,7 +80,7 @@ fromPtr = peek . castPtr
 -- Ensure that a file exists.
 checkFile :: FilePath -> IO ()
 checkFile f = do e <- doesFileExist f
-                 if e then return () else error $ "Can't find "++f
+                 unless e (error $ "Can't find "++f)
 
 -- |Load a color 'HIplImage' from an 8-bit image file. If the image
 -- file is grayscale, it will be converted to color.
@@ -138,7 +138,7 @@ fromPGM16 fileName =
      maxCol <- hGetLine h
      when (maxCol /= "65535") (hClose h >>
                                error (fileName ++" is not 16-bit"))
-     let numBytes = width*height*2
+     let numBytes = fromIntegral $ width*height*2
      fp <- mallocForeignPtrArray numBytes
      hSetBinaryMode h True
      withForeignPtr fp $ \ptr' ->
@@ -155,7 +155,7 @@ fromPGM16 fileName =
                                  swapBytes (offset+2)
           swapBytes 0
      hClose h
-     return $ HIplImage 0 width height numBytes fp fp (2*width)
+     return $ HIplImage 0 width height (fromIntegral numBytes) fp fp (2*width)
 
 -- |Save a 'HIplImage' to the specified file.
 toFile :: (HasChannels c, HasDepth d) => FilePath -> HIplImage c d -> IO ()
@@ -165,23 +165,19 @@ toFile fileName img = withHIplImage img $ \ptr -> cvSaveImage fileName ptr
 -- color channels, and color depth as an existing HIplImage. The pixel
 -- data of the original 'HIplImage' is not copied.
 compatibleImage :: HIplImage c d -> IO (HIplImage c d)
-compatibleImage img@(HIplImage _ _ _ _ _ _ _) = 
-    do ptr <- mallocForeignPtrArray sz
+compatibleImage (HIplImage _ w h sz _ _ stride) = 
+    do ptr <- mallocForeignPtrArray (fromIntegral sz)
        return $ HIplImage 0 w h sz ptr ptr stride
-    where w = width img
-          h = height img
-          sz = imageSize img
-          stride = widthStep img
 
 -- |Allocate a new 'IplImage' with the same dimensions, number of
 -- color channels, and color depth as an existing 'HIplImage'. The
 -- pixel data of the original 'HIplImage' is not copied.
 compatibleImagePtr :: forall c d. (HasChannels c, HasDepth d) =>
                       HIplImage c d -> IO (ForeignPtr IplImage)
-compatibleImagePtr img = createImageF (CvSize w' h') c d
+compatibleImagePtr img = createImageF (CvSize w' h') nc d
     where w' = fromIntegral . width $ img
           h' = fromIntegral . height $ img
-          c = fromIntegral . numChannels $ (undefined::c)
+          nc = fromIntegral . numChannels $ (undefined::c)
           d = depth (undefined::d)
 
 compatibleImagePtrPtr :: Ptr IplImage -> IO (Ptr IplImage)
@@ -191,15 +187,12 @@ compatibleImagePtrPtr =
 -- |Create an exact duplicate of the given HIplImage. This allocates a
 -- fresh array to store the copied pixels.
 duplicateImage :: HIplImage c d -> IO (HIplImage c d)
-duplicateImage img@(HIplImage _ _ _ _ _ _ _ ) =
-    do fptr <- mallocForeignPtrArray sz
-       withForeignPtr (imageData img) $ 
-           \src -> withForeignPtr fptr $ \dst -> copyBytes dst src sz
+duplicateImage (HIplImage _ w h sz pixels _ stride) =
+    do fptr <- mallocForeignPtrArray sz'
+       withForeignPtr pixels $ 
+           \src -> withForeignPtr fptr $ \dst -> copyBytes dst src sz'
        return $ HIplImage 0 w h sz fptr fptr stride
-    where w = width img
-          h = height img
-          sz = imageSize img
-          stride = widthStep img
+  where sz' = fromIntegral sz
 
 -- |Clone an 'HIplImage', returning the 'Ptr' 'IplImage' underlying
 -- the clone.
@@ -292,7 +285,7 @@ unsafeWithHIplImage img f = unsafePerformIO $ withHIplImage img (return . f)
 getROI :: (HasChannels c, HasDepth d) =>
           (Int,Int) -> (Int,Int) -> HIplImage c d -> IO (HIplImage c d)
 getROI (rx,ry) (rw,rh) src = 
-    do img <- mkHIplImage rw rh
+    do img <- mkHIplImage (fromIntegral rw) (fromIntegral rh)
        withForeignPtr (imageData img) $ \dst ->
          withForeignPtr (imageData src) $ \src ->
            mapM_ (\(dOff, sOff) -> copyBytes (plusPtr dst dOff) 

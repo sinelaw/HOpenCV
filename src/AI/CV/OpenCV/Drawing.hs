@@ -1,4 +1,3 @@
-{-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls #-}
 module AI.CV.OpenCV.Drawing (prepFont, prepFontAlt, putText, FontFace(..), 
                              LineType(..), RGB, drawLines) where
 import AI.CV.OpenCV.Core.CxCore
@@ -28,7 +27,7 @@ initFont face italic hscale vscale shear thickness ltype =
     do p <- malloc
        cvInitFont p face' hscale vscale shear thickness lt
        return p
-    where face' | italic = (fi $ fromEnum face) .|. italicFont
+    where face' | italic = fi (fromEnum face) .|. italicFont
                 | otherwise = fi $ fromEnum face
           lt = fi $ lineTypeEnum ltype
           fi = fromIntegral
@@ -66,7 +65,7 @@ prepFontAlt face italic hscale vscale shear thickness ltype =
                                   withCString msg $ \msg' ->
                                       cvPutText dst msg' x y f r g b
            {-# INLINE go #-}
-       return $ go
+       return go
 {-# INLINE prepFontAlt #-}
 
 putText :: (HasChannels c, HasDepth d) => 

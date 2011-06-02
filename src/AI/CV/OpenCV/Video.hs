@@ -3,6 +3,7 @@
 module AI.CV.OpenCV.Video (createFileCapture, createFileCaptureLoop, 
                            createCameraCapture, createVideoWriter, 
                            FourCC, mpeg4CC) where
+import Data.Maybe (fromMaybe)
 import Foreign.Ptr
 import Foreign.ForeignPtr (withForeignPtr)
 import AI.CV.OpenCV.Core.CxCore
@@ -12,7 +13,7 @@ import AI.CV.OpenCV.Core.HighGui
 -- |Raise an error if 'cvQueryFrame' returns 'Nothing'; otherwise
 -- returns a 'Ptr' 'IplImage'.
 queryError :: Ptr CvCapture -> IO (Ptr IplImage)
-queryError = (maybe (error "Unable to capture frame") id `fmap`) . cvQueryFrame
+queryError = fmap (fromMaybe $ error "Unable to capture frame") . cvQueryFrame
 
 -- |If 'cvQueryFrame' returns 'Nothing', try rewinding the video and
 -- querying again. If it still fails, raise an error. When a non-null
@@ -58,7 +59,7 @@ createCameraCapture cam = do cvInit
                              capture <- createCameraCaptureF cam'
                              return (withForeignPtr capture $ 
                                      (>>= fromPtr) . queryError)
-    where cam' = maybe (-1) id cam
+    where cam' = fromMaybe (-1) cam
 
 -- |4-character code for MPEG-4.
 mpeg4CC :: FourCC

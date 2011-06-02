@@ -97,8 +97,10 @@ houghStandard rho theta threshold img = unsafePerformIO $
                                        x2 = clampX $ x0 - 10000*(-b)
                                        y2 = clampY $ y0 - 10000*a
                                    in ((x1,y1),(x2,y2))
-          clampX x = max 0 (min (truncate x) (width img - 1))
-          clampY y = max 0 (min (truncate y) (height img - 1))
+          w = fromIntegral (width img)
+          h = fromIntegral (height img)
+          clampX x = max 0 (min (truncate x) (w - 1))
+          clampY y = max 0 (min (truncate y) (h - 1))
 {-# NOINLINE houghStandard #-}
 
 -- |Line detection in a binary image using a probabilistic Hough

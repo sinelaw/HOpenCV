@@ -61,10 +61,6 @@ convertScale scale shift  = cv2 $ \src dst ->
 foreign import ccall "opencv2/core/core_c.h cvAnd"
   c_cvAnd :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> IO ()
 
-cvAndHelper :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> 
-               IO ()
-cvAndHelper src1 src2 dst mask = c_cvAnd src1 src2 dst mask
-
 -- |Calculate the per-element bitwise conjunction of two
 -- arrays. Parameters are a mask and two source images. The mask
 -- specifies the elements of the result that will be computed via the
@@ -76,14 +72,14 @@ andMask :: (HasChannels c, HasDepth d) =>
 andMask mask src1 = cv2 $ \src2 dst -> 
                     withHIplImage src1 $ \src1' -> 
                         withHIplImage mask $ \mask' ->
-                            cvAndHelper (castPtr src1') src2 dst (castPtr mask')
+                            c_cvAnd (castPtr src1') src2 dst (castPtr mask')
 {-# INLINE andMask #-}
 
 -- |Calculates the per-element bitwise conjunction of two arrays.
 cvAnd :: (HasChannels c, HasDepth d) => 
           HIplImage c d -> HIplImage c d ->  HIplImage c d
 cvAnd src1 = cv2 $ \src2 dst -> withHIplImage src1 $ \src1' -> 
-             cvAndHelper (castPtr src1') src2 dst nullPtr
+             c_cvAnd (castPtr src1') src2 dst nullPtr
 {-# INLINE cvAnd #-}
 
 foreign import ccall "opencv2/core/core_c.h cvAndS"
@@ -238,12 +234,12 @@ foreign import ccall "opencv2/core/core_c.h cvCmpS"
 data ComparisonOp = CmpEq | CmpGT | CmpGE | CmpLT | CmpLE | CmpNE
 
 cmpToCmp :: ComparisonOp -> CInt
-cmpToCmp CmpEq = unCmpOp $ cmpEq
-cmpToCmp CmpGT = unCmpOp $ cmpGT
-cmpToCmp CmpGE = unCmpOp $ cmpGE
-cmpToCmp CmpLT = unCmpOp $ cmpLT
-cmpToCmp CmpLE = unCmpOp $ cmpLE
-cmpToCmp CmpNE = unCmpOp $ cmpNE
+cmpToCmp CmpEq = unCmpOp cmpEq
+cmpToCmp CmpGT = unCmpOp cmpGT
+cmpToCmp CmpGE = unCmpOp cmpGE
+cmpToCmp CmpLT = unCmpOp cmpLT
+cmpToCmp CmpLE = unCmpOp cmpLE
+cmpToCmp CmpNE = unCmpOp cmpNE
 
 -- |Per-element comparison of an array and a scalar.
 cmpS :: HasDepth d => 

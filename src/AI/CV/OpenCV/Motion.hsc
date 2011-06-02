@@ -38,8 +38,9 @@ calcOpticalFlowBM prev curr blockSize shiftSize maxRange =
                                         (sw maxRange) (sh maxRange)
                                         0 (fromArr vxPtr) (fromArr vyPtr)
        return (velX, velY)
-    where w = (width prev - fst blockSize) `div` fst shiftSize
-          h = (height prev - snd blockSize) `div` snd shiftSize
+    where fi = fromIntegral
+          w = (fi (width prev) - fst blockSize) `div` fst shiftSize
+          h = (fi (height prev) - snd blockSize) `div` snd shiftSize
           sw = fromIntegral . fst -- size width
           sh = fromIntegral . snd -- size height
 {-# NOINLINE calcOpticalFlowBM #-}

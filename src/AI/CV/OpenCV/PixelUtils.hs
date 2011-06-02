@@ -36,11 +36,11 @@ packPixels img =
                                             go (y+1) pSrc' pDst'
                             | otherwise = VG.unsafeFreeze v
                     go 0 0 0
-    where w = width img
-          h = height img
+    where w = fromIntegral $ width img
+          h = fromIntegral $ height img
           nc = imgChannels img
           w' = w * nc
-          stride = widthStep img
+          stride = fromIntegral $ widthStep img
           pix = pixels img
 {-# INLINE packPixels #-}
 
@@ -57,9 +57,9 @@ isolateChannel ch img =
                             | otherwise = do VM.unsafeWrite v p (get p3)
                                              go (x+1) (p+1) (p3+3) y
                     go 0 0 ch 0
-    where w = width img
-          h = height img
-          margin = widthStep img - (w  * 3)
+    where w = fromIntegral $ width img
+          h = fromIntegral $ height img
+          margin = fromIntegral (widthStep img) - (w  * 3)
           pix = pixels img
           get = V.unsafeIndex pix
 {-# INLINE isolateChannel #-}

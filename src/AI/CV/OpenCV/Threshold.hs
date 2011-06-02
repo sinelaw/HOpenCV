@@ -34,7 +34,7 @@ instance ByteOrFloat d => SameOrByte d d where
 
 foreign import ccall "opencv2/imgproc/imgproc_c.h cvThreshold"
   c_cvThreshold :: Ptr CvArr -> Ptr CvArr -> CDouble -> CDouble -> CInt -> 
-                   IO (CDouble)
+                   IO CDouble
 
 -- The worker function that calls c_cvThreshold.
 cvThreshold :: (ByteOrFloat d1, SameOrByte d1 d2) =>
@@ -49,13 +49,6 @@ cvThreshold threshold maxValue tType =
           maxValue' = realToFrac . toDouble $ maxValue
           tType' = fromIntegral tType
 {-# INLINE cvThreshold #-}
-
-cvThreshold1 :: (ByteOrFloat d1, SameOrByte d1 d2) =>
-               d1 -> d1 -> Int -> HIplImage MonoChromatic d1 ->
-               HIplImage MonoChromatic d2
-cvThreshold1 threshold maxValue tType = 
-    cvThreshold threshold maxValue tType
-{-# INLINE cvThreshold1 #-}
 
 -- Use Otsu's method to determine an optimal threshold value which is
 -- returned along with the thresholded image.
@@ -73,7 +66,7 @@ cvThresholdOtsu maxValue tType = cvThreshold 0 maxValue tType'
 thresholdBinary :: (ByteOrFloat d1, SameOrByte d1 d2) =>
                    d1 -> d1 -> HIplImage MonoChromatic d1 ->
                    HIplImage MonoChromatic d2
-thresholdBinary th maxValue = cvThreshold1 th maxValue (fromEnum ThreshBinary)
+thresholdBinary th maxValue = cvThreshold th maxValue (fromEnum ThreshBinary)
 {-# INLINE thresholdBinary #-}
 
 -- |Inverse binary thresholding. Parameters are the @threshold@ value,
@@ -83,7 +76,7 @@ thresholdBinary th maxValue = cvThreshold1 th maxValue (fromEnum ThreshBinary)
 thresholdBinaryInv :: (ByteOrFloat d1, SameOrByte d1 d2) =>
                       d1 -> d1 -> HIplImage MonoChromatic d1 ->
                       HIplImage MonoChromatic d2
-thresholdBinaryInv th maxValue = cvThreshold1 th maxValue tType
+thresholdBinaryInv th maxValue = cvThreshold th maxValue tType
     where tType = fromEnum ThreshBinaryInv
 {-# INLINE thresholdBinaryInv #-}
 
@@ -94,7 +87,7 @@ thresholdBinaryInv th maxValue = cvThreshold1 th maxValue tType
 thresholdTruncate :: (ByteOrFloat d1, SameOrByte d1 d2) => 
                      d1 -> HIplImage MonoChromatic d1 ->
                      HIplImage MonoChromatic d2
-thresholdTruncate threshold = cvThreshold1 threshold 0 (fromEnum ThreshTrunc)
+thresholdTruncate threshold = cvThreshold threshold 0 (fromEnum ThreshTrunc)
 {-# INLINE thresholdTruncate #-}
 
 -- |Maps pixels that are less than or equal to @threshold@ to zero;
@@ -103,7 +96,7 @@ thresholdTruncate threshold = cvThreshold1 threshold 0 (fromEnum ThreshTrunc)
 thresholdToZero :: (ByteOrFloat d1, SameOrByte d1 d2) => 
                    d1 -> HIplImage MonoChromatic d1 ->
                    HIplImage MonoChromatic d2
-thresholdToZero threshold = cvThreshold1 threshold 0 (fromEnum ThreshToZero)
+thresholdToZero threshold = cvThreshold threshold 0 (fromEnum ThreshToZero)
 {-# INLINE thresholdToZero #-}
 
 -- |Maps pixels that are greater than @threshold@ to zero; leaves all
@@ -112,7 +105,7 @@ thresholdToZero threshold = cvThreshold1 threshold 0 (fromEnum ThreshToZero)
 thresholdToZeroInv :: (ByteOrFloat d1, SameOrByte d1 d2) => 
                       d1 -> HIplImage MonoChromatic d1 ->
                       HIplImage MonoChromatic d2
-thresholdToZeroInv threshold = cvThreshold1 threshold 0 tType
+thresholdToZeroInv threshold = cvThreshold threshold 0 tType
     where tType = fromEnum ThreshToZeroInv
 {-# INLINE thresholdToZeroInv #-}
 

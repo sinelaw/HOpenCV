@@ -54,7 +54,7 @@ data TriChromatic
 data MonoChromatic
 
 class HasChannels a where
-    numChannels :: a -> Int
+    numChannels :: a -> CInt
 
 class (Storable a, Num a) => HasDepth a where
     depth      :: a -> Depth
@@ -144,24 +144,27 @@ bytesPerPixel = (`div` 8) . fromIntegral . unSign . unDepth . depth
 -- color channels (i.e. 'MonoChromatic' or 'TriChromatic'), and the
 -- pixel depth (e.g. 'Word8', 'Float').
 data HIplImage c d = (HasChannels c, HasDepth d) => 
-                     HIplImage { origin          :: {-# UNPACK #-} !Int
-                               , width           :: {-# UNPACK #-} !Int
-                               , height          :: {-# UNPACK #-} !Int
-                               , imageSize       :: {-# UNPACK #-} !Int
+                     HIplImage { origin          :: {-# UNPACK #-} !CInt
+                               , width           :: {-# UNPACK #-} !CInt
+                               , height          :: {-# UNPACK #-} !CInt
+                               , imageSize       :: {-# UNPACK #-} !CInt
                                , imageData       :: {-# UNPACK #-} !(ForeignPtr d)
                                , imageDataOrigin :: {-# UNPACK #-} !(ForeignPtr d)
-                               , widthStep       :: {-# UNPACK #-} !Int }
+                               , widthStep       :: {-# UNPACK #-} !CInt }
 
 -- |Prepare a 'HIplImage' of the given width and height. The pixel and
 -- color depths are gleaned from the type, and may often be inferred.
-mkHIplImage :: forall c d. (HasChannels c, HasDepth d) => 
-               Int -> Int -> IO (HIplImage c d)
-mkHIplImage w h = 
-    do ptr <- mallocForeignPtrArray numBytes
+mkHIplImage :: forall a c d. (HasChannels c, HasDepth d, Integral a) => 
+               a -> a -> IO (HIplImage c d)
+mkHIplImage w' h' = 
+    do ptr <- mallocForeignPtrArray (fromIntegral numBytes)
        return $ HIplImage 0 w h numBytes ptr ptr stride
-    where numBytes = stride * h
-          bpp = bytesPerPixel (undefined::d)
-          stride = w * (numChannels (undefined::c) :: Int) * bpp
+    where w = fromIntegral w'
+          h = fromIntegral h'
+          numBytes = stride * h
+          bpp = fi $ bytesPerPixel (undefined::d)
+          stride = w * numChannels (undefined::c) * bpp
+          fi = fromIntegral
 
 foreign import ccall "memset"
   memset :: Ptr Word8 -> Word8 -> CInt -> IO ()
@@ -229,7 +232,7 @@ instance forall c d. (HasChannels c, HasDepth d) =>
     alignment _ = alignment (undefined :: CDouble)
     poke = error "Poking a Ptr HIplImage is unsafe."
     peek ptr = do
-      numChannels' <- (#peek IplImage, nChannels) ptr :: IO Int
+      numChannels' <- (#peek IplImage, nChannels) ptr :: IO CInt
       depth' <- Depth <$> (#peek IplImage, depth) ptr
       width' <- (#peek IplImage, width) ptr
       height' <- (#peek IplImage, height) ptr

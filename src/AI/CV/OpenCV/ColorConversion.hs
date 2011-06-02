@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 -- |Type-safe color conversion functions. 
 module AI.CV.OpenCV.ColorConversion
     (convertGrayToRGB, convertGrayToBGR, 
