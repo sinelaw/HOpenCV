@@ -43,10 +43,6 @@ dupArg f = \x -> f x x
 
 -- |Operations that want an argument /and/ a compatible destination
 -- buffer, but don't need a clone of an input.
--- cv2 :: (HasChannels c1, HasDepth d1, HasChannels c2, HasDepth d2) => 
---        (Ptr IplImage -> Ptr IplImage -> IO a) -> 
---        HIplImage c1 d1 -> HIplImage c2 d2
--- cv2 = runBinOp . BinOp . ((void .) .)
 cv2 :: forall a c1 d1 c2 d2 e.
        (HasChannels c1, HasDepth d1, HasChannels c2, HasDepth d2, 
         IplArrayType e) => 
@@ -73,20 +69,14 @@ newtype BinOp a b c =
 cbop :: BinOp b b c -> BinOp a b c -> BinOp a b c
 cbop (BinOp f) (BinOp g) = BinOp $ \x y -> g x y >> f y y
 
--- withDst :: (HasChannels c1, HasDepth d1, HasChannels c2, HasDepth d2) => 
---            (Ptr IplImage -> Ptr IplImage -> IO a) ->
---            HIplImage c1 d1 -> IO (HIplImage c2 d2)
--- withDst f img = mkHIplImage (width img) (height img) >>= \img2 ->
---                 withHIplImage img2 (\x -> withHIplImage img (flip f x) >>
---                                           return img2)
 withDst :: (HasChannels c1, HasDepth d1, HasChannels c2, HasDepth d2, 
             IplArrayType e) => 
            (Ptr e -> Ptr e -> IO a) ->
            HIplImage c1 d1 -> IO (HIplImage c2 d2)
-withDst f img = mkHIplImage (width img) (height img) >>= \img2 ->
-                withHIplImage img2 (\x -> withHIplImage img (flip f (castPtr x) . castPtr) >>
-                                          return img2)
-
+withDst f img = do img2 <- mkHIplImage (width img) (height img)
+                   _ <- withHIplImage img2 go
+                   return img2
+    where go x = withHIplImage img (flip f (castPtr x) . castPtr)
 
 runBinOp :: (HasChannels c1, HasDepth d1, HasChannels c2, HasDepth d2, 
              IplArrayType e) => 
