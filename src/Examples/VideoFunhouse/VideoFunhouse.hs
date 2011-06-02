@@ -89,6 +89,10 @@ blueprint2slow x = add (neonEdges g) (fourTones g)
 
 main = do args <- getArgs
           cam <- case args of
+                   ["--help"] -> do putStrLn "Usage: ./VideoFunhouse [filename]"
+                                    putStr "If no file is given, a connected "
+                                    putStrLn "camera is opened."
+                                    exitSuccess
                    [fname] -> createFileCaptureLoop fname
                    _ -> createCameraCapture (Just 0)
           (showImg,close) <- namedWindow "Video Funhouse" [AutoSize]
