@@ -1,11 +1,13 @@
 -- |An example application demonstrating realtime image processing on
--- the video feed from an attached webcam. The executable prints usage
--- instructions to the console when run.
+-- the video feed from an attached webcam or a video file specified as
+-- a command line argument. The executable prints usage instructions
+-- to the console when run.
 import AI.CV.OpenCV.HighCV
 import AI.CV.OpenCV.ArrayOps
 import AI.CV.OpenCV.Filtering
 import Control.Applicative
 import Control.Parallel
+import System.Environment (getArgs)
 import System.Exit (exitSuccess)
 import Rate
 
@@ -85,7 +87,10 @@ blueprint2slow x = add (neonEdges g) (fourTones g)
 -- perfMon monitor counts only the time a frame is being processed and
 -- drawn.
 
-main = do cam <- createCameraCapture (Just 0)
+main = do args <- getArgs
+          cam <- case args of
+                   [fname] -> createFileCaptureLoop fname
+                   _ -> createCameraCapture (Just 0)
           (showImg,close) <- namedWindow "Video Funhouse" [AutoSize]
           --rater <- trackRate
           (startFrame', curr, stopFrame) <- perfMon
