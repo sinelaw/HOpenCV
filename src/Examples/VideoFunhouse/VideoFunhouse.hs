@@ -85,7 +85,9 @@ blueprint2slow x = add (neonEdges g) (fourTones g)
 -- situations, a camera may run at a lower rate to effect a longer
 -- exposure time. To still report a useful performance metric, the
 -- perfMon monitor counts only the time a frame is being processed and
--- drawn.
+-- drawn. Thus, the displayed framerate is the maximum theoretical
+-- rate the processing and display code could run at if the image
+-- capturing mechanism could feed it that fast.
 
 main = do args <- getArgs
           cam <- case args of
