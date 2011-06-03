@@ -2,25 +2,40 @@
 -- operations will be performed in-place under composition. For
 -- example, @dilate 8 . erode 8@ will allocate one new image rather
 -- than two.
-module AI.CV.OpenCV.HighCV (erode, dilate, houghStandard, houghProbabilistic, 
-                            HIplImage, width, height, isColor, isMono,
-                            pixels, withPixels, fromGrayPixels, fromColorPixels,
+module AI.CV.OpenCV.HighCV (
+                            -- * Image Files
                             fromFile, fromFileGray, fromFileColor, 
-                            fromPGM16, toFile, fromPtr, normalize,
-                            withImagePixels, sampleLine, Connectivity(..), 
-                            fromPixels, resize, getROI, CvRect(..),
-                            cv_L2, cv_MinMax, Word8, Word16,
-                            InterpolationMethod(..), MonoChromatic, 
-                            TriChromatic, HasChannels, HasDepth,
-                            GrayImage, ColorImage, GrayImage16, 
+                            fromPGM16, toFile,
+                            -- * Image Properties
+                            width, height, isColor, isMono,
+                            -- * Image Construction
+                            fromPixels, fromGrayPixels, fromColorPixels, 
+                            fromPtr,
+                            -- * Image Data Accessors
+                            pixels, withPixelVector, withImagePixels, 
+                            sampleLine, getRect,
+                            -- * Image Processing
+                            erode, dilate, houghStandard, houghProbabilistic, 
+                            normalize, resize, 
                             module AI.CV.OpenCV.ColorConversion,
                             module AI.CV.OpenCV.Threshold,
                             module AI.CV.OpenCV.FloodFill,
                             module AI.CV.OpenCV.FeatureDetection,
+                            Connectivity(..), 
+                            CvRect(..),
+                            cv_L2, cv_MinMax, 
+                            InterpolationMethod(..), 
+                            -- * GUI and Drawing
+                            module AI.CV.OpenCV.GUI, 
                             module AI.CV.OpenCV.Drawing,
-                            module AI.CV.OpenCV.GUI,
-                            module AI.CV.OpenCV.Video)
-    where
+                            -- * Video
+                            module AI.CV.OpenCV.Video,
+                            -- * Image types
+                            HIplImage, MonoChromatic, TriChromatic, 
+                            HasChannels, HasDepth, 
+                            GrayImage, ColorImage, GrayImage16, 
+                            Word8, Word16
+    ) where
 import AI.CV.OpenCV.Core.CxCore
 import AI.CV.OpenCV.Core.CV
 import AI.CV.OpenCV.Drawing
@@ -155,6 +170,9 @@ resize method w h img =
        return img'
 {-# NOINLINE resize #-}
 
+-- |Normalize the range of color values in an image to the given
+-- range. Example usage with a grayscale image is @normalize cv_MinMax
+-- 0 255 img@
 normalize :: (HasChannels c, HasDepth d) => 
              ArrayNorm -> CDouble -> CDouble -> HIplImage c d -> HIplImage c d
 normalize ntype a b = cv2 $ \img dst -> 

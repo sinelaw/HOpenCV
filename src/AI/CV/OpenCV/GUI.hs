@@ -14,7 +14,8 @@ bool :: a -> a -> Bool -> a
 bool t _ True = t
 bool _ f False = f
 
--- |Simple window runner. Exits when any key is pressed.
+-- |Simple window runner. Takes an action that produces images to be
+-- shown in the window. Exits when any key is pressed.
 runWindow :: HasChannels c => IO (HIplImage c Word8) -> IO ()
 runWindow mkImg = newWindow 0 True >> go
     where go = do mkImg >>= flip withHIplImage (showImage 0)

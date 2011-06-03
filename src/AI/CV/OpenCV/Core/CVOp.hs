@@ -1,6 +1,22 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 -- |Combinators that fuse compositions of image processing operations
 -- for in-place mutation.
+--
+-- The 'cv' wrapper is intended for operations that take a single
+-- array argument, and mutate that array in-place. A canonical example
+-- is a function that draws lines on an image. Compositions of such
+-- operations may all mutate the same image in-place, but an argument
+-- given to the composition, or indeed given to a standalone operation
+-- of this variety, must be duplicated before being operated upon.
+--
+-- In contrast, the 'cv2' wrapper is for operations that take separate
+-- @src@ and @dst@ (source and destination) arguments. When the image
+-- types of these arguments are the same, it is possible to supply the
+-- same value for both arguments, thus avoiding an image allocation. A
+-- standalone operation of this variety, or a composition beginning
+-- with such an operation, must have a destination image
+-- allocated. This is cheaper than duplicating the input image as with
+-- operations wrapped by the `cv` combinator.
 module AI.CV.OpenCV.Core.CVOp (cv, cv2) where
 import AI.CV.OpenCV.Core.CxCore (IplArrayType, CvArr)
 import AI.CV.OpenCV.Core.HIplUtil
@@ -13,6 +29,9 @@ import System.IO.Unsafe
 -- |A CV operation is an IO function on a 'HIplImage'.
 newtype CVOp c d = CVOp { op :: Ptr CvArr -> IO () }
 
+-- |A wrapper for operations that mutate an array in-place. The input
+-- to such operations must be duplicated before being passed to the
+-- operation.
 cv :: forall a c d e.
       (HasChannels c, HasDepth d, IplArrayType e) => 
       (Ptr e -> IO a) -> HIplImage c d -> HIplImage c d
@@ -41,8 +60,8 @@ runCV = (unsafePerformIO .) . withClone . op
 dupArg :: (Ptr e -> Ptr e -> IO ()) -> Ptr e -> IO ()
 dupArg f = \x -> f x x
 
--- |Operations that want an argument /and/ a compatible destination
--- buffer, but don't need a clone of an input.
+-- |Wrapper for operations that want an argument /and/ a compatible
+-- destination buffer, but don't need a clone of an input.
 cv2 :: forall a c1 d1 c2 d2 e.
        (HasChannels c1, HasDepth d1, HasChannels c2, HasDepth d2, 
         IplArrayType e) => 

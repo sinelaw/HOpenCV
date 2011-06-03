@@ -2,7 +2,7 @@
              FlexibleInstances #-}
 -- |Functions for working with 'HIplImage's.
 module AI.CV.OpenCV.Core.HIplUtil
-    (isColor, isMono, imgChannels, withPixels, pixels,
+    (isColor, isMono, imgChannels, withPixelVector, pixels,
      fromPtr, fromFileColor, fromFileGray, fromPGM16, toFile, 
      compatibleImage, duplicateImage, fromPixels,
      withImagePixels, fromGrayPixels, fromColorPixels,
@@ -10,7 +10,7 @@ module AI.CV.OpenCV.Core.HIplUtil
      HIplImage, mkHIplImage, width, height, mkBlackImage,
      withHIplImage, MonoChromatic, TriChromatic, HasChannels, 
      HasDepth(..), HasScalar(..), IsCvScalar(..), colorDepth,
-     ByteOrFloat, getROI, imageData, fromFile, unsafeWithHIplImage,
+     ByteOrFloat, getRect, imageData, fromFile, unsafeWithHIplImage,
      duplicateImagePtr, compatibleImagePtr, compatibleImagePtrPtr) where
 import AI.CV.OpenCV.Core.CxCore (IplImage, cvFree, cvFreePtr, createImageF, 
                                  CvSize(..), cloneImageF, cvCreateImage, 
@@ -32,12 +32,14 @@ import System.IO (openFile, hGetLine, hGetBuf, hClose, hSetBinaryMode,
 import System.IO.Unsafe
 
 -- |This is a way to let the type checker know that you belieave an
--- image to be tri-chromatic.
+-- image to be tri-chromatic. If your image type can't be inferred any
+-- other way, this is an alternative to adding a type annotation.
 isColor :: HIplImage TriChromatic d -> HIplImage TriChromatic d
 isColor = id
 
 -- |This is a way to let the type checker know that you believe an
--- image to be monochromatic.
+-- image to be monochromatic. If your image type can't be inferred any
+-- other way, this is an alternative to adding a type annotation.
 isMono :: HIplImage MonoChromatic d -> HIplImage MonoChromatic d
 isMono = id
 
@@ -117,7 +119,8 @@ instance LoadableFormat MonoChromatic Word16 where
   loadFormat _ = fromPGM16
 
 -- |An overloaded image file loader. The number of color channels and
--- color depth parts of the returned image's type must be inferrable.
+-- color depth parts of the returned image's type must be inferrable
+-- as they control how the image file is loaded.
 fromFile :: forall c d. LoadableFormat c d => FilePath -> IO (HIplImage c d)
 fromFile = loadFormat (undefined :: (c,d))
 
@@ -157,7 +160,7 @@ fromPGM16 fileName =
      hClose h
      return $ HIplImage 0 width height (fromIntegral numBytes) fp fp (2*width)
 
--- |Save a 'HIplImage' to the specified file.
+-- |Save an image to the specified file.
 toFile :: (HasChannels c, HasDepth d) => FilePath -> HIplImage c d -> IO ()
 toFile fileName img = withHIplImage img $ \ptr -> cvSaveImage fileName ptr
 
@@ -203,12 +206,12 @@ duplicateImagePtr = flip withHIplImage cloneImageF
 -- |Pass the given function a 'HIplImage' constructed from a width, a
 -- height, and a 'V.Vector' of pixel values. The new 'HIplImage' \'s
 -- pixel data is shared with the supplied 'V.Vector'.
-withPixels :: forall a c d r. 
-              (HasChannels c, Integral a, HasDepth d) =>
-              a -> a -> V.Vector d -> (HIplImage c d -> r) -> r
-withPixels w h pix f = if fromIntegral len == sz
-                       then f $ HIplImage 0 w' h' sz fp fp (w'*nc)
-                       else error "Length disagreement"
+withPixelVector :: forall a c d r. 
+                   (HasChannels c, Integral a, HasDepth d) =>
+                   a -> a -> V.Vector d -> (HIplImage c d -> r) -> r
+withPixelVector w h pix f = if fromIntegral len == sz
+                            then f $ HIplImage 0 w' h' sz fp fp (w'*nc)
+                            else error "Length disagreement"
     where w' = fromIntegral w
           h' = fromIntegral h
           nc = numChannels (undefined::c)
@@ -245,9 +248,9 @@ fromGrayPixels :: (HasDepth d, Integral a) =>
                   a -> a -> V.Vector d -> HIplImage MonoChromatic d
 fromGrayPixels w h = isMono . fromPixels w h
 
--- |Helper function to explicitly type a vector of trichromatic pixel
--- data. Parameters are the output image's width, height, and pixel
--- content.
+-- |Helper function to explicitly type a vector of interleaved
+-- trichromatic pixel data. Parameters are the output image's width,
+-- height, and pixel content.
 fromColorPixels :: (HasDepth d, Integral a) =>
                    a -> a -> V.Vector d -> HIplImage TriChromatic d
 fromColorPixels w h = isColor . fromPixels w h
@@ -278,13 +281,13 @@ unsafeWithHIplImage :: (HasChannels c, HasDepth d) =>
 unsafeWithHIplImage img f = unsafePerformIO $ withHIplImage img (return . f)
 
 -- |Extract a rectangular region of interest from an image. Returns a
--- new image whose pixel data is copied from the ROI of the source
--- image. Parameters are the upper-left corner of the ROI in image
--- coordinates, the (width,height) of the ROI in pixels, and the
--- source 'HIplImage'.
-getROI :: (HasChannels c, HasDepth d) =>
-          (Int,Int) -> (Int,Int) -> HIplImage c d -> IO (HIplImage c d)
-getROI (rx,ry) (rw,rh) src = 
+-- new image whose pixel data is copied from the given rectangle of
+-- the source image. Parameters are the upper-left corner of the
+-- rectangle in image coordinates, the (width,height) of the rectangle
+-- in pixels, and the source 'HIplImage'.
+getRect :: (HasChannels c, HasDepth d) =>
+           (Int,Int) -> (Int,Int) -> HIplImage c d -> IO (HIplImage c d)
+getRect (rx,ry) (rw,rh) src = 
     do img <- mkHIplImage (fromIntegral rw) (fromIntegral rh)
        withForeignPtr (imageData img) $ \dst ->
          withForeignPtr (imageData src) $ \src ->

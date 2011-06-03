@@ -12,16 +12,22 @@ description:
    .
    /Installation/
    .
-   You must install OpenCV (development packages) prior to installing this package. Currently tested on Ubuntu Linux 10.04, Mac OS 10.5 and 10.6. Windows support is untested.
+   You must install OpenCV (development packages) prior to installing this package. Currently tested on Ubuntu Linux 10.04, Mac OS 10.5 and 10.6.
    .
-   On Windows, OpenCV is assumed to be installed in the @C:\\OpenCV2.2@ directory.
+   Windows support is untested, but OpenCV is assumed to be installed in the @C:\\OpenCV2.2@ directory.
    .
    /Usage/
    .
-   The "AI.CV.OpenCV.HighCV" module exposes the most commonly used functionality. Other modules not in the @Core@ directory provide specific types of operations.
+   The "AI.CV.OpenCV.HighCV" module exposes the most commonly used functionality. Other modules not in the @Core@ directory provide specific types of operations. While the @Core@ modules contain to low-level OpenCV interfaces.
+   .
+   See @src\/Examples\/VideoFunhouse@ for an example application.
 build-type:         Simple
 cabal-version:      >= 1.2
-extra-source-files: src/AI/CV/OpenCV/Core/HOpenCV_wrap.h
+extra-source-files: src/AI/CV/OpenCV/Core/HOpenCV_wrap.h 
+                    src/Examples/VideoFunhouse/Makefile 
+                    src/Examples/VideoFunhouse/Rate.hs
+                    src/Examples/VideoFunhouse/VideoFunhouse.hs
+                    src/Examples/Closing/Closing.hs
 source-repository head
   type: git
   location: git://github.com/acowley/HOpenCV.git
@@ -29,6 +35,7 @@ source-repository head
 library
    exposed-modules:
       AI.CV.OpenCV.Core.CV
+      AI.CV.OpenCV.Core.CVOp 
       AI.CV.OpenCV.Core.CxCore
       AI.CV.OpenCV.Core.HighGui
       AI.CV.OpenCV.Core.HIplImage
@@ -40,6 +47,7 @@ library
       AI.CV.OpenCV.FloodFill
       AI.CV.OpenCV.PixelUtils
       AI.CV.OpenCV.ColorConversion
+      AI.CV.OpenCV.Drawing
       AI.CV.OpenCV.Motion
       AI.CV.OpenCV.Contours
       AI.CV.OpenCV.Threshold
@@ -48,7 +56,7 @@ library
       AI.CV.OpenCV.FeatureDetection
    c-sources:
       src/AI/CV/OpenCV/Core/HOpenCV_wrap.c
-   other-modules: AI.CV.OpenCV.Core.CVOp AI.CV.OpenCV.Drawing
+   other-modules: 
    hs-Source-Dirs: src
    if os(windows)
      include-dirs: C:\\OpenCV2.2\\include
