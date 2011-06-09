@@ -32,6 +32,10 @@ source-repository head
   type: git
   location: git://github.com/acowley/HOpenCV.git
 
+Flag OpenCV21
+  Description: Link against OpenCV 2.1
+  Default:     False
+
 library
    exposed-modules:
       AI.CV.OpenCV.Core.CV
@@ -63,7 +67,11 @@ library
      extra-lib-dirs:     C:\\OpenCV2.2\\bin
      extra-libraries: cxcore220, cv220, highgui220
    else
-     extra-libraries: opencv_core,opencv_imgproc,opencv_highgui
+     if flag(OpenCV21)
+       CC-Options:      "-DOCV21"
+       extra-libraries: cv highgui
+     else
+       extra-libraries: opencv_core,opencv_imgproc,opencv_highgui
    build-depends: base >=4 && <5, 
                   template-haskell,
                   allocated-processor >= 0.0.1, 

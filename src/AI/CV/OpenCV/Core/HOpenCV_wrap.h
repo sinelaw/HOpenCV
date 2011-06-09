@@ -1,5 +1,10 @@
+#ifdef OCV21
+#include <opencv/cv.h>
+#include <opencv/highgui.h>
+#else
 #include <opencv2/imgproc/imgproc_c.h>
 #include <opencv2/core/core_c.h>
+#endif
 
 void debug_print_image_header(IplImage *image);
 
