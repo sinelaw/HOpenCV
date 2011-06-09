@@ -6,6 +6,7 @@ import AI.CV.OpenCV.Core.HIplImage
 import AI.CV.OpenCV.Core.HighGui
 import AI.CV.OpenCV.Core.CxCore (fromArr)
 import Control.Monad ((>=>))
+import Data.Bits ((.&.))
 import Data.Word (Word8)
 import Foreign.Ptr (castPtr)
 import Foreign.C.String (newCString)
@@ -53,4 +54,4 @@ namedWindow name flags =
 waitKey :: Int -> IO (Maybe Int)
 waitKey = cvWaitKey . fromIntegral >=> return . checkKey
   where checkKey (-1) = Nothing
-        checkKey x = Just (fromIntegral x)
+        checkKey x = Just (fromIntegral (x .&. 0xFF))
