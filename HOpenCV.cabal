@@ -63,9 +63,9 @@ library
    other-modules: 
    hs-Source-Dirs: src
    if os(windows)
-     include-dirs: C:\\OpenCV2.2\\include
-     extra-lib-dirs:     C:\\OpenCV2.2\\bin
-     extra-libraries: cxcore220, cv220, highgui220
+     include-dirs:	C:\\OpenCV2.2\\include
+     extra-lib-dirs:	C:\\OpenCV2.2\\bin
+     extra-libraries: 	opencv_core220,opencv_imgproc220,opencv_highgui220
    else
      if flag(OpenCV21)
        CC-Options:      "-DOCV21"
