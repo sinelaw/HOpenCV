@@ -12,9 +12,7 @@ description:
    .
    /Installation/
    .
-   You must install OpenCV (development packages) prior to installing this package. Currently tested on Ubuntu Linux 10.04, Mac OS 10.5 and 10.6.
-   .
-   Windows support is untested, but OpenCV is assumed to be installed in the @C:\\OpenCV2.2@ directory.
+   You must install OpenCV (development packages) prior to installing this package. Currently tested on Ubuntu Linux 11.04, Mac OS 10.5 and 10.6, Windows 7.
    .
    /Usage/
    .
