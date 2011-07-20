@@ -2,7 +2,8 @@
 module AI.CV.OpenCV.ColorConversion
     (convertGrayToRGB, convertGrayToBGR, 
      convertBGRToGray, convertRGBToGray,
-     convertBayerBgToBGR, convertBayerBgToRGB) where
+     convertBayerBgToBGR, convertBayerBgToRGB,
+     convertRGBToHSV, convertBGRToHSV, convertHSVToBGR) where
 import AI.CV.OpenCV.Core.CV
 import AI.CV.OpenCV.Core.HIplUtil
 import AI.CV.OpenCV.Core.ColorConversion
@@ -37,6 +38,21 @@ convertBayerBgToRGB :: HasDepth d =>
                        HIplImage MonoChromatic d -> HIplImage TriChromatic d
 convertBayerBgToRGB = convertColor cv_BayerBG2RGB
 {-# INLINE convertBayerBgToRGB #-}
+
+convertRGBToHSV :: HasDepth d =>
+                   HIplImage TriChromatic d -> HIplImage TriChromatic d
+convertRGBToHSV = convertColor cv_RGB2HSV
+{-# INLINE convertRGBToHSV #-}
+
+convertBGRToHSV :: HasDepth d =>
+                   HIplImage TriChromatic d -> HIplImage TriChromatic d
+convertBGRToHSV = convertColor cv_BGR2HSV
+{-# INLINE convertBGRToHSV #-}
+
+convertHSVToBGR :: HasDepth d =>
+                   HIplImage TriChromatic d -> HIplImage TriChromatic d
+convertHSVToBGR = convertColor cv_HSV2BGR
+{-# INLINE convertHSVToBGR #-}
 
 -- |Convert the color model of an image.
 convertColor :: (HasChannels c1, HasChannels c2, HasDepth d) =>
