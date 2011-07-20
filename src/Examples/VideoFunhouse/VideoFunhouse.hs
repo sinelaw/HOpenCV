@@ -46,6 +46,14 @@ boostSat x = convertHSVToBGR $ replaceChannel 1 s' hsv
         s' = convertScale 2.0 0 . isolateChannel 1 $ hsv
 {-# INLINE boostSat #-}
 
+-- Saturate and blur the borders
+centralFocus :: ColorImage -> ColorImage
+centralFocus img = withROI r (copy (setROI r img)) bg
+  where bg = smoothGaussian 35 . boostSat $ img
+        white = cvOrS (255,255,255) img
+        r = CvRect 150 100 340 280
+{-# INLINE centralFocus #-}
+
 -- A two-tone blueprint effect.
 blueprint x = toned `par` neon `pseq` add neon toned
   where g = convertRGBToGray x
@@ -119,6 +127,7 @@ main = do args <- getArgs
               checkKey b _ 54 = go b blueprint2      -- 6
               checkKey b _ 55 = go b blueprint2slow  -- 7
               checkKey b _ 56 = go b boostSat        -- 8
+              checkKey b _ 57 = go b centralFocus    -- 9
               checkKey b p 102 = go (not b) p
               checkKey _ _ 27 = close >> exitSuccess
               checkKey b p _ = go b p
@@ -153,6 +162,7 @@ showHelp = do p "Usage: VideoFunhouse [file]"
               p " 6 - A four-tone blueprint effect"
               p " 7 - Four-tone blueprint effect without par annotations"
               p " 8 - Saturation boost"
+              p " 9 - Focus on the middle"
               p ""
               p "Press Esc to exit."
     where p = putStrLn
