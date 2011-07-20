@@ -56,6 +56,7 @@ library
       AI.CV.OpenCV.ArrayOps
       AI.CV.OpenCV.Filtering
       AI.CV.OpenCV.FeatureDetection
+      AI.CV.OpenCV.Histograms
    c-sources:
       src/AI/CV/OpenCV/Core/HOpenCV_wrap.c
    other-modules: 
@@ -76,4 +77,4 @@ library
                   vector-space >= 0.7.2,
                   directory >= 1.0.1.0 && < 2,
                   vector == 0.7.*
-   ghc-options: -Wall -fno-warn-type-defaults -fno-warn-name-shadowing -O3 -funbox-strict-fields
+   ghc-options: -Wall -fno-warn-type-defaults -fno-warn-name-shadowing -O2 -funbox-strict-fields
