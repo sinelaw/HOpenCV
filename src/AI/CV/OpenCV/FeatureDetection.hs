@@ -1,4 +1,4 @@
-{-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE ForeignFunctionInterface, FlexibleContexts #-}
 -- |Feature Detection.
 module AI.CV.OpenCV.FeatureDetection (cornerHarris, cornerHarris', canny) where
 import Foreign.C.Types (CInt, CDouble)
@@ -16,11 +16,13 @@ harris src dst blockSize aperture k =
     where fi = fromIntegral
           rf = realToFrac
 
+type M = MonoChromatic
+
 -- |Equivalent to 'cornerHarris'' with an @aperture@ of @3@ and a @k@
 -- of @0.04@.
-cornerHarris :: ByteOrFloat d => 
-                Int -> HIplImage MonoChromatic d -> 
-                HIplImage MonoChromatic Float
+cornerHarris :: (ByteOrFloat d, InplaceROI r M d M Float) => 
+                Int -> HIplImage MonoChromatic d r -> 
+                HIplImage MonoChromatic Float r
 cornerHarris blockSize = cornerHarris' blockSize 3 0.04
 {-# INLINE cornerHarris #-}
 
@@ -32,9 +34,9 @@ cornerHarris blockSize = cornerHarris' blockSize 3 0.04
 -- @aperture@ size to be used by the Sobel operator that is run during
 -- corner evaluation, the value of @k@, and the source
 -- 'HIplImage'.
-cornerHarris' :: ByteOrFloat d => 
-                 Int -> Int -> Double -> HIplImage MonoChromatic d -> 
-                 HIplImage MonoChromatic Float
+cornerHarris' :: (ByteOrFloat d, InplaceROI r M d M Float) => 
+                 Int -> Int -> Double -> HIplImage MonoChromatic d r -> 
+                 HIplImage MonoChromatic Float r
 cornerHarris' blockSize aperture k = 
     cv2 $ \src dst -> harris src dst blockSize aperture k
 {-# INLINE cornerHarris' #-}
@@ -47,9 +49,9 @@ foreign import ccall "opencv2/imgprog/imgproc_c.h cvCanny"
 -- thresholds used to find initial segments of strong edges while the
 -- smaller threshold is used for edge linking. The third parameter is
 -- the aperture size used for initial Sobel operator edge detection.
-canny :: HasDepth d =>
-         Double -> Double -> Int -> HIplImage MonoChromatic d -> 
-         HIplImage MonoChromatic d
+canny :: (HasDepth d, InplaceROI r M d M d) =>
+         Double -> Double -> Int -> HIplImage MonoChromatic d r -> 
+         HIplImage MonoChromatic d r
 canny t1 t2 aperture = 
     cv2 $ \src dst -> c_cvCanny src dst (rf t1) (rf t2) (fi aperture)
     --cv $ \src -> c_cvCanny src src (rf t1) (rf t2) (fi aperture)

@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, MultiParamTypeClasses, FlexibleInstances #-}
 -- |Combinators that fuse compositions of image processing operations
 -- for in-place mutation.
 --
@@ -17,14 +17,16 @@
 -- with such an operation, must have a destination image
 -- allocated. This is cheaper than duplicating the input image as with
 -- operations wrapped by the `cv` combinator.
-module AI.CV.OpenCV.Core.CVOp (cv, cv2) where
+module AI.CV.OpenCV.Core.CVOp (cv, InplaceROI(..)) where
 import AI.CV.OpenCV.Core.CxCore (IplArrayType, CvArr)
 import AI.CV.OpenCV.Core.HIplUtil
+import AI.CV.OpenCV.Core.HIplImage
 import Control.Monad ((>=>), void)
 import Data.Monoid
-import Foreign.Ptr
 import Foreign.ForeignPtr
+import Foreign.Ptr
 import System.IO.Unsafe
+import Data.Word (Word8, Word16)
 
 -- |A CV operation is an IO function on a 'HIplImage'.
 newtype CVOp c d = CVOp { op :: Ptr CvArr -> IO () }
@@ -32,9 +34,9 @@ newtype CVOp c d = CVOp { op :: Ptr CvArr -> IO () }
 -- |A wrapper for operations that mutate an array in-place. The input
 -- to such operations must be duplicated before being passed to the
 -- operation.
-cv :: forall a c d e.
-      (HasChannels c, HasDepth d, IplArrayType e) => 
-      (Ptr e -> IO a) -> HIplImage c d -> HIplImage c d
+cv :: forall a c d e r1 r2.
+      (HasChannels c, HasDepth d, ImgBuilder r1, ImgBuilder r2, IplArrayType e) => 
+      (Ptr e -> IO a) -> HIplImage c d r1 -> HIplImage c d r2
 cv = runCV . mkCVOp
     where mkCVOp :: (Ptr e -> IO a) -> CVOp c d
           mkCVOp f = CVOp (void . f. castPtr)
@@ -45,31 +47,31 @@ instance Monoid (CVOp c d) where
   CVOp f `mappend` CVOp g = CVOp (\x -> g x >> f x)
   {-# INLINE mappend #-}
 
-withClone :: (HasChannels c, HasDepth d) =>
-             (Ptr e -> IO a) -> HIplImage c d -> IO (HIplImage c d)
+withClone :: (HasChannels c, HasDepth d, ImgBuilder r1, ImgBuilder r2) =>
+             (Ptr e -> IO a) -> HIplImage c d r1 -> IO (HIplImage c d r2)
 withClone f = duplicateImagePtr >=> flip withForeignPtr (\x -> f (castPtr x) >> 
                                                                fromPtr x)
 
 -- |Run a 'CVOp'.
-runCV :: (HasChannels c, HasDepth d) => 
-         CVOp c d -> HIplImage c d -> HIplImage c d
+runCV :: (HasChannels c, HasDepth d, ImgBuilder r1, ImgBuilder r2) => 
+         CVOp c d -> HIplImage c d r1 -> HIplImage c d r2
 runCV = (unsafePerformIO .) . withClone . op
 {-# NOINLINE runCV #-}
 
 -- Apply a binary function to the same argument twice.
-dupArg :: (Ptr e -> Ptr e -> IO ()) -> Ptr e -> IO ()
+dupArg :: (Ptr e -> Ptr e -> IO a) -> Ptr e -> IO a
 dupArg f = \x -> f x x
 
 -- |Wrapper for operations that want an argument /and/ a compatible
 -- destination buffer, but don't need a clone of an input.
-cv2 :: forall a c1 d1 c2 d2 e.
-       (HasChannels c1, HasDepth d1, HasChannels c2, HasDepth d2, 
-        IplArrayType e) => 
-       (Ptr e -> Ptr e -> IO a) -> HIplImage c1 d1 -> HIplImage c2 d2
-cv2 = runBinOp . mkBinOp
+cv2Alloc :: forall a c1 d1 c2 d2 e r.
+            (HasChannels c1, HasDepth d1, HasChannels c2, HasDepth d2, 
+             IplArrayType e, ImgBuilder r) => 
+            (Ptr e -> Ptr e -> IO a) -> HIplImage c1 d1 r -> HIplImage c2 d2 r
+cv2Alloc = runBinOp . mkBinOp
     where mkBinOp :: (Ptr e -> Ptr e -> IO a) -> BinOp (c1,d1) (c2,d2)
           mkBinOp f = BinOp (\x y -> void (f (castPtr x) (castPtr y)))
-{-# INLINE cv2 #-}
+{-# INLINE cv2Alloc #-}
 
 bi2unary :: BinOp (c,d) (c,d) -> CVOp c d
 bi2unary = CVOp . dupArg . binop
@@ -81,6 +83,63 @@ unary2bi = BinOp . const . op
 (<>) = mappend
 {-# INLINE (<>) #-}
 
+-- Some operations really benefit from operating in-place over a defined ROI.
+class (HasChannels c1, HasDepth d1, HasChannels c2, HasDepth d2, ImgBuilder r) =>
+      InplaceROI r c1 d1 c2 d2 where
+  cv2 :: IplArrayType e =>
+           (Ptr e -> Ptr e -> IO a) -> HIplImage c1 d1 r -> HIplImage c2 d2 r
+  cv2 = cv2Alloc
+  {-# INLINE cv2 #-}
+
+instance (HasChannels c, HasDepth d) => InplaceROI HasROI c d c d where
+  cv2 = cv . dupArg
+  {-# INLINE cv2 #-}
+
+instance (HasDepth d1, HasDepth d2) => 
+         InplaceROI HasROI TriChromatic d1 MonoChromatic d2 where
+  cv2 = cv2Alloc
+  {-# INLINE cv2 #-}
+
+instance (HasDepth d1, HasDepth d2) => 
+         InplaceROI HasROI MonoChromatic d1 TriChromatic d2 where
+  cv2 = cv2Alloc
+  {-# INLINE cv2 #-}
+
+instance (HasChannels c1, HasChannels c2) => 
+         InplaceROI HasROI c1 Word8 c2 Float where
+  cv2 = cv2Alloc
+  {-# INLINE cv2 #-}
+
+instance (HasChannels c1, HasChannels c2) => 
+         InplaceROI HasROI c1 Word8 c2 Word16 where
+  cv2 = cv2Alloc
+  {-# INLINE cv2 #-}
+
+instance (HasChannels c1, HasChannels c2) => 
+         InplaceROI HasROI c1 Word8 c2 Double where
+  cv2 = cv2Alloc
+  {-# INLINE cv2 #-}
+
+instance (HasChannels c1, HasChannels c2) => 
+         InplaceROI HasROI c1 Double c2 Word8 where
+  cv2 = cv2Alloc
+  {-# INLINE cv2 #-}
+
+instance (HasChannels c1, HasChannels c2) => 
+         InplaceROI HasROI c1 Word16 c2 Word8 where
+  cv2 = cv2Alloc
+  {-# INLINE cv2 #-}
+
+instance (HasChannels c1, HasChannels c2) => 
+         InplaceROI HasROI c1 Float c2 Word8 where
+  cv2 = cv2Alloc
+  {-# INLINE cv2 #-}
+
+instance (HasChannels c1, HasDepth d1, HasChannels c2, HasDepth d2) =>
+         InplaceROI NoROI c1 d1 c2 d2 where
+  cv2 = cv2Alloc
+  {-# INLINE cv2 #-}
+
 newtype BinOp a b = 
     BinOp { binop :: Ptr CvArr -> Ptr CvArr -> IO () }
 
@@ -89,16 +148,17 @@ cbop :: BinOp b b -> BinOp a b -> BinOp a b
 cbop (BinOp f) (BinOp g) = BinOp $ \x y -> g x y >> f y y
 
 withDst :: (HasChannels c1, HasDepth d1, HasChannels c2, HasDepth d2, 
-            IplArrayType e) => 
+            ImgBuilder r, IplArrayType e) => 
            (Ptr e -> Ptr e -> IO a) ->
-           HIplImage c1 d1 -> IO (HIplImage c2 d2)
-withDst f img = do img2 <- mkHIplImage (width img) (height img)
+           HIplImage c1 d1 r -> IO (HIplImage c2 d2 r)
+withDst f img = do img2' <- mkHIplImage (width img) (height img)
+                   let img2 = addMaybeROI (roi img) img2'
                    _ <- withHIplImage img2 go
                    return img2
     where go x = withHIplImage img (flip f (castPtr x) . castPtr)
 
-runBinOp :: (HasChannels c1, HasDepth d1, HasChannels c2, HasDepth d2) => 
-            BinOp (c1,d1) (c2,d2) -> HIplImage c1 d1 -> HIplImage c2 d2
+runBinOp :: (HasChannels c1, HasDepth d1, HasChannels c2, HasDepth d2, ImgBuilder r) => 
+            BinOp (c1,d1) (c2,d2) -> HIplImage c1 d1 r -> HIplImage c2 d2 r
 runBinOp = (unsafePerformIO .) . withDst . binop
 {-# NOINLINE runBinOp #-}
 

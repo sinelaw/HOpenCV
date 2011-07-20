@@ -181,6 +181,15 @@ void c_cvSetRoi(IplImage* img, int x, int y, int width, int height)
   cvSetImageROI(img, cvRect(x,y,width,height));
 }
 
+void c_cvGetROI(IplImage* img, int* rptr)
+{
+    CvRect r = cvGetImageROI(img);
+    rptr[0] = r.x; 
+    rptr[1] = r.y;
+    rptr[2] = r.width;
+    rptr[3] = r.height;
+}
+
 void c_cvAvg(const CvArr *img, const CvArr *mask, double* avg)
 {
   CvScalar s = cvAvg(img, mask);

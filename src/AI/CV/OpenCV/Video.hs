@@ -30,7 +30,7 @@ queryFrameLoop cap = do f <- cvQueryFrame cap
 -- available either due to error or the end of the video sequence,
 -- 'Nothing' is returned.
 createFileCapture :: (HasChannels c, HasDepth d) => 
-                     FilePath -> IO (IO (Maybe (HIplImage c d)))
+                     FilePath -> IO (IO (Maybe (HIplImage c d NoROI)))
 createFileCapture fname = do capture <- createFileCaptureF fname
                              return (withForeignPtr capture $ \cap ->
                                        do f <- cvQueryFrame cap
@@ -43,7 +43,7 @@ createFileCapture fname = do capture <- createFileCaptureF fname
 -- frames will return to its beginning when the end of the video is
 -- encountered.
 createFileCaptureLoop :: (HasChannels c, HasDepth d) =>
-                         FilePath -> IO (IO (HIplImage c d))
+                         FilePath -> IO (IO (HIplImage c d NoROI))
 createFileCaptureLoop fname = do capture <- createFileCaptureF fname
                                  return (withForeignPtr capture $ 
                                          (>>= fromPtr) . queryFrameLoop)
@@ -54,7 +54,7 @@ createFileCaptureLoop fname = do capture <- createFileCaptureF fname
 -- matter what camera is used. The returned action may be used to
 -- query for the next available frame.
 createCameraCapture :: (HasChannels c, HasDepth d) =>
-                       Maybe Int -> IO (IO (HIplImage c d))
+                       Maybe Int -> IO (IO (HIplImage c d NoROI))
 createCameraCapture cam = do cvInit
                              capture <- createCameraCaptureF cam'
                              return (withForeignPtr capture $ 
@@ -70,9 +70,9 @@ mpeg4CC = ('F','M','P','4')
 -- (e.g. @(\'F\',\'M\',\'P\',\'4\')@ for MPEG-4), the framerate of the
 -- created video stream, and the size of the video frames. The
 -- returned action may be used to add frames to the video stream.
-createVideoWriter :: (HasChannels c, HasDepth d) =>
+createVideoWriter :: (HasChannels c, HasDepth d, ImgBuilder r) =>
                      FilePath -> FourCC -> Double -> (Int,Int) -> 
-                     IO (HIplImage c d -> IO ())
+                     IO (HIplImage c d r -> IO ())
 createVideoWriter fname codec fps sz = 
     do writer <- createVideoWriterF fname codec fps sz
        let writeFrame img = withForeignPtr writer $ \writer' ->

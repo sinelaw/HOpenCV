@@ -40,15 +40,6 @@ twoTone g = light t `cvOr` dark t
 neonEdges :: GrayImage -> ColorImage
 neonEdges = convertGrayToRGB . smoothGaussian 3 . dilate 1 . canny 70 110 3
 
-neonEdges' :: ColorImage -> ColorImage
-neonEdges' x = hedges `cvOr` sedges `cvAnd` (cvNot vedges)
-  where hsv = convertBGRToHSV x
-        glow = convertGrayToRGB . smoothGaussian 5 . dilate 1 . canny 70 110 3
-        hedges = cvAndS (0,255,255) . glow . isolateChannel 0 $ hsv
-        sedges = cvAndS (0,255,120) . glow . isolateChannel 1 $ hsv
-        vedges = convertGrayToRGB . thresholdBinary 200 255 . smoothGaussian 5 . dilate 1 . canny 70 110 3 . isolateChannel 2 $ hsv
-{-# INLINE neonEdges #-}
-
 -- Boost saturation
 boostSat x = convertHSVToBGR $ replaceChannel 1 s' hsv
   where hsv = convertBGRToHSV x
@@ -59,7 +50,7 @@ boostSat x = convertHSVToBGR $ replaceChannel 1 s' hsv
 blueprint x = toned `par` neon `pseq` add neon toned
   where g = convertRGBToGray x
         toned = twoTone g
-        neon = neonEdges' x --g
+        neon = neonEdges g
 {-# INLINE blueprint #-}
 
 -- No parallelism

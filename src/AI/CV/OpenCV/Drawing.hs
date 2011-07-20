@@ -41,10 +41,10 @@ defaultFont = unsafePerformIO $ initFont NormalSans False 1 1 0 1 EightConn
 -- a text-drawing function using a font with the given @face@ (which
 -- may be @italic@), horizontal and verticale scale, and line
 -- @thickness@.
-prepFont :: (HasChannels c, HasDepth d) =>
+prepFont :: (HasChannels c, HasDepth d, ImgBuilder r) =>
             FontFace -> Bool -> CDouble -> CDouble -> CInt -> 
             IO ((CInt, CInt) -> (CDouble, CDouble, CDouble) -> String -> 
-                HIplImage c d -> HIplImage c d)
+                HIplImage c d r -> HIplImage c d r)
 prepFont face italic hscale vscale thickness = 
     prepFontAlt face italic hscale vscale 0 thickness EightConn
 {-# INLINE prepFont #-}
@@ -54,11 +54,11 @@ prepFont face italic hscale vscale thickness =
 -- ltype@ produces a text-drawing function using a font with the given
 -- @face@ (which may be @italic@), horizontal and vertical scale,
 -- @shear@, line @thickness@, and line type.
-prepFontAlt :: (HasChannels c, HasDepth d) =>
+prepFontAlt :: (HasChannels c, HasDepth d, ImgBuilder r) =>
                FontFace -> Bool -> CDouble -> CDouble -> CDouble -> 
                CInt -> LineType ->
                IO ((CInt, CInt) -> (CDouble, CDouble, CDouble) -> String -> 
-                   HIplImage c d -> HIplImage c d)
+                   HIplImage c d r -> HIplImage c d r)
 prepFontAlt face italic hscale vscale shear thickness ltype =     
     do f <- initFont face italic hscale vscale shear thickness ltype
        let go (x,y) (r,g,b) msg = cv $ \dst -> 
@@ -68,9 +68,9 @@ prepFontAlt face italic hscale vscale shear thickness ltype =
        return go
 {-# INLINE prepFontAlt #-}
 
-putText :: (HasChannels c, HasDepth d) => 
+putText :: (HasChannels c, HasDepth d, ImgBuilder r) => 
            (CInt, CInt) -> (CDouble, CDouble, CDouble) -> String -> 
-           HIplImage c d -> HIplImage c d
+           HIplImage c d r -> HIplImage c d r
 putText (x,y) (r,g,b) msg = cv $ \dst ->
                             withCString msg $ \msg' ->
                                 cvPutText dst msg' x y defaultFont r g b
@@ -97,9 +97,9 @@ lineTypeEnum AALine    = 16
 -- |Draw each line, defined by its endpoints, on a duplicate of the
 -- given 'HIplImage' using the specified RGB color, line thickness,
 -- and aliasing style.
-drawLines :: (HasChannels c, HasDepth d) =>
+drawLines :: (HasChannels c, HasDepth d, ImgBuilder r) =>
              RGB -> Int -> LineType -> [((Int,Int),(Int,Int))] -> 
-             HIplImage c d -> HIplImage c d
+             HIplImage c d r -> HIplImage c d r
 drawLines col thick lineType lines = 
     cv $ \img -> mapM_ (draw img) lines
     where draw ptr (pt1, pt2) = cvLine ptr pt1 pt2 col thick lineType'

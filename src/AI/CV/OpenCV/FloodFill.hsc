@@ -55,9 +55,9 @@ floodHelper (x,y) newVal loDiff upDiff range src =
 -- painting should be compared to the seed pixel ('FloodFixed') or to
 -- their neighbors ('FloodFloating'); the source image.
 floodFill :: (ByteOrFloat d, HasChannels c, HasScalar c d, 
-              IsCvScalar s, s ~ CvScalar c d) => 
-             (Int, Int) -> s -> s -> s -> FloodRange -> HIplImage c d -> 
-             HIplImage c d
+              IsCvScalar s, s ~ CvScalar c d, ImgBuilder r) => 
+             (Int, Int) -> s -> s -> s -> FloodRange -> HIplImage c d r -> 
+             HIplImage c d r
 floodFill seed newVal loDiff upDiff range = 
     cv $ floodHelper seed (toCvScalar newVal) (toCvScalar loDiff)
                      (toCvScalar upDiff) range

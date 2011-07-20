@@ -20,7 +20,7 @@ import Unsafe.Coerce (unsafeCoerce)
 -- pixel data that excludes these unused bytes. If the original image
 -- data is already packed, it is returned as a 'V.Vector' without
 -- copying.
-packPixels :: (HasChannels c, HasDepth d) => HIplImage c d -> V.Vector d
+packPixels :: (HasChannels c, HasDepth d) => HIplImage c d NoROI -> V.Vector d
 packPixels img = 
     if w' == stride 
     then pixels img
@@ -46,7 +46,8 @@ packPixels img =
 
 -- |Return a Vector of bytes of a single color channel from a
 -- tri-chromatic image. The desired channel must be one of 0, 1, or 2.
-isolateChannel :: HasDepth d => Int -> HIplImage TriChromatic d -> V.Vector d
+isolateChannel :: HasDepth d => 
+                  Int -> HIplImage TriChromatic d NoROI -> V.Vector d
 isolateChannel ch img = 
     if ch < 0 || ch >= 3
     then error $ "Invalid channel "++show ch++" for trichromatic image"
@@ -65,7 +66,8 @@ isolateChannel ch img =
 {-# INLINE isolateChannel #-}
 
 -- |Convert an 'HIplImage' \'s pixel data to a 'V.Vector' of monochromatic bytes.
-toMono :: (HasChannels c, HasDepth d, Integral d) => HIplImage c d -> V.Vector d
+toMono :: (HasChannels c, HasDepth d, Integral d) => 
+          HIplImage c d NoROI -> V.Vector d
 toMono img = if imgChannels img == 1 then packPixels img
              else packPixels . convertRGBToGray . isColor $ unsafeCoerce img
 

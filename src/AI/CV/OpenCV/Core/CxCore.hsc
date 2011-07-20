@@ -53,7 +53,10 @@ instance VectorSpace CvSize where
   type Scalar CvSize = Double -- todo: use CInt instead of Double here?
   a *^ s = liftCvSize (a*) s
 
-data CvRect  = CvRect { rectX :: CInt, rectY :: CInt, rectWidth :: CInt, rectHeight :: CInt }
+data CvRect  = CvRect { rectX      :: {-# UNPACK #-} !CInt
+                      , rectY      :: {-# UNPACK #-} !CInt
+                      , rectWidth  :: {-# UNPACK #-} !CInt
+                      , rectHeight :: {-# UNPACK #-} !CInt }
                deriving (Show, Eq)
                         
 instance Storable CvRect where
@@ -201,11 +204,11 @@ createImageF x y z = createForeignPtr cp_release_image $ cvCreateImage x y z
 foreign import ccall "opencv2/core/core_c.h cvCloneImage"
   c_cvCloneImage :: Ptr IplImage -> IO (Ptr IplImage)
 
-cvCloneImage :: Ptr IplImage -> IO (Ptr IplImage)
-cvCloneImage = errorName "Failed to clone image" . checkPtr . c_cvCloneImage
+cloneImage :: Ptr IplImage -> IO (Ptr IplImage)
+cloneImage = errorName "Failed to clone image" . checkPtr . c_cvCloneImage
                   
 cloneImageF :: Ptr IplImage -> IO (ForeignPtr IplImage)
-cloneImageF x = createForeignPtr cp_release_image $ cvCloneImage x
+cloneImageF x = createForeignPtr cp_release_image $ cloneImage x
   
 foreign import ccall "HOpenCV_wrap.h get_size"
   c_get_size :: Ptr CvArr -> Ptr CvSize -> IO ()

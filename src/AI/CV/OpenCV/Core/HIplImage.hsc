@@ -1,12 +1,16 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, ScopedTypeVariables, 
              TypeFamilies, MultiParamTypeClasses, FlexibleInstances, GADTs, 
              BangPatterns, FlexibleContexts #-}
+{-# OPTIONS_GHC -funbox-strict-fields #-}
 module AI.CV.OpenCV.Core.HIplImage 
     ( TriChromatic, MonoChromatic, HasChannels(..), HasDepth(..), 
       HIplImage(..), mkHIplImage, mkBlackImage, withHIplImage, bytesPerPixel, 
-      ByteOrFloat, HasScalar(..), IsCvScalar(..), freeROI) where
+      ByteOrFloat, HasScalar(..), IsCvScalar(..), freeROI, c_cvSetImageROI, 
+      c_cvResetImageROI, origin, width, height, imageSize, roi, imageData, 
+      widthStep, imageDataOrigin, addROI, resetROI, ImgBuilder(..), 
+      HasROI, NoROI) where
 import AI.CV.OpenCV.Core.CxCore (IplImage,Depth(..),iplDepth8u, iplDepth16u,
-                                 iplDepth32f, iplDepth64f, cvFree)
+                                 iplDepth32f, iplDepth64f, cvFree, CvRect(..))
 import AI.CV.OpenCV.Core.CV (cvCvtColor)
 import AI.CV.OpenCV.Core.ColorConversion (cv_GRAY2BGR, cv_BGR2GRAY)
 import Control.Applicative ((<$>))
@@ -16,6 +20,7 @@ import Data.Word (Word8, Word16)
 import Foreign.C.Types
 import Foreign.ForeignPtr
 import Foreign.Marshal.Alloc (alloca)
+import Foreign.Marshal.Array (allocaArray, peekArray)
 import Foreign.Ptr
 import Foreign.Storable
 import Unsafe.Coerce
@@ -136,29 +141,78 @@ bytesPerPixel :: HasDepth d => d -> Int
 bytesPerPixel = (`div` 8) . fromIntegral . unSign . unDepth . depth
     where unSign = (complement #{const IPL_DEPTH_SIGN} .&.)
 
-
 -- |A data structure representing the information OpenCV uses from an
 -- 'IplImage' struct. It includes the pixel origin, image width, image
 -- height, image size (number of bytes), a pointer to the pixel data,
 -- and the row stride. Its type is parameterized by the number of
 -- color channels (i.e. 'MonoChromatic' or 'TriChromatic'), and the
 -- pixel depth (e.g. 'Word8', 'Float').
-data HIplImage c d = (HasChannels c, HasDepth d) => 
-                     HIplImage { origin          :: {-# UNPACK #-} !CInt
-                               , width           :: {-# UNPACK #-} !CInt
-                               , height          :: {-# UNPACK #-} !CInt
-                               , imageSize       :: {-# UNPACK #-} !CInt
-                               , imageData       :: {-# UNPACK #-} !(ForeignPtr d)
-                               , imageDataOrigin :: {-# UNPACK #-} !(ForeignPtr d)
-                               , widthStep       :: {-# UNPACK #-} !CInt }
+-- data HIplImage c d = (HasChannels c, HasDepth d) => 
+--                      HIplImage { origin          :: {-# UNPACK #-} !CInt
+--                                , width           :: {-# UNPACK #-} !CInt
+--                                , height          :: {-# UNPACK #-} !CInt
+--                                , roi             :: !(Maybe CvRect)
+--                                , imageSize       :: {-# UNPACK #-} !CInt
+--                                , imageData       :: {-# UNPACK #-} !(ForeignPtr d)
+--                                , imageDataOrigin :: {-# UNPACK #-} !(ForeignPtr d)
+--                                , widthStep       :: {-# UNPACK #-} !CInt }
+
+data HasROI
+data NoROI
+
+data HIplImage c d r where
+  Img :: (HasChannels c, HasDepth d) => 
+         !CInt -> !CInt -> !CInt -> !CInt -> !(ForeignPtr d) -> !(ForeignPtr d) -> 
+         !CInt -> HIplImage c d NoROI
+  ImgR :: (HasChannels c, HasDepth d) => 
+          !CInt -> !CInt -> !CInt -> !CvRect -> !CInt -> !(ForeignPtr d) -> 
+          !(ForeignPtr d) -> !CInt -> HIplImage c d HasROI
+
+origin :: HIplImage c d r -> CInt
+origin (Img o _ _ _ _ _ _) = o
+origin (ImgR o _ _ _ _ _ _ _) = o
+
+imageSize :: HIplImage c d r -> CInt
+imageSize (Img _ _ _ s _ _ _) = s
+imageSize (ImgR _ _ _ _ s _ _ _) = s
+
+roi :: HIplImage c d r -> Maybe CvRect
+roi (ImgR _ _ _ r _ _ _ _) = Just r
+roi _ = Nothing
+
+imageData :: HIplImage c d r -> ForeignPtr d
+imageData (Img _ _ _ _ p _ _) = p
+imageData (ImgR _ _ _ _ _ p _ _) = p
+
+imageDataOrigin :: HIplImage c d r -> ForeignPtr d
+imageDataOrigin (Img _ _ _ _ _ p _) = p
+imageDataOrigin (ImgR _ _ _ _ _ _ p _) = p
+
+width,height,widthStep :: HIplImage c d r -> CInt
+width (Img _ w _ _ _ _ _) = w
+width (ImgR _ w _ _ _ _ _ _) = w
+height (Img _ _ h _ _ _ _) = h
+height (ImgR _ _ h _ _ _ _ _) = h
+widthStep (Img _ _ _ _ _ _ ws) = ws
+widthStep (ImgR _ _ _ _ _ _ _ ws) = ws
+
+addROI :: CvRect -> HIplImage c d r -> HIplImage c d HasROI
+addROI r (Img o w h sz d ido ws) = ImgR o w h r sz d ido ws
+addROI r (ImgR o w h _ sz d ido ws) = ImgR o w h r sz d ido ws
+{-# INLINE addROI #-}
+
+resetROI :: HIplImage c d r -> HIplImage c d NoROI
+resetROI x@(Img _ _ _ _ _ _ _) = x
+resetROI (ImgR o w h _ sz d ido ws) = Img o w h sz d ido ws
+{-# INLINE resetROI #-}
 
 -- |Prepare a 'HIplImage' of the given width and height. The pixel and
 -- color depths are gleaned from the type, and may often be inferred.
 mkHIplImage :: forall a c d. (HasChannels c, HasDepth d, Integral a) => 
-               a -> a -> IO (HIplImage c d)
+               a -> a -> IO (HIplImage c d NoROI)
 mkHIplImage w' h' = 
     do ptr <- mallocForeignPtrArray (fromIntegral numBytes)
-       return $ HIplImage 0 w h numBytes ptr ptr stride
+       return $ Img 0 w h numBytes ptr ptr stride
     where w = fromIntegral w'
           h = fromIntegral h'
           numBytes = stride * h
@@ -172,7 +226,7 @@ foreign import ccall "memset"
 -- |Prepare a 'HIplImage' of the given width and height. Set all
 -- pixels to zero.
 mkBlackImage :: (HasChannels c, HasDepth d, Integral a) => 
-                a -> a -> IO (HIplImage c d)
+                a -> a -> IO (HIplImage c d NoROI)
 mkBlackImage w h = do img <- mkHIplImage (fromIntegral w) (fromIntegral h)
                       let sz = fromIntegral $ imageSize img
                       withForeignPtr (imageData img) $ \ptr ->
@@ -182,17 +236,35 @@ mkBlackImage w h = do img <- mkHIplImage (fromIntegral w) (fromIntegral h)
 -- |Provides the supplied function with a 'Ptr' to the 'IplImage'
 -- underlying the given 'HIplImage'.
 withHIplImage :: (HasChannels c, HasDepth d) =>
-                 HIplImage c d -> (Ptr IplImage -> IO b) -> IO b
+                 HIplImage c d r -> (Ptr IplImage -> IO b) -> IO b
 withHIplImage img f = alloca $ 
                       \p -> withForeignPtr (imageData img) 
                                            (\hp -> pokeIpl img p (castPtr hp) >>
-                                                   f p)
+                                                   withROI img p f)
+
+withROI :: (HasChannels c, HasDepth d) => 
+           HIplImage c d r -> Ptr IplImage -> (Ptr IplImage -> IO a) -> IO a
+withROI img p f = case roi img of
+                    Nothing -> f p
+                    Just (CvRect x y w h) -> do c_cvSetImageROI p x y w h
+                                                r <- f p
+                                                c_cvResetImageROI p
+                                                return r
+
+foreign import ccall "HOpenCV_wrap.h c_cvSetRoi"
+  c_cvSetImageROI :: Ptr IplImage -> CInt -> CInt -> CInt -> CInt -> IO ()
+
+foreign import ccall "opencv2/core/core_c.h cvResetImageROI"
+  c_cvResetImageROI :: Ptr IplImage -> IO ()
+
+foreign import ccall "HOpenCV_wrap.h c_cvGetROI"
+  c_cvGetImageROI :: Ptr IplImage -> Ptr CInt -> IO ()
 
 -- Poke a 'Ptr' 'IplImage' with a specific imageData 'Ptr' that is
 -- currently valid. This is solely an auxiliary function to
 -- 'withHIplImage'.
-pokeIpl :: forall c d. (HasChannels c, HasDepth d) => 
-           HIplImage c d -> Ptr IplImage -> Ptr Word8 -> IO ()
+pokeIpl :: forall c d r. (HasChannels c, HasDepth d) => 
+           HIplImage c d r -> Ptr IplImage -> Ptr Word8 -> IO ()
 pokeIpl himg ptr hp =
     do (#poke IplImage, nSize) ptr ((#size IplImage)::Int)
        (#poke IplImage, ID) ptr (0::Int)
@@ -216,6 +288,31 @@ freeROI :: Ptr IplImage -> IO ()
 freeROI ptr = do p <- (#peek IplImage, roi) ptr
                  if (ptrToIntPtr p == 0) then return () else cvFree p
 
+maybePeek :: Ptr IplImage -> Ptr () -> IO (Maybe CvRect)
+maybePeek img p | p == nullPtr = return Nothing
+                | otherwise = allocaArray 4 $ 
+                              \r -> do c_cvGetImageROI img r
+                                       [x,y,w,h] <- peekArray 4 r
+                                       return . Just $ CvRect x y w h
+
+class ImgBuilder a where
+  buildImg :: (HasChannels c, HasDepth d) =>
+              CInt -> CInt -> CInt -> Maybe CvRect -> CInt ->
+              ForeignPtr d -> ForeignPtr d -> CInt -> HIplImage c d a
+  addMaybeROI :: Maybe CvRect -> (HIplImage c d r) -> HIplImage c d a
+
+instance ImgBuilder NoROI where
+  buildImg o w h Nothing sz d ido ws = Img o w h sz d ido ws
+  buildImg _ _ _ _ _ _ _ _ = error "Building a NoROI image, but was given a ROI!"
+  addMaybeROI Nothing x = resetROI x
+  addMaybeROI _ _ = error "addMaybeROI tried to add a ROI to a NoROI Image!"
+
+instance ImgBuilder HasROI where
+  buildImg o w h (Just r) sz d ido ws = ImgR o w h r sz d ido ws
+  buildImg _ _ _ _ _ _ _ _ = error "Building a ROI image, but wasn't given a ROI!"
+  addMaybeROI (Just r) x = addROI r x
+  addMaybeROI _ _ = error "addMaybeROI tried to add a null ROI to a HasROI Image!"
+
 -- |An 'HIplImage' in Haskell is isomorphic with OpenCV's 'IplImage'
 -- structure type. They share the same binary representation through
 -- 'HIplImage' \'s 'Storable' instance. This allows for safe casts
@@ -226,8 +323,8 @@ freeROI ptr = do p <- (#peek IplImage, roi) ptr
 -- values constructed within the Haskell runtime, on the other hand,
 -- do have their underlying pixel data buffers registered with a
 -- finalizer.
-instance forall c d. (HasChannels c, HasDepth d) => 
-    Storable (HIplImage c d) where
+instance forall c d r. (HasChannels c, HasDepth d, ImgBuilder r) => 
+    Storable (HIplImage c d r) where
     sizeOf _ = (#size IplImage)
     alignment _ = alignment (undefined :: CDouble)
     poke = error "Poking a Ptr HIplImage is unsafe."
@@ -236,12 +333,14 @@ instance forall c d. (HasChannels c, HasDepth d) =>
       depth' <- Depth <$> (#peek IplImage, depth) ptr
       width' <- (#peek IplImage, width) ptr
       height' <- (#peek IplImage, height) ptr
+      roir <- (#peek IplImage, roi) ptr >>= maybePeek (castPtr ptr)
       when (depth' /= (depth (undefined::d)))
            (error $ "IplImage has depth "++show depth'++
                     " but desired HIplImage has depth "++
                     show (depth (undefined::d)))
       if numChannels (undefined::c) /= numChannels'
-        then do img2 <- mkHIplImage width' height' :: IO (HIplImage c d)
+        then do img2' <- mkHIplImage width' height' :: IO (HIplImage c d NoROI)
+                let img2 = addMaybeROI roir img2' :: HIplImage c d r
                 let conv = if numChannels' == 1 
                            then cv_GRAY2BGR
                            else cv_BGR2GRAY
@@ -256,5 +355,10 @@ instance forall c d. (HasChannels c, HasDepth d) =>
                 imageData' <- (#peek IplImage, imageData) ptr >>= newForeignPtr_
                 imageDataOrigin' <- (#peek IplImage, imageDataOrigin) ptr >>= newForeignPtr_
                 widthStep' <- (#peek IplImage, widthStep) ptr
-                return $ HIplImage origin' width' height' imageSize' 
-                                   imageData' imageDataOrigin' widthStep'
+                return $ buildImg origin' width' height' roir imageSize'
+                                  imageData' imageDataOrigin' widthStep'
+                -- return $ case roir of
+                --            Nothing -> Img origin' width' height' imageSize' 
+                --                           imageData' imageDataOrigin' widthStep'
+                --            Just r -> ImgR origin' width' height' r imageSize' 
+                --                           imageData' imageDataOrigin' widthStep'

@@ -37,6 +37,7 @@ void c_cvLine(CvArr *img, int x1, int y1, int x2, int y2, double r, double g,
               double b, int thickness, int lineType, int shift);
 
 void c_cvSetRoi(IplImage* img, int x, int y, int width, int height);
+void c_cvGetROI(IplImage* img, int* rptr);
 
 void c_cvPutText(CvArr *img, const char* msg, int x, int y, 
                  double r, double g, double b);

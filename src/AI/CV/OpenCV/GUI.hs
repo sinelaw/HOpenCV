@@ -17,14 +17,15 @@ bool _ f False = f
 
 -- |Simple window runner. Takes an action that produces images to be
 -- shown in the window. Exits when any key is pressed.
-runWindow :: HasChannels c => IO (HIplImage c Word8) -> IO ()
+runWindow :: (HasChannels c, ImgBuilder r) => IO (HIplImage c Word8 r) -> IO ()
 runWindow mkImg = newWindow 0 True >> go
     where go = do mkImg >>= flip withHIplImage (showImage 0)
                   cvWaitKey 1 >>= bool (delWindow 0) go . (> 0)
 
 -- |Simple named window runner. Exits when any key is pressed. The
 -- name is shown in the window's title bar.
-runNamedWindow :: HasChannels c => String -> IO (HIplImage c Word8) -> IO ()
+runNamedWindow :: (HasChannels c, ImgBuilder r) => 
+                  String -> IO (HIplImage c Word8 r) -> IO ()
 runNamedWindow name mkImg = 
     do name' <- newCString name
        cvNamedWindow name' (windowFlagsToEnum [AutoSize])
@@ -37,10 +38,10 @@ runNamedWindow name mkImg =
 -- action for showing an image, and an action for destroying the
 -- window. Be sure to repeatedly invoke 'waitKey' to keep the system
 -- alive.
-namedWindow :: (HasChannels c, HasDepth d) => 
+namedWindow :: (HasChannels c, HasDepth d, ImgBuilder r) => 
                String -> [WindowFlag] -> 
                --Maybe MouseCallback -> 
-               IO (HIplImage c d -> IO (), IO ())
+               IO (HIplImage c d r -> IO (), IO ())
 namedWindow name flags =
   do cstr <- newCString name
      let showImg img = withHIplImage img $ \imgPtr ->
