@@ -52,5 +52,6 @@ canny :: HasDepth d =>
          HIplImage MonoChromatic d
 canny t1 t2 aperture = 
     cv2 $ \src dst -> c_cvCanny src dst (rf t1) (rf t2) (fi aperture)
+    --cv $ \src -> c_cvCanny src src (rf t1) (rf t2) (fi aperture)
   where rf = realToFrac
         fi = fromIntegral

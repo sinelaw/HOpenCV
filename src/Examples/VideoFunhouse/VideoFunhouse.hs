@@ -5,6 +5,7 @@
 import AI.CV.OpenCV.HighCV
 import AI.CV.OpenCV.ArrayOps
 import AI.CV.OpenCV.Filtering
+import AI.CV.OpenCV.Histograms
 import Control.Applicative
 import Control.Parallel
 import System.Environment (getArgs)
@@ -38,13 +39,27 @@ twoTone g = light t `cvOr` dark t
 -- Smoothed Canny edges.
 neonEdges :: GrayImage -> ColorImage
 neonEdges = convertGrayToRGB . smoothGaussian 3 . dilate 1 . canny 70 110 3
+
+neonEdges' :: ColorImage -> ColorImage
+neonEdges' x = hedges `cvOr` sedges `cvAnd` (cvNot vedges)
+  where hsv = convertBGRToHSV x
+        glow = convertGrayToRGB . smoothGaussian 5 . dilate 1 . canny 70 110 3
+        hedges = cvAndS (0,255,255) . glow . isolateChannel 0 $ hsv
+        sedges = cvAndS (0,255,120) . glow . isolateChannel 1 $ hsv
+        vedges = convertGrayToRGB . thresholdBinary 200 255 . smoothGaussian 5 . dilate 1 . canny 70 110 3 . isolateChannel 2 $ hsv
 {-# INLINE neonEdges #-}
+
+-- Boost saturation
+boostSat x = convertHSVToBGR $ replaceChannel 1 s' hsv
+  where hsv = convertBGRToHSV x
+        s' = convertScale 2.0 0 . isolateChannel 1 $ hsv
+{-# INLINE boostSat #-}
 
 -- A two-tone blueprint effect.
 blueprint x = toned `par` neon `pseq` add neon toned
   where g = convertRGBToGray x
         toned = twoTone g
-        neon = neonEdges g
+        neon = neonEdges' x --g
 {-# INLINE blueprint #-}
 
 -- No parallelism
@@ -112,6 +127,7 @@ main = do args <- getArgs
               checkKey b _ 53 = go b blueprintSlow   -- 5
               checkKey b _ 54 = go b blueprint2      -- 6
               checkKey b _ 55 = go b blueprint2slow  -- 7
+              checkKey b _ 56 = go b boostSat        -- 8
               checkKey b p 102 = go (not b) p
               checkKey _ _ 27 = close >> exitSuccess
               checkKey b p _ = go b p
@@ -130,7 +146,9 @@ main = do args <- getArgs
           go False id
 
 showHelp :: IO ()
-showHelp = do p "Press 'f' to toggle framerate display"
+showHelp = do p "Usage: VideoFunhouse [file]"
+              p ""
+              p "Press 'f' to toggle framerate display"
               p "  The rate is computed from the per-frame processing time."
               p "  Lighting conditions and the specific camera used will"
               p "  determine the actual rate at which frames are acquired."
@@ -143,6 +161,7 @@ showHelp = do p "Press 'f' to toggle framerate display"
               p " 5 - Two-tone blueprint effect without par annotations"
               p " 6 - A four-tone blueprint effect"
               p " 7 - Four-tone blueprint effect without par annotations"
+              p " 8 - Saturation boost"
               p ""
               p "Press Esc to exit."
     where p = putStrLn

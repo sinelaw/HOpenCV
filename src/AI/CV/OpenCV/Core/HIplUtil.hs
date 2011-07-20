@@ -9,6 +9,7 @@ module AI.CV.OpenCV.Core.HIplUtil
      withDuplicateImage, withCompatibleImage, pipeline,
      HIplImage, mkHIplImage, width, height, mkBlackImage,
      withHIplImage, MonoChromatic, TriChromatic, HasChannels, 
+     GrayImage, GrayImage16, ColorImage,
      HasDepth(..), HasScalar(..), IsCvScalar(..), colorDepth,
      ByteOrFloat, getRect, imageData, fromFile, unsafeWithHIplImage,
      duplicateImagePtr, compatibleImagePtr, compatibleImagePtrPtr) where
@@ -30,6 +31,15 @@ import System.Directory (doesFileExist)
 import System.IO (openFile, hGetLine, hGetBuf, hClose, hSetBinaryMode, 
                   IOMode(..))
 import System.IO.Unsafe
+
+-- |Grayscale 8-bit (per-pixel) image type.
+type GrayImage = HIplImage MonoChromatic Word8
+
+-- |Grayscale 16-bit (per-pixel) image type.
+type GrayImage16 = HIplImage MonoChromatic Word16
+
+-- |Color 8-bit (per-color) image type.
+type ColorImage = HIplImage TriChromatic Word8
 
 -- |This is a way to let the type checker know that you belieave an
 -- image to be tri-chromatic. If your image type can't be inferred any

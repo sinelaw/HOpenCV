@@ -80,7 +80,7 @@ instance HasDepth Double where
     toDouble = id
     fromDouble = id
 
-class HasDepth a => ByteOrFloat a where
+class (HasDepth a, Num a) => ByteOrFloat a where
 instance ByteOrFloat Word8 where
 instance ByteOrFloat Float where
 

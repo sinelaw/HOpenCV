@@ -53,15 +53,6 @@ import AI.CV.OpenCV.FloodFill
 import AI.CV.OpenCV.FeatureDetection
 import AI.CV.OpenCV.Video
 
--- |Grayscale 8-bit (per-pixel) image type.
-type GrayImage = HIplImage MonoChromatic Word8
-
--- |Grayscale 16-bit (per-pixel) image type.
-type GrayImage16 = HIplImage MonoChromatic Word16
-
--- |Color 8-bit (per-color) image type.
-type ColorImage = HIplImage TriChromatic Word8
-
 -- |Erode an 'HIplImage' with a 3x3 structuring element for the
 -- specified number of iterations.
 erode :: (HasChannels c, HasDepth d) =>

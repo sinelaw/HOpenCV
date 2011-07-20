@@ -1,13 +1,9 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 import AI.CV.OpenCV.HighCV
-import AI.CV.OpenCV.Core.HIplImage
 import AI.CV.OpenCV.ArrayOps
 import AI.CV.OpenCV.Filtering
 import Control.Parallel
 import Criterion.Main
-import System.IO.Unsafe
-import Control.DeepSeq
-import Foreign.ForeignPtr
 
 -- Morphological closing
 close :: GrayImage -> GrayImage
@@ -33,7 +29,7 @@ fourTones g = cvOr light dark
 
 -- Smoothed Canny edges.
 neonEdges :: GrayImage -> ColorImage
-neonEdges = convertGrayToRGB . smoothGaussian 3 . dilate 1 . canny 70 110 3
+neonEdges = convertGrayToRGB . smoothGaussian 5. dilate 1 . canny 70 110 3
 {-# INLINE neonEdges #-}
 
 -- A blueprint effect.
@@ -50,9 +46,7 @@ blueprintSlow x = add (fourTones g) (neonEdges g)
     where g = convertRGBToGray x
 {-# INLINE blueprintSlow #-}
 
-instance NFData ColorImage where
-    rnf img = unsafePerformIO (touchForeignPtr $ imageData img) `seq` ()
-
+main :: IO ()
 main = do img <- fromFile "lena.jpg"
           defaultMain [ 
               bench "blueprint" $ whnf blueprint img
