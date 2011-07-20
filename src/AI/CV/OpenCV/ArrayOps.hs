@@ -6,7 +6,7 @@ module AI.CV.OpenCV.ArrayOps (subRS, absDiff, convertScale,
                               cvOr, cvOrS, set, setROI, resetROI,
                               mul, mulS, add, addS, sub, subMask,
                               cmpS, avg, avgMask, cvNot, withROI,
-                              ComparisonOp(..), isolateChannel, 
+                              ComparisonOp(..), isolateChannel, copy,
                               replaceChannel) where
 import Data.Word (Word8)
 import Foreign.C.Types (CDouble, CInt)
@@ -338,3 +338,11 @@ replaceChannel n c = cv2 $ \src dst ->
                              cvMixChannels p1 2 p2 1 ft 3
   where n' = (n + 1) `rem` 3
         n'' = (n + 2) `rem` 3
+
+foreign import ccall "opencv2/core/core_c.h cvCopy"
+  cvCopy :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> IO ()
+
+copy :: (HasChannels c, HasDepth d, ImgBuilder r2) =>
+        HIplImage c d r1 -> HIplImage c d r2 -> HIplImage c d r2
+copy src = cv $ \dst -> withHIplImage src $ \src' ->
+           cvCopy (castPtr src') dst nullPtr
