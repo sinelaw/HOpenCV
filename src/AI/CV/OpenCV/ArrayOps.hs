@@ -5,11 +5,14 @@ module AI.CV.OpenCV.ArrayOps (subRS, absDiff, convertScale,
                               cvOr, cvOrS, set, setROI, resetROI,
                               mul, mulS, add, addS, sub, subMask,
                               cmpS, avg, avgMask, cvNot,
-                              ComparisonOp(..)) where
+                              ComparisonOp(..), isolateChannel, 
+                              replaceChannel) where
 import Data.Word (Word8)
 import Foreign.C.Types (CDouble, CInt)
 import Foreign.Ptr (Ptr, castPtr, nullPtr)
 import Foreign.Marshal.Array
+import Foreign.Marshal.Alloc
+import Foreign.Storable (poke)
 import System.IO.Unsafe (unsafePerformIO)
 import AI.CV.OpenCV.Core.CxCore (CvArr, IplImage, CvRect(..), CmpOp(..), 
                                  cmpEq, cmpGT, cmpGE, cmpLT, cmpLE, cmpNE)
@@ -281,3 +284,30 @@ foreign import ccall "opencv2/core/core_c.h cvNot"
 cvNot :: (HasChannels c, HasDepth d) => HIplImage c d -> HIplImage c d
 cvNot = cv2 $ \src dst -> c_cvNot src dst
 {-# INLINE cvNot #-}
+
+foreign import ccall "opencv2/core/core_c.h cvMixChannels"
+  cvMixChannels :: Ptr (Ptr CvArr) -> CInt -> Ptr (Ptr CvArr) -> CInt -> 
+                   Ptr CInt -> CInt -> IO ()
+
+-- |Isolate a specific channel from a trichromatic image.
+isolateChannel :: HasDepth d =>
+                  CInt -> HIplImage TriChromatic d -> HIplImage MonoChromatic d
+isolateChannel n = cv2 $ \src dst -> 
+                   alloca $ \p1 -> poke p1 src >>
+                                   (alloca $ \p2 ->
+                                     poke p2 dst >>
+                                     (withArray [n,0] $ \ft ->
+                                       cvMixChannels p1 1 p2 1 ft 1))
+
+-- |Replace a specific channel of a trichromatic image with the single
+-- channel from a monochromatic image.
+replaceChannel :: HasDepth d => CInt -> HIplImage MonoChromatic d -> 
+                  HIplImage TriChromatic d -> HIplImage TriChromatic d
+replaceChannel n c = cv2 $ \src dst -> 
+                     withHIplImage c $ \cp ->
+                       withArray [castPtr cp, src] $ \p1 -> 
+                         withArray [dst] $ \p2 ->
+                           withArray [0,n,1+n',n',1+n'',n''] $ \ft ->
+                             cvMixChannels p1 2 p2 1 ft 3
+  where n' = (n + 1) `rem` 3
+        n'' = (n + 2) `rem` 3
