@@ -47,7 +47,7 @@ packPixels img =
 -- |Return a Vector of bytes of a single color channel from a
 -- tri-chromatic image. The desired channel must be one of 0, 1, or 2.
 isolateChannel :: HasDepth d => 
-                  Int -> HIplImage TriChromatic d NoROI -> V.Vector d
+                  Int -> HIplImage Trichromatic d NoROI -> V.Vector d
 isolateChannel ch img = 
     if ch < 0 || ch >= 3
     then error $ "Invalid channel "++show ch++" for trichromatic image"

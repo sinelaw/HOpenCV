@@ -1,14 +1,23 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, ScopedTypeVariables, 
              TypeFamilies, MultiParamTypeClasses, FlexibleInstances, GADTs, 
-             BangPatterns, FlexibleContexts #-}
+             BangPatterns, FlexibleContexts, TypeSynonymInstances #-}
 {-# OPTIONS_GHC -funbox-strict-fields #-}
-module AI.CV.OpenCV.Core.HIplImage 
-    ( TriChromatic, MonoChromatic, HasChannels(..), HasDepth(..), 
-      HIplImage(..), mkHIplImage, mkBlackImage, withHIplImage, bytesPerPixel, 
-      ByteOrFloat, HasScalar(..), IsCvScalar(..), freeROI, c_cvSetImageROI, 
-      c_cvResetImageROI, origin, width, height, imageSize, roi, imageData, 
-      widthStep, imageDataOrigin, addROI, resetROI, ImgBuilder(..), 
-      HasROI, NoROI) where
+module AI.CV.OpenCV.Core.HIplImage (
+    -- * Phantom types that statically describe image properties
+    Trichromatic, Monochromatic, HasROI, NoROI,
+
+    -- * Value-level reification of type-level properties
+    HasChannels(..), HasDepth(..), 
+
+    -- * Typed support for image operations that take scalar (color) parameters
+    HasScalar(..), IsCvScalar(..),
+
+    -- * Low-level image data structure
+    HIplImage(..), mkHIplImage, mkBlackImage, withHIplImage, bytesPerPixel, 
+    freeROI, c_cvSetImageROI, 
+    c_cvResetImageROI, origin, width, height, imageSize, roi, imageData, 
+    widthStep, imageDataOrigin, setROI, resetROI, ImgBuilder(..)
+  ) where
 import AI.CV.OpenCV.Core.CxCore (IplImage,Depth(..),iplDepth8u, iplDepth16u,
                                  iplDepth32f, iplDepth64f, cvFree, CvRect(..))
 import AI.CV.OpenCV.Core.CV (cvCvtColor)
@@ -55,19 +64,40 @@ typedef struct _IplImage
 IplImage;
 -}
 
-data TriChromatic
-data MonoChromatic
+-- *Phantom types that statically describe image properties
+data Trichromatic
+data Monochromatic
+data HasROI
+data NoROI
 
+-- Rather than the unrelated HasROI and NoROI type tags, we can close
+-- the family by using a GADT to define the necessary singleton
+-- types. The downside is GHC gives: "Warning: Defined but not used:
+-- data constructor `HasROI'". To avoid this warning, I'll stick with
+-- the separate type definitions.
+
+-- data True
+-- data False
+
+-- data ROIProp a where
+--   HasROI :: ROIProp True
+--   NoROI  :: ROIProp False
+
+-- type HasROI = ROIProp True
+-- type NoROI = ROIProp False
+
+-- * Value-level reification of properties encoded in phantom types
 class HasChannels a where
     numChannels :: a -> CInt
+
+instance HasChannels Trichromatic where numChannels _ = 3
+instance HasChannels Monochromatic where numChannels _ = 1
 
 class (Storable a, Num a) => HasDepth a where
     depth      :: a -> Depth
     toDouble   :: a -> Double
     fromDouble :: Double -> a
 
-instance HasChannels TriChromatic where numChannels _ = 3
-instance HasChannels MonoChromatic where numChannels _ = 1
 instance HasDepth Word8 where 
     depth _ = iplDepth8u
     toDouble = fromIntegral
@@ -85,15 +115,6 @@ instance HasDepth Double where
     toDouble = id
     fromDouble = id
 
-class (HasDepth a, Num a) => ByteOrFloat a where
-instance ByteOrFloat Word8 where
-instance ByteOrFloat Float where
-
--- FIXME: Perhaps it would be better to use a distinct type for the
--- scalar type of color images? I'm having some trouble getting this
--- type to fit in, though.
---data RGB d = RGB !d !d !d
-
 -- |An image with a particular number of channels have an associated
 -- scalar type built from the type of its pixels. This class lets us
 -- ensure that a scalar value to be used in an operation with an image
@@ -101,12 +122,15 @@ instance ByteOrFloat Float where
 class HasDepth d => HasScalar c d where
     type CvScalar c d
 
-instance HasDepth d => HasScalar MonoChromatic d where
-    type CvScalar MonoChromatic d = d
+instance HasDepth d => HasScalar Monochromatic d where
+    type CvScalar Monochromatic d = d
 
-instance HasDepth d => HasScalar TriChromatic d where
-    type CvScalar TriChromatic d = (d,d,d)
+instance HasDepth d => HasScalar Trichromatic d where
+    type CvScalar Trichromatic d = (d,d,d)
 
+-- |Scalar types are often round-tripped via doubles in OpenCV to
+-- allow for non-overloaded interfaces of functions with scalar
+-- parameters.
 class IsCvScalar x where
     toCvScalar :: x -> (CDouble, CDouble, CDouble, CDouble)
     fromCvScalar :: (CDouble, CDouble, CDouble, CDouble) -> x
@@ -141,12 +165,6 @@ bytesPerPixel :: HasDepth d => d -> Int
 bytesPerPixel = (`div` 8) . fromIntegral . unSign . unDepth . depth
     where unSign = (complement #{const IPL_DEPTH_SIGN} .&.)
 
--- |A data structure representing the information OpenCV uses from an
--- 'IplImage' struct. It includes the pixel origin, image width, image
--- height, image size (number of bytes), a pointer to the pixel data,
--- and the row stride. Its type is parameterized by the number of
--- color channels (i.e. 'MonoChromatic' or 'TriChromatic'), and the
--- pixel depth (e.g. 'Word8', 'Float').
 -- data HIplImage c d = (HasChannels c, HasDepth d) => 
 --                      HIplImage { origin          :: {-# UNPACK #-} !CInt
 --                                , width           :: {-# UNPACK #-} !CInt
@@ -157,9 +175,13 @@ bytesPerPixel = (`div` 8) . fromIntegral . unSign . unDepth . depth
 --                                , imageDataOrigin :: {-# UNPACK #-} !(ForeignPtr d)
 --                                , widthStep       :: {-# UNPACK #-} !CInt }
 
-data HasROI
-data NoROI
-
+-- |A data structure representing the information OpenCV uses from an
+-- 'IplImage' struct. It includes the pixel origin, image width, image
+-- height, image size (number of bytes), a pointer to the pixel data,
+-- and the row stride. Its type is parameterized by the number of
+-- color channels (i.e. 'Monochromatic' or 'Trichromatic'), the pixel
+-- depth (e.g. 'Word8', 'Float'), and whether or not the image has a
+-- region-of-interest (ROI) set ('HasROI' or 'NoROI').
 data HIplImage c d r where
   Img :: (HasChannels c, HasDepth d) => 
          !CInt -> !CInt -> !CInt -> !CInt -> !(ForeignPtr d) -> !(ForeignPtr d) -> 
@@ -196,11 +218,13 @@ height (ImgR _ _ h _ _ _ _ _) = h
 widthStep (Img _ _ _ _ _ _ ws) = ws
 widthStep (ImgR _ _ _ _ _ _ _ ws) = ws
 
-addROI :: CvRect -> HIplImage c d r -> HIplImage c d HasROI
-addROI r (Img o w h sz d ido ws) = ImgR o w h r sz d ido ws
-addROI r (ImgR o w h _ sz d ido ws) = ImgR o w h r sz d ido ws
-{-# INLINE addROI #-}
+-- |Set an image's region-of-interest.
+setROI :: CvRect -> HIplImage c d r -> HIplImage c d HasROI
+setROI r (Img o w h sz d ido ws) = ImgR o w h r sz d ido ws
+setROI r (ImgR o w h _ sz d ido ws) = ImgR o w h r sz d ido ws
+{-# INLINE setROI #-}
 
+-- |Clear any region-of-interest set for an image.
 resetROI :: HIplImage c d r -> HIplImage c d NoROI
 resetROI x@(Img _ _ _ _ _ _ _) = x
 resetROI (ImgR o w h _ sz d ido ws) = Img o w h sz d ido ws
@@ -310,19 +334,16 @@ instance ImgBuilder NoROI where
 instance ImgBuilder HasROI where
   buildImg o w h (Just r) sz d ido ws = ImgR o w h r sz d ido ws
   buildImg _ _ _ _ _ _ _ _ = error "Building a ROI image, but wasn't given a ROI!"
-  addMaybeROI (Just r) x = addROI r x
+  addMaybeROI (Just r) x = setROI r x
   addMaybeROI _ _ = error "addMaybeROI tried to add a null ROI to a HasROI Image!"
 
--- |An 'HIplImage' in Haskell is isomorphic with OpenCV's 'IplImage'
--- structure type. They share the same binary representation through
--- 'HIplImage' \'s 'Storable' instance. This allows for safe casts
--- between pointers of the two types. Note that obtaining an
--- 'HIplImage' from an 'IplImage' via 'peek' will not install a
--- Haskell finalizer on the underlying pixel data. That data is the
--- responsibility of the provider of the 'IplImage'. 'HIplImage'
--- values constructed within the Haskell runtime, on the other hand,
--- do have their underlying pixel data buffers registered with a
--- finalizer.
+-- |An 'HIplImage' in Haskell conforms closely to OpenCV's 'IplImage'
+-- structure type. Note that obtaining an 'HIplImage' from an
+-- 'IplImage' via 'peek' will not install a Haskell finalizer on the
+-- underlying pixel data. That data is the responsibility of the
+-- provider of the 'IplImage'. 'HIplImage' values constructed within
+-- the Haskell runtime, on the other hand, will have their underlying
+-- pixel data buffers managedy by the garbage collector.
 instance forall c d r. (HasChannels c, HasDepth d, ImgBuilder r) => 
     Storable (HIplImage c d r) where
     sizeOf _ = (#size IplImage)

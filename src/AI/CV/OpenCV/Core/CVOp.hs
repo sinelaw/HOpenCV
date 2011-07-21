@@ -1,4 +1,5 @@
-{-# LANGUAGE ScopedTypeVariables, MultiParamTypeClasses, FlexibleInstances #-}
+{-# LANGUAGE ScopedTypeVariables, MultiParamTypeClasses, FlexibleInstances,
+             TypeSynonymInstances #-}
 -- |Combinators that fuse compositions of image processing operations
 -- for in-place mutation.
 --
@@ -17,7 +18,7 @@
 -- with such an operation, must have a destination image
 -- allocated. This is cheaper than duplicating the input image as with
 -- operations wrapped by the `cv` combinator.
-module AI.CV.OpenCV.Core.CVOp (cv, InplaceROI(..)) where
+module AI.CV.OpenCV.Core.CVOp (cv, Inplace(..)) where
 import AI.CV.OpenCV.Core.CxCore (IplArrayType, CvArr)
 import AI.CV.OpenCV.Core.HIplUtil
 import AI.CV.OpenCV.Core.HIplImage
@@ -83,62 +84,96 @@ unary2bi = BinOp . const . op
 (<>) = mappend
 {-# INLINE (<>) #-}
 
--- Some operations really benefit from operating in-place over a defined ROI.
+-- |Some operations benefit from operating in-place over a defined
+-- region-of-interest (ROI). If an operation must recompute every
+-- pixel of the result image, then there is no need to initialize a
+-- fresh destination image to the contents of the source
+-- image. However, if we will only be recomputing a ROI of the source
+-- image, then the result image should be initialized as a copy of the
+-- source image so that its contents outside the ROI match the
+-- original image.
 class (HasChannels c1, HasDepth d1, HasChannels c2, HasDepth d2, ImgBuilder r) =>
-      InplaceROI r c1 d1 c2 d2 where
+      Inplace r c1 d1 c2 d2 where
   cv2 :: IplArrayType e =>
            (Ptr e -> Ptr e -> IO a) -> HIplImage c1 d1 r -> HIplImage c2 d2 r
   cv2 = cv2Alloc
   {-# INLINE cv2 #-}
 
-instance (HasChannels c, HasDepth d) => InplaceROI HasROI c d c d where
+-- | We clone an image and operate within its ROI if the source and
+-- destination images are compatible (same number of channels and
+-- pixel depth).
+instance (HasChannels c, HasDepth d) => Inplace HasROI c d c d where
   cv2 = cv . dupArg
   {-# INLINE cv2 #-}
 
 instance (HasDepth d1, HasDepth d2) => 
-         InplaceROI HasROI TriChromatic d1 MonoChromatic d2 where
+         Inplace HasROI Trichromatic d1 Monochromatic d2 where
   cv2 = cv2Alloc
   {-# INLINE cv2 #-}
 
 instance (HasDepth d1, HasDepth d2) => 
-         InplaceROI HasROI MonoChromatic d1 TriChromatic d2 where
+         Inplace HasROI Monochromatic d1 Trichromatic d2 where
   cv2 = cv2Alloc
   {-# INLINE cv2 #-}
 
 instance (HasChannels c1, HasChannels c2) => 
-         InplaceROI HasROI c1 Word8 c2 Float where
+         Inplace HasROI c1 Word8 c2 Float where
   cv2 = cv2Alloc
   {-# INLINE cv2 #-}
 
 instance (HasChannels c1, HasChannels c2) => 
-         InplaceROI HasROI c1 Word8 c2 Word16 where
+         Inplace HasROI c1 Word8 c2 Word16 where
   cv2 = cv2Alloc
   {-# INLINE cv2 #-}
 
 instance (HasChannels c1, HasChannels c2) => 
-         InplaceROI HasROI c1 Word8 c2 Double where
+         Inplace HasROI c1 Word8 c2 Double where
   cv2 = cv2Alloc
   {-# INLINE cv2 #-}
 
 instance (HasChannels c1, HasChannels c2) => 
-         InplaceROI HasROI c1 Double c2 Word8 where
+         Inplace HasROI c1 Word16 c2 Word8 where
   cv2 = cv2Alloc
   {-# INLINE cv2 #-}
 
 instance (HasChannels c1, HasChannels c2) => 
-         InplaceROI HasROI c1 Word16 c2 Word8 where
-  cv2 = cv2Alloc
-  {-# INLINE cv2 #-}
-
-instance (HasChannels c1, HasChannels c2) => 
-         InplaceROI HasROI c1 Float c2 Word8 where
+         Inplace HasROI c1 Float c2 Word8 where
   cv2 = cv2Alloc
   {-# INLINE cv2 #-}
 
 instance (HasChannels c1, HasDepth d1, HasChannels c2, HasDepth d2) =>
-         InplaceROI NoROI c1 d1 c2 d2 where
+         Inplace NoROI c1 d1 c2 d2 where
   cv2 = cv2Alloc
   {-# INLINE cv2 #-}
+
+-- If the source and destination are not compatible, then it doesn't
+-- matter if there is a ROI set as we can never operate in-place.
+instance (HasChannels c1, HasChannels c2) => 
+         Inplace HasROI c1 Float c2 Word16 where
+
+instance (HasChannels c1, HasChannels c2) => 
+         Inplace HasROI c1 Float c2 Double where
+
+instance (HasChannels c1, HasChannels c2) => 
+         Inplace HasROI c1 Word16 c2 Float where
+
+instance (HasChannels c1, HasChannels c2) => 
+         Inplace HasROI c1 Word16 c2 Double where
+
+instance (HasChannels c1, HasChannels c2) => 
+         Inplace HasROI c1 Double c2 Float where
+
+instance (HasChannels c1, HasChannels c2) => 
+         Inplace HasROI c1 Double c2 Word16 where
+
+instance (HasChannels c1, HasChannels c2) => 
+         Inplace HasROI c1 Double c2 Word8 where
+
+
+
+
+
+
 
 newtype BinOp a b = 
     BinOp { binop :: Ptr CvArr -> Ptr CvArr -> IO () }

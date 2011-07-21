@@ -16,7 +16,7 @@ module AI.CV.OpenCV.HighCV (
                             sampleLine, getRect,
                             -- * Image Processing
                             erode, dilate, houghStandard, houghProbabilistic, 
-                            normalize, resize, 
+                            normalize, resize, setROI, resetROI,
                             module AI.CV.OpenCV.ColorConversion,
                             module AI.CV.OpenCV.Threshold,
                             module AI.CV.OpenCV.FloodFill,
@@ -31,7 +31,7 @@ module AI.CV.OpenCV.HighCV (
                             -- * Video
                             module AI.CV.OpenCV.Video,
                             -- * Image types
-                            HIplImage, MonoChromatic, TriChromatic, 
+                            HIplImage, Monochromatic, Trichromatic, 
                             HasChannels, HasDepth, 
                             GrayImage, ColorImage, GrayImage16, 
                             Word8, Word16
@@ -55,14 +55,14 @@ import AI.CV.OpenCV.Video
 
 -- |Erode an 'HIplImage' with a 3x3 structuring element for the
 -- specified number of iterations.
-erode :: (HasChannels c, HasDepth d, InplaceROI r c d c d) =>
+erode :: (HasChannels c, HasDepth d, Inplace r c d c d) =>
          Int -> HIplImage c d r -> HIplImage c d r
 erode n = cv2 $ \src dst -> cvErode src dst (fromIntegral n)
 {-# INLINE erode #-}
 
 -- |Dilate an 'HIplImage' with a 3x3 structuring element for the
 -- specified number of iterations.
-dilate :: (HasChannels c, HasDepth d, InplaceROI r c d c d) =>
+dilate :: (HasChannels c, HasDepth d, Inplace r c d c d) =>
           Int -> HIplImage c d r -> HIplImage c d r
 dilate n = cv2 $ \src dst -> cvDilate src dst (fromIntegral n)
 {-# INLINE dilate #-}
@@ -82,7 +82,7 @@ sampleLine pt1 pt2 conn img = unsafePerformIO . withHIplImage img $
 -- pixels; @theta@, the angle resolution in radians; @threshold@, the
 -- line classification accumulator threshold; and the input image.
 houghStandard :: ImgBuilder r =>
-                 Double -> Double -> Int -> HIplImage MonoChromatic Word8 r -> 
+                 Double -> Double -> Int -> HIplImage Monochromatic Word8 r -> 
                  [((Int, Int),(Int,Int))]
 houghStandard rho theta threshold img = unsafePerformIO $
     do storage <- cvCreateMemStorage (min 0 (fromIntegral threshold))
@@ -116,7 +116,7 @@ houghStandard rho theta threshold img = unsafePerformIO $
 -- classification accumulator threshold; and the input image.
 houghProbabilistic :: ImgBuilder r =>
                       Double -> Double -> Int -> Double -> Double -> 
-                      HIplImage MonoChromatic Word8 r -> [((Int, Int),(Int,Int))]
+                      HIplImage Monochromatic Word8 r -> [((Int, Int),(Int,Int))]
 houghProbabilistic rho theta threshold minLength maxGap img = 
     unsafePerformIO $
     do storage <- cvCreateMemStorage (min 0 (fromIntegral threshold))
@@ -139,7 +139,7 @@ houghProbabilistic rho theta threshold minLength maxGap img =
 
 {-
 -- |Find the 'CvContour's in an image.
-findContours :: HIplImage a MonoChromatic Word8 -> [CvContour]
+findContours :: HIplImage a Monochromatic Word8 -> [CvContour]
 findContours img = snd $ withDuplicateImage img $
                      \src -> cvFindContours src CV_RETR_CCOMP CV_CHAIN_APPROX_SIMPLE
 -}
@@ -167,7 +167,7 @@ resize method w h img =
 -- |Normalize the range of color values in an image to the given
 -- range. Example usage with a grayscale image is @normalize cv_MinMax
 -- 0 255 img@
-normalize :: (HasChannels c, HasDepth d, InplaceROI r c d c d) => 
+normalize :: (HasChannels c, HasDepth d, Inplace r c d c d) => 
              ArrayNorm -> CDouble -> CDouble -> HIplImage c d r -> HIplImage c d r
 normalize ntype a b = cv2 $ \img dst -> 
                       cvNormalize img dst a b (unNorm ntype) nullPtr

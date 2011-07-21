@@ -50,7 +50,6 @@ boostSat x = convertHSVToBGR $ replaceChannel 1 s' hsv
 centralFocus :: ColorImage -> ColorImage
 centralFocus img = withROI r (copy (setROI r img)) bg
   where bg = smoothGaussian 35 . boostSat $ img
-        white = cvOrS (255,255,255) img
         r = CvRect 150 100 340 280
 {-# INLINE centralFocus #-}
 

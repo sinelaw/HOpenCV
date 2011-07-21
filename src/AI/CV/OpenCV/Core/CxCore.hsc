@@ -74,6 +74,7 @@ instance Storable CvRect where
         (#poke CvRect, width) ptr w
         (#poke CvRect, height) ptr h
 
+-- |Apply a function to each component of a 'CvRect'.
 liftCvRect :: (RealFrac c, Num b) => (b -> c) -> CvRect -> CvRect
 liftCvRect f (CvRect x y w h) = CvRect (f' x) (f' y) (f' w) (f' h)
     where f' = toFromIntegral f

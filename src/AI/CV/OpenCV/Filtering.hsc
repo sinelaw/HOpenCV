@@ -31,7 +31,7 @@ cvGaussian = #{const CV_GAUSSIAN}
 -- the kernel size. This function is the same as calling
 -- @smoothGaussian' width Nothing Nothing@. May be performed in-place
 -- under composition.
-smoothGaussian :: (ByteOrFloat d, HasChannels c, InplaceROI r c d c d) => 
+smoothGaussian :: (ByteOrFloat d, HasChannels c, Inplace r c d c d) => 
                   Int -> HIplImage c d r -> HIplImage c d r
 smoothGaussian w = smoothGaussian' w Nothing Nothing
 {-# INLINE smoothGaussian #-}
@@ -42,7 +42,7 @@ smoothGaussian w = smoothGaussian' w Nothing Nothing
 -- width), the Gaussian standard deviation (if 'Nothing', it will be
 -- calculated from the kernel size), and the source image. May be
 -- performed in-place under composition.
-smoothGaussian' :: (ByteOrFloat d, HasChannels c, InplaceROI r c d c d) => 
+smoothGaussian' :: (ByteOrFloat d, HasChannels c, Inplace r c d c d) => 
                    Int -> Maybe Int -> Maybe Double -> HIplImage c d r -> 
                    HIplImage c d r
 smoothGaussian' w h sigma = 

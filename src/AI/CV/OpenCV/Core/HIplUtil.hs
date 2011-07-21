@@ -6,9 +6,9 @@ module AI.CV.OpenCV.Core.HIplUtil
      fromPtr, fromFileColor, fromFileGray, fromPGM16, toFile, 
      compatibleImage, duplicateImage, fromPixels,
      withImagePixels, fromGrayPixels, fromColorPixels,
-     withDuplicateImage, withCompatibleImage, 
+     withDuplicateImage, withCompatibleImage, setROI, resetROI,
      mkHIplImage, width, height, mkBlackImage, HIplImage, NoROI, HasROI,
-     withHIplImage, MonoChromatic, TriChromatic, HasChannels, ImgBuilder(..),
+     withHIplImage, Monochromatic, Trichromatic, HasChannels, ImgBuilder(..),
      GrayImage, GrayImage16, ColorImage, c_cvSetImageROI, c_cvResetImageROI,
      HasDepth(..), HasScalar(..), IsCvScalar(..), colorDepth,
      ByteOrFloat, getRect, imageData, fromFile, unsafeWithHIplImage,
@@ -32,25 +32,30 @@ import System.IO (openFile, hGetLine, hGetBuf, hClose, hSetBinaryMode,
                   IOMode(..))
 import System.IO.Unsafe
 
+-- |Some operations are restricted to bytes or floats.
+class (HasDepth a, Num a) => ByteOrFloat a where
+instance ByteOrFloat Word8 where
+instance ByteOrFloat Float where
+
 -- |Grayscale 8-bit (per-pixel) image type.
-type GrayImage = HIplImage MonoChromatic Word8 NoROI
+type GrayImage = HIplImage Monochromatic Word8 NoROI
 
 -- |Grayscale 16-bit (per-pixel) image type.
-type GrayImage16 = HIplImage MonoChromatic Word16 NoROI
+type GrayImage16 = HIplImage Monochromatic Word16 NoROI
 
 -- |Color 8-bit (per-color) image type.
-type ColorImage = HIplImage TriChromatic Word8 NoROI
+type ColorImage = HIplImage Trichromatic Word8 NoROI
 
 -- |This is a way to let the type checker know that you belieave an
 -- image to be tri-chromatic. If your image type can't be inferred any
 -- other way, this is an alternative to adding a type annotation.
-isColor :: HIplImage TriChromatic d r -> HIplImage TriChromatic d r
+isColor :: HIplImage Trichromatic d r -> HIplImage Trichromatic d r
 isColor = id
 
 -- |This is a way to let the type checker know that you believe an
 -- image to be monochromatic. If your image type can't be inferred any
 -- other way, this is an alternative to adding a type annotation.
-isMono :: HIplImage MonoChromatic d r -> HIplImage MonoChromatic d r
+isMono :: HIplImage Monochromatic d r -> HIplImage Monochromatic d r
 isMono = id
 
 {-# INLINE isMono #-}
@@ -97,11 +102,11 @@ checkFile f = do e <- doesFileExist f
 
 -- |Load a color 'HIplImage' from an 8-bit image file. If the image
 -- file is grayscale, it will be converted to color.
-fromFileColor :: FilePath -> IO (HIplImage TriChromatic Word8 NoROI)
+fromFileColor :: FilePath -> IO (HIplImage Trichromatic Word8 NoROI)
 fromFileColor fileName = 
   do checkFile fileName
      ptr <- cvLoadImage fileName LoadColor
-     img <- fromPtr ptr :: IO (HIplImage TriChromatic Word8 NoROI)
+     img <- fromPtr ptr :: IO (HIplImage Trichromatic Word8 NoROI)
      addForeignPtrFinalizer cvFreePtr (imageDataOrigin img)
      freeROI ptr
      cvFree ptr
@@ -109,24 +114,27 @@ fromFileColor fileName =
 
 -- |Load a grayscale 'HIplImage' from an 8-bit image file. If the
 -- image file is color, it will be converted to grayscale.
-fromFileGray :: FilePath -> IO (HIplImage MonoChromatic Word8 NoROI)
+fromFileGray :: FilePath -> IO (HIplImage Monochromatic Word8 NoROI)
 fromFileGray fileName = 
   do checkFile fileName
      ptr <- cvLoadImage fileName LoadGray
-     img <- fromPtr ptr :: IO (HIplImage MonoChromatic Word8 NoROI)
+     img <- fromPtr ptr :: IO (HIplImage Monochromatic Word8 NoROI)
      addForeignPtrFinalizer cvFreePtr (imageDataOrigin img)
      return img
 
+-- |If the type of a loaded image is known (e.g. by a type annotation,
+-- or usage of a narrowly typed functions), then we can automatically
+-- dispatch to the proper image loading routine.
 class LoadableFormat c d where
   loadFormat :: (c,d) -> FilePath -> IO (HIplImage c d NoROI)
 
-instance LoadableFormat MonoChromatic Word8 where
+instance LoadableFormat Monochromatic Word8 where
   loadFormat _ = fromFileGray
 
-instance LoadableFormat TriChromatic Word8 where
+instance LoadableFormat Trichromatic Word8 where
   loadFormat _ = fromFileColor
 
-instance LoadableFormat MonoChromatic Word16 where
+instance LoadableFormat Monochromatic Word16 where
   loadFormat _ = fromPGM16
 
 -- |An overloaded image file loader. The number of color channels and
@@ -140,7 +148,7 @@ fromFile = loadFormat (undefined :: (c,d))
 -- so this 16bpp loader is restricted to PGM. This loading routine
 -- converts from Most Significant Byte first (MSB) byte ordering (as
 -- per the PGM spec) to LSB byte ordering for x86 compatibility.
-fromPGM16 :: FilePath -> IO (HIplImage MonoChromatic Word16 NoROI)
+fromPGM16 :: FilePath -> IO (HIplImage Monochromatic Word16 NoROI)
 fromPGM16 fileName = 
   do checkFile fileName
      h <- openFile fileName ReadMode
@@ -261,14 +269,14 @@ fromPixels w h pix = unsafePerformIO $
 -- data. Parameters are the output image's width, height, and pixel
 -- content.
 fromGrayPixels :: (HasDepth d, Integral a) => 
-                  a -> a -> V.Vector d -> HIplImage MonoChromatic d NoROI
+                  a -> a -> V.Vector d -> HIplImage Monochromatic d NoROI
 fromGrayPixels w h = isMono . fromPixels w h
 
 -- |Helper function to explicitly type a vector of interleaved
 -- trichromatic pixel data. Parameters are the output image's width,
 -- height, and pixel content.
 fromColorPixels :: (HasDepth d, Integral a) =>
-                   a -> a -> V.Vector d -> HIplImage TriChromatic d NoROI
+                   a -> a -> V.Vector d -> HIplImage Trichromatic d NoROI
 fromColorPixels w h = isColor . fromPixels w h
 
 -- |Provides the supplied function with a 'Ptr' to the 'IplImage'

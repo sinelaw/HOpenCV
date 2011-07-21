@@ -19,11 +19,11 @@ foreign import ccall "opencv2/video/tracking.hpp cvCalcOpticalFlowBM"
 -- increments; the fifth is the size of the scanned neighborhood in
 -- pixels around the block. The result is a pair of the horizontal and
 -- vertical components of optical flow.
-calcOpticalFlowBM :: HIplImage MonoChromatic Word8 r -> 
-                     HIplImage MonoChromatic Word8 r -> 
+calcOpticalFlowBM :: HIplImage Monochromatic Word8 r -> 
+                     HIplImage Monochromatic Word8 r -> 
                      (Int,Int) -> (Int,Int) -> (Int,Int) -> 
-                     (HIplImage MonoChromatic Float NoROI, 
-                      HIplImage MonoChromatic Float NoROI)
+                     (HIplImage Monochromatic Float NoROI, 
+                      HIplImage Monochromatic Float NoROI)
 calcOpticalFlowBM prev curr blockSize shiftSize maxRange = 
     unsafePerformIO $
     do velX <- mkHIplImage w h 
