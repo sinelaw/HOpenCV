@@ -18,13 +18,15 @@ module AI.CV.OpenCV.Core.HIplImage (
     c_cvResetImageROI, origin, width, height, imageSize, roi, imageData, 
     widthStep, imageDataOrigin, setROI, resetROI, ImgBuilder(..)
   ) where
-import AI.CV.OpenCV.Core.CxCore (IplImage,Depth(..),iplDepth8u, iplDepth16u,
-                                 iplDepth32f, iplDepth64f, cvFree, CvRect(..))
+import AI.CV.OpenCV.Core.CxCore (IplImage,Depth(..),iplDepth8u, iplDepth16u, 
+                                 iplDepth16s, iplDepth32f, iplDepth64f, cvFree, 
+                                 CvRect(..))
 import AI.CV.OpenCV.Core.CV (cvCvtColor)
 import AI.CV.OpenCV.Core.ColorConversion (cv_GRAY2BGR, cv_BGR2GRAY)
 import Control.Applicative ((<$>))
 import Control.Monad (when)
 import Data.Bits (complement, (.&.))
+import Data.Int
 import Data.Word (Word8, Word16)
 import Foreign.C.Types
 import Foreign.ForeignPtr
@@ -106,6 +108,10 @@ instance HasDepth Word16 where
     depth _ = iplDepth16u
     toDouble = fromIntegral
     fromDouble = round
+instance HasDepth Int16 where 
+    depth _ = iplDepth16s
+    toDouble = fromIntegral
+    fromDouble = round
 instance HasDepth Float where 
     depth _ = iplDepth32f
     toDouble = realToFrac
@@ -140,6 +146,10 @@ instance IsCvScalar Word8 where
     fromCvScalar (r,_,_,_) = floor r
 
 instance IsCvScalar Word16 where
+    toCvScalar = depthToScalar
+    fromCvScalar (r,_,_,_) = floor r
+
+instance IsCvScalar Int16 where
     toCvScalar = depthToScalar
     fromCvScalar (r,_,_,_) = floor r
 

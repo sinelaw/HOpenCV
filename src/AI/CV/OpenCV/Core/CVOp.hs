@@ -23,6 +23,7 @@ import AI.CV.OpenCV.Core.CxCore (IplArrayType, CvArr)
 import AI.CV.OpenCV.Core.HIplUtil
 import AI.CV.OpenCV.Core.HIplImage
 import Control.Monad ((>=>), void)
+import Data.Int
 import Data.Monoid
 import Foreign.ForeignPtr
 import Foreign.Ptr
@@ -149,10 +150,19 @@ instance (HasChannels c1, HasDepth d1, HasChannels c2, HasDepth d2) =>
 -- If the source and destination are not compatible, then it doesn't
 -- matter if there is a ROI set as we can never operate in-place.
 instance (HasChannels c1, HasChannels c2) => 
+         Inplace HasROI c1 Word8 c2 Int16 where
+
+instance (HasChannels c1, HasChannels c2) => 
          Inplace HasROI c1 Float c2 Word16 where
 
 instance (HasChannels c1, HasChannels c2) => 
+         Inplace HasROI c1 Float c2 Int16 where
+
+instance (HasChannels c1, HasChannels c2) => 
          Inplace HasROI c1 Float c2 Double where
+
+instance (HasChannels c1, HasChannels c2) => 
+         Inplace HasROI c1 Word16 c2 Int16 where
 
 instance (HasChannels c1, HasChannels c2) => 
          Inplace HasROI c1 Word16 c2 Float where
@@ -169,11 +179,18 @@ instance (HasChannels c1, HasChannels c2) =>
 instance (HasChannels c1, HasChannels c2) => 
          Inplace HasROI c1 Double c2 Word8 where
 
+instance (HasChannels c1, HasChannels c2) => 
+         Inplace HasROI c1 Double c2 Int16 where
 
+instance (HasChannels c1, HasChannels c2) => 
+         Inplace HasROI c1 Int16 c2 Word8 where
 
+instance (HasChannels c1, HasChannels c2) => 
+         Inplace HasROI c1 Int16 c2 Word16 where
 
-
-
+-- |This can be in-place due to the common representation.
+instance (HasChannels c1, HasChannels c2) => 
+         Inplace HasROI c1 Int16 c2 Float where
 
 newtype BinOp a b = 
     BinOp { binop :: Ptr CvArr -> Ptr CvArr -> IO () }

@@ -9,7 +9,8 @@ module AI.CV.OpenCV.Core.HIplUtil
      withDuplicateImage, withCompatibleImage, setROI, resetROI,
      mkHIplImage, width, height, mkBlackImage, HIplImage, NoROI, HasROI,
      withHIplImage, Monochromatic, Trichromatic, HasChannels, ImgBuilder(..),
-     GrayImage, GrayImage16, ColorImage, c_cvSetImageROI, c_cvResetImageROI,
+     GrayImage, GrayImage16, GrayImage16S, ColorImage, 
+     c_cvSetImageROI, c_cvResetImageROI,
      HasDepth(..), HasScalar(..), IsCvScalar(..), colorDepth,
      ByteOrFloat, getRect, imageData, fromFile, unsafeWithHIplImage,
      duplicateImagePtr, compatibleImagePtr, compatibleImagePtrPtr) where
@@ -21,6 +22,7 @@ import AI.CV.OpenCV.Core.HIplImage
 import Control.Applicative
 import Control.Arrow (second, (***))
 import Control.Monad (when, unless, join)
+import Data.Int (Int16)
 import qualified Data.Vector.Storable as V
 import Data.Word (Word8, Word16)
 import Foreign.ForeignPtr
@@ -40,8 +42,11 @@ instance ByteOrFloat Float where
 -- |Grayscale 8-bit (per-pixel) image type.
 type GrayImage = HIplImage Monochromatic Word8 NoROI
 
--- |Grayscale 16-bit (per-pixel) image type.
+-- |Grayscale unsigned 16-bit (per-pixel) image type.
 type GrayImage16 = HIplImage Monochromatic Word16 NoROI
+
+-- |Grayscale signed 16-bit (per-pixel) image type.
+type GrayImage16S = HIplImage Monochromatic Int16 NoROI
 
 -- |Color 8-bit (per-color) image type.
 type ColorImage = HIplImage Trichromatic Word8 NoROI

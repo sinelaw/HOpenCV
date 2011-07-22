@@ -1,13 +1,13 @@
 {-# LANGUAGE ForeignFunctionInterface, TypeFamilies, ScopedTypeVariables,
              FlexibleContexts #-}
 -- |Array operations.
-module AI.CV.OpenCV.ArrayOps (subRS, absDiff, convertScale, 
+module AI.CV.OpenCV.ArrayOps (subRS, absDiff, abs, convertScale, 
                               cvAnd, andMask, scaleAdd, cvAndS,
-                              cvOr, cvOrS, set, 
+                              cvOr, cvOrS, set, cvAbs, cvAbsDiffS,
                               mul, mulS, add, addS, sub, subMask,
                               cmpS, avg, avgMask, cvNot, withROI,
                               ComparisonOp(..), isolateChannel, copy,
-                              replaceChannel) where
+                              replaceChannel, convertScaleAbs, absSat) where
 import Data.Word (Word8)
 import Foreign.C.Types (CDouble, CInt)
 import Foreign.Ptr (Ptr, castPtr, nullPtr)
@@ -45,6 +45,24 @@ absDiff src1 = cv2 $ \src2 dst ->
                  c_cvAbsDiff (castPtr src1') src2 dst
 {-# INLINE absDiff #-}
 
+foreign import ccall "opencv2/core/core_c.h cvAbsDiffS"
+  c_cvAbsDiffS :: Ptr CvArr -> Ptr CvArr -> 
+                  CDouble -> CDouble -> CDouble -> CDouble -> IO ()
+
+-- |Absolute difference of each pixel in an image and a scalar.
+cvAbsDiffS :: (HasChannels c, HasDepth d, Inplace r c d c d,
+               IsCvScalar s, s ~ CvScalar c d) =>
+              s -> HIplImage c d r -> HIplImage c d r
+cvAbsDiffS value = cv2 $ \src dst -> c_cvAbsDiffS src dst r g b a
+  where (r,g,b,a) = toCvScalar value
+{-# INLINE cvAbsDiffS #-}
+
+-- |Absolute value of each pixel.
+cvAbs :: (HasChannels c, HasDepth d, Inplace r c d c d) =>
+         HIplImage c d r -> HIplImage c d r
+cvAbs = cv2 $ \src dst -> c_cvAbsDiffS src dst 0 0 0 0
+{-# INLINE cvAbs #-}
+
 foreign import ccall "opencv2/core/core_c.h cvConvertScale"
   c_cvConvertScale :: Ptr CvArr -> Ptr CvArr -> CDouble -> CDouble -> IO ()
 
@@ -63,6 +81,24 @@ convertScale scale shift = cv2 $ \src dst ->
                            c_cvConvertScale src dst (rf scale) (rf shift)
   where rf = realToFrac
 {-# INLINE convertScale #-}
+
+foreign import ccall "opencv2/core/core_c.h cvConvertScaleAbs"
+  c_cvConvertScaleAbs :: Ptr CvArr -> Ptr CvArr -> CDouble -> CDouble -> IO ()
+
+-- |@convertScaleAbs scale shift@ scales each element of an image,
+-- adds an offset to the scaled value, computes the absolute value,
+-- and saturates to 8 bits.
+convertScaleAbs :: (HasChannels c, HasDepth d, Inplace r c d c Word8) =>
+                   CDouble -> CDouble -> HIplImage c d r -> HIplImage c Word8 r
+convertScaleAbs scale shift = cv2 $ \src dst -> 
+                              c_cvConvertScaleAbs src dst scale shift
+{-# INLINE convertScaleAbs #-}
+
+-- |Computes the absolute value of each pixel and saturates to 8 bits.
+absSat :: (HasChannels c, HasDepth d, Inplace r c d c Word8) =>
+          HIplImage c d r -> HIplImage c Word8 r
+absSat = convertScaleAbs 1 0
+{-# INLINE absSat #-}
 
 foreign import ccall "opencv2/core/core_c.h cvAnd"
   c_cvAnd :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> IO ()
@@ -144,8 +180,9 @@ foreign import ccall "opencv2/core/core_c.h cvAdd"
   c_cvAdd :: Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> Ptr CvArr -> IO ()
 
 -- |Per-element sum.
-add :: (HasChannels c, HasDepth d, ImgBuilder r1, Inplace r2 c d c d) => 
-       HIplImage c d r1 -> HIplImage c d r2 -> HIplImage c d r2
+add :: (HasChannels c, HasDepth d1, HasDepth d2, HasDepth d3,
+        ImgBuilder r1, Inplace r2 c d2 c d3) => 
+       HIplImage c d1 r1 -> HIplImage c d2 r2 -> HIplImage c d3 r2
 add src1 = cv2 $ \src2 dst ->
            withHIplImage src1 $ \src1' ->
                c_cvAdd (castPtr src1') src2 dst nullPtr

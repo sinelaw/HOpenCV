@@ -33,7 +33,7 @@ module AI.CV.OpenCV.HighCV (
                             -- * Image types
                             HIplImage, Monochromatic, Trichromatic, 
                             HasChannels, HasDepth, 
-                            GrayImage, ColorImage, GrayImage16, 
+                            GrayImage, ColorImage, GrayImage16, GrayImage16S,
                             Word8, Word16
     ) where
 import AI.CV.OpenCV.Core.CxCore
