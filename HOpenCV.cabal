@@ -64,13 +64,13 @@ library
    if os(windows)
      include-dirs:	C:\\OpenCV2.2\\include
      extra-lib-dirs:	C:\\OpenCV2.2\\bin
-     extra-libraries: 	opencv_core220,opencv_imgproc220,opencv_highgui220
+     extra-libraries: 	opencv_core220,opencv_imgproc220,opencv_highgui220,opencv_video220
    else
      if flag(OpenCV21)
        CC-Options:      "-DOCV21"
        extra-libraries: cv highgui
      else
-       extra-libraries: opencv_core,opencv_imgproc,opencv_highgui
+       extra-libraries: opencv_core,opencv_imgproc,opencv_highgui,opencv_video
    build-depends: base >=4 && <5, 
                   template-haskell,
                   allocated-processor >= 0.0.1, 
