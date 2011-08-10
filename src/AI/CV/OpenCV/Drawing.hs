@@ -1,5 +1,5 @@
 module AI.CV.OpenCV.Drawing (prepFont, prepFontAlt, putText, FontFace(..), 
-                             LineType(..), RGB, drawLines) where
+                             LineType(..), RGB, drawLines, fillConvexPoly) where
 import AI.CV.OpenCV.Core.CxCore
 import AI.CV.OpenCV.Core.HIplUtil
 import AI.CV.OpenCV.Core.CVOp
@@ -7,6 +7,7 @@ import Data.Bits ((.|.))
 import Foreign.C.String
 import Foreign.C.Types
 import Foreign.Marshal.Alloc (malloc)
+import Foreign.Marshal.Array (withArray)
 import Foreign.Ptr
 import System.IO.Unsafe (unsafePerformIO)
 
@@ -105,3 +106,18 @@ drawLines col thick lineType lines =
     where draw ptr (pt1, pt2) = cvLine ptr pt1 pt2 col thick lineType'
           lineType' = lineTypeEnum lineType
 {-# INLINE drawLines #-}
+
+-- |Draw a filled, convex polygon. Can draw all monotonic polygons
+-- without self-intersections including those with horizontal top or
+-- bottom edges.
+fillConvexPoly :: (HasChannels c, HasDepth d, ImgBuilder r) =>
+                  RGB -> LineType -> [(Int,Int)] -> 
+                  HIplImage c d r -> HIplImage c d r
+fillConvexPoly (r,g,b) lineType pts = 
+  cv $ \img -> withArray (concatMap flatten pts) $ \pts' ->
+               c_cvFillConvexPoly img pts' (fi $ length pts) 
+                                  (fr r) (fr g) (fr b) 0 lt 0
+  where lt = fi $ lineTypeEnum lineType
+        flatten (x,y) = [fi x, fi y]
+        fi = fromIntegral
+        fr = realToFrac

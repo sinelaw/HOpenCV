@@ -320,6 +320,9 @@ cvLine dst (x1,y1) (x2,y2) (r,g,b) thickness lineType =
         where fi = fromIntegral
               fr = realToFrac
 
+foreign import ccall "opencv2/core/core_c.h cvFillConvexPoly"
+  c_cvFillConvexPoly :: Ptr CvArr -> Ptr CInt -> CInt -> CDouble -> CDouble -> CDouble -> CDouble -> CInt -> CInt -> IO ()
+
 data CvFont
 instance Storable CvFont where
   sizeOf _ = (#size CvFont)
