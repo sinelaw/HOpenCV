@@ -1,5 +1,5 @@
 name: HOpenCV
-version: 0.2
+version: 0.2.1
 license: BSD3
 author: Noam Lewis <jones.noamle@gmail.com>
 maintainer: Anthony Cowley <acowley@gmail.com>
@@ -8,7 +8,7 @@ category: AI, Graphics
 synopsis: A binding for the OpenCV computer vision library.
 Tested-With:   GHC==7.0.3
 description:
-   Limited bindings to OpenCV 2.2. (See: <http://opencv.willowgarage.com/wiki/Welcome>)
+   Limited bindings to OpenCV 2.3. (See: <http://opencv.willowgarage.com/wiki/Welcome>)
    .
    /Installation/
    .
@@ -34,6 +34,10 @@ Flag OpenCV21
   Description: Link against OpenCV 2.1
   Default:     False
 
+Flag MotionAnalysis
+  Description: Export optical flow bindings. Doesn't work with GHCi.
+  Default:     False
+
 library
    exposed-modules:
       AI.CV.OpenCV.Core.CV
@@ -50,7 +54,6 @@ library
       AI.CV.OpenCV.PixelUtils
       AI.CV.OpenCV.ColorConversion
       AI.CV.OpenCV.Drawing
-      AI.CV.OpenCV.Motion
       AI.CV.OpenCV.Contours
       AI.CV.OpenCV.Threshold
       AI.CV.OpenCV.ArrayOps
@@ -61,6 +64,8 @@ library
       src/AI/CV/OpenCV/Core/HOpenCV_wrap.c
    other-modules: 
    hs-Source-Dirs: src
+   if flag(MotionAnalysis)
+     exposed-modules:   AI.CV.OpenCV.Motion
    if os(windows)
      include-dirs:	C:\\OpenCV2.2\\include
      extra-lib-dirs:	C:\\OpenCV2.2\\bin
