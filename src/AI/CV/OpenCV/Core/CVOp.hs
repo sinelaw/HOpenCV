@@ -57,7 +57,7 @@ withClone f = duplicateImagePtr >=> flip withForeignPtr (\x -> f (castPtr x) >>
 -- |Run a 'CVOp'.
 runCV :: (HasChannels c, HasDepth d, ImgBuilder r1, ImgBuilder r2) => 
          CVOp c d -> HIplImage c d r1 -> HIplImage c d r2
-runCV = (unsafePerformIO .) . withClone . op
+runCV = (unsafeDupablePerformIO .) . withClone . op
 {-# NOINLINE runCV #-}
 
 -- Apply a binary function to the same argument twice.
@@ -211,7 +211,7 @@ withDst f img = do img2' <- mkHIplImage (width img) (height img)
 
 runBinOp :: (HasChannels c1, HasDepth d1, HasChannels c2, HasDepth d2, ImgBuilder r) => 
             BinOp (c1,d1) (c2,d2) -> HIplImage c1 d1 r -> HIplImage c2 d2 r
-runBinOp = (unsafePerformIO .) . withDst . binop
+runBinOp = (unsafeDupablePerformIO .) . withDst . binop
 {-# NOINLINE runBinOp #-}
 
 {-# RULES "runCV/fuse"

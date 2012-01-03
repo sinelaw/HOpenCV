@@ -2,11 +2,12 @@
 -- |Miscellaneous image transformations.
 module AI.CV.OpenCV.FloodFill (floodFill, FloodRange(..)) where
 import Data.Bits ((.|.))
-import Foreign.C.Types (CDouble, CInt)
+import Foreign.C.Types (CInt)
 import Foreign.Ptr (Ptr, nullPtr, castPtr)
 import AI.CV.OpenCV.Core.CxCore 
 import AI.CV.OpenCV.Core.HIplUtil
 import AI.CV.OpenCV.Core.CVOp
+import AI.CV.OpenCV.Core.StorableUtil
 
 -- |Flag used to indicate whether pixels under consideration for
 -- addition to a connected component should be compared to the seed
@@ -22,25 +23,32 @@ data FloodRange = FloodFixed | FloodFloating
 -- (e.g. bytes inserted between fields or at the end of the struct to
 -- ensure a desired alignment).
 
-foreign import ccall "opencv2/imgproc/imgproc_c.h cvFloodFill"
-  c_cvFloodFill :: Ptr CvArr -> CInt -> CInt -> 
-                   CDouble -> CDouble -> CDouble -> CDouble ->
-                   CDouble -> CDouble -> CDouble -> CDouble ->
-                   CDouble -> CDouble -> CDouble -> CDouble ->
-                   Ptr () -> CInt -> Ptr () -> IO ()
+#def void cvFloodFill_wrap(CvArr* img, CvPoint* seedPt,\
+                           CvScalar* newVal, CvScalar* loDiff,\
+                           CvScalar* upDiff, void *comp, int flags,\
+                           CvArr* mask) {\
+  cvFloodFill(img, *seedPt, *newVal, *loDiff, *upDiff, comp, flags, mask);\
+}
 
-type CvD = (CDouble, CDouble, CDouble, CDouble)
+-- "opencv2/imgproc/imgproc_c.h cvFloodFill"
+foreign import ccall "cvFloodFill_wrap" 
+  c_cvFloodFill :: Ptr CvArr -> Ptr CvPoint -> Ptr CvScalar -> Ptr CvScalar -> 
+                   Ptr CvScalar -> Ptr () -> CInt -> Ptr () -> IO ()
 
-floodHelper :: (Int, Int) -> CvD -> CvD -> CvD -> FloodRange -> 
+floodHelper :: (Int, Int) -> CvScalar -> CvScalar -> CvScalar -> FloodRange -> 
                Ptr IplImage -> IO ()
 floodHelper (x,y) newVal loDiff upDiff range src =
-    c_cvFloodFill (castPtr src) (fromIntegral x) (fromIntegral y) 
-                  nv1 nv2 nv3 nv4 lo1 lo2 lo3 lo4 up1 up2 up3 up4 
+  withS (CvPoint (fromIntegral x) (fromIntegral y)) $ \seedPtr ->
+  withS newVal $ \newValPtr ->
+  withS loDiff $ \loDiffPtr ->
+  withS upDiff $ \upDiffPtr ->
+    c_cvFloodFill (castPtr src) seedPtr newValPtr loDiffPtr upDiffPtr 
                   nullPtr flags nullPtr
-    where (nv1,nv2,nv3,nv4) = newVal
-          (lo1,lo2,lo3,lo4) = loDiff
-          (up1,up2,up3,up4) = upDiff
-          flags = case range of
+    -- c_cvFloodFill (castPtr src) 
+    --               (CvPoint (fromIntegral x) (fromIntegral y))
+    --               newVal loDiff upDiff
+    --               nullPtr flags nullPtr
+    where flags = case range of
                     FloodFixed -> 4 .|. #{const CV_FLOODFILL_FIXED_RANGE}
                     FloodFloating -> 4
 
@@ -55,7 +63,7 @@ floodHelper (x,y) newVal loDiff upDiff range src =
 -- painting should be compared to the seed pixel ('FloodFixed') or to
 -- their neighbors ('FloodFloating'); the source image.
 floodFill :: (ByteOrFloat d, HasChannels c, HasScalar c d, 
-              IsCvScalar s, s ~ CvScalar c d, ImgBuilder r) => 
+              IsCvScalar s, s ~ CvScalarT c d, ImgBuilder r) => 
              (Int, Int) -> s -> s -> s -> FloodRange -> HIplImage c d r -> 
              HIplImage c d r
 floodFill seed newVal loDiff upDiff range = 

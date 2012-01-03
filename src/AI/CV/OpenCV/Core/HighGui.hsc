@@ -244,3 +244,8 @@ enumToEventFlags x = map fst . filter snd $
                      zip [minBound..maxBound]
                          (map ((> 0) . (x .|.)) 
                               (map eventFlagToEnum [minBound..maxBound]))
+
+-- Qt fonts
+-- foreign import ccall "opencv2/highgui/highgui_c.h cvFontQt"
+--   cvFontQt :: CString -> CInt -> CDouble -> CDouble -> CDouble -> 
+--               CInt -> CInt -> CInt -> IO CvFont

@@ -23,13 +23,13 @@ void debug_print_image_header(IplImage *image)
            "\twidth: %d\n"
            "\theight: %d\n"
            "\timageSize: %d\n"
-           "\timageData: %x\n"
+           "\timageData: %p\n"
            "\twidthStep: %d\n"
-           "\timageDataOrigin: %x\n",
+           "\timageDataOrigin: %p\n",
            image->nSize, image->ID, image->nChannels, image->alphaChannel,
            image->depth, image->dataOrder, image->origin, image->align,
-           image->width, image->height, image->imageSize, (int)image->imageData, 
-           image->widthStep, (int)image->imageDataOrigin);
+           image->width, image->height, image->imageSize, image->imageData, 
+           image->widthStep, image->imageDataOrigin);
 }
 
 /****************************************************************************/
@@ -190,10 +190,10 @@ void c_cvGetROI(IplImage* img, int* rptr)
     rptr[3] = r.height;
 }
 
-void c_cvAvg(const CvArr *img, const CvArr *mask, double* avg)
+void c_cvAvg(const CvArr *img, const CvArr *mask, CvScalar* avg)
 {
   CvScalar s = cvAvg(img, mask);
-  memcpy(avg, s.val, 4*sizeof(double));
+  memcpy(avg, &s, sizeof(CvScalar));
 }
 
 

@@ -1,1 +1,6 @@
 dist
+*_hsc.c
+*_hsc.h
+*.hi
+*.o
+

@@ -19,8 +19,8 @@ description:
    The "AI.CV.OpenCV.HighCV" module exposes the most commonly used functionality. Other modules not in the @Core@ directory provide specific types of operations. While the @Core@ modules contain to low-level OpenCV interfaces.
    .
    See @src\/Examples\/VideoFunhouse@ for an example application.
-build-type:         Simple
-cabal-version:      >= 1.2
+build-type:         Custom
+cabal-version:      >= 1.8
 extra-source-files: src/AI/CV/OpenCV/Core/HOpenCV_wrap.h 
                     src/Examples/VideoFunhouse/Makefile 
                     src/Examples/VideoFunhouse/Rate.hs
@@ -62,7 +62,10 @@ library
       AI.CV.OpenCV.Histograms
    c-sources:
       src/AI/CV/OpenCV/Core/HOpenCV_wrap.c
-   other-modules: 
+      src/AI/CV/OpenCV/ArrayOps_hsc.c
+      src/AI/CV/OpenCV/FloodFill_hsc.c
+      src/AI/CV/OpenCV/Drawing_hsc.c
+   other-modules: AI.CV.OpenCV.Core.StorableUtil
    hs-Source-Dirs: src
    if flag(MotionAnalysis)
      exposed-modules:   AI.CV.OpenCV.Motion
@@ -81,5 +84,5 @@ library
                   allocated-processor >= 0.0.1, 
                   vector-space >= 0.7.2,
                   directory >= 1.0.1.0 && < 2,
-                  vector == 0.7.*
+                  vector >= 0.7
    ghc-options: -Wall -fno-warn-type-defaults -fno-warn-name-shadowing -O2 -funbox-strict-fields

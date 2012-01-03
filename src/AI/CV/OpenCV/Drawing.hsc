@@ -1,8 +1,10 @@
+{-# LANGUAGE ForeignFunctionInterface #-}
 module AI.CV.OpenCV.Drawing (prepFont, prepFontAlt, putText, FontFace(..), 
                              LineType(..), RGB, drawLines, fillConvexPoly) where
 import AI.CV.OpenCV.Core.CxCore
 import AI.CV.OpenCV.Core.HIplUtil
 import AI.CV.OpenCV.Core.CVOp
+import AI.CV.OpenCV.Core.StorableUtil
 import Data.Bits ((.|.))
 import Foreign.C.String
 import Foreign.C.Types
@@ -36,6 +38,7 @@ initFont face italic hscale vscale shear thickness ltype =
 -- |Default sans-serif font.
 defaultFont :: Ptr CvFont
 defaultFont = unsafePerformIO $ initFont NormalSans False 1 1 0 1 EightConn
+{-# NOINLINE defaultFont #-}
 
 -- |Produce a text-drawing function given a font description. The
 -- application @prepFont face italic hscale vscale thickness@ produces
@@ -49,6 +52,17 @@ prepFont :: (HasChannels c, HasDepth d, ImgBuilder r) =>
 prepFont face italic hscale vscale thickness = 
     prepFontAlt face italic hscale vscale 0 thickness EightConn
 {-# INLINE prepFont #-}
+
+#include <opencv2/core/core_c.h>
+
+#def void cvPutText_wrap(CvArr* img, const char* text, CvPoint* org,\
+                         const CvFont* font, CvScalar* color) {\
+  cvPutText(img, text, *org, font, *color);\
+}
+
+foreign import ccall "cvPutText_wrap" 
+  c_cvPutText :: Ptr CvArr -> CString -> Ptr CvPoint -> 
+                 Ptr CvFont -> Ptr CvScalar -> IO ()
 
 -- |Produce a text-drawing function given a font description. The
 -- application @prepFontAlt face italic hscale vscale shear thickness
@@ -64,7 +78,10 @@ prepFontAlt face italic hscale vscale shear thickness ltype =
     do f <- initFont face italic hscale vscale shear thickness ltype
        let go (x,y) (r,g,b) msg = cv $ \dst -> 
                                   withCString msg $ \msg' ->
-                                      cvPutText dst msg' x y f r g b
+                                  withS (CvPoint x y) $ \ptPtr ->
+                                  withS (CvScalar r g b 1) $ \colPtr ->
+                                    c_cvPutText dst msg' ptPtr f colPtr
+                                      --cvPutText dst msg' x y f r g b
            {-# INLINE go #-}
        return go
 {-# INLINE prepFontAlt #-}
@@ -74,9 +91,11 @@ putText :: (HasChannels c, HasDepth d, ImgBuilder r) =>
            HIplImage c d r -> HIplImage c d r
 putText (x,y) (r,g,b) msg = cv $ \dst ->
                             withCString msg $ \msg' ->
-                                cvPutText dst msg' x y defaultFont r g b
-                                -- c_cvPutText (castPtr dst) msg' (fi x) (fi y) 
-                                --             (fr r) (fr g) (fr b)
+                            withS (CvPoint x y) $ \ptPtr ->
+                            withS (CvScalar r g b 1) $ \colPtr ->
+                              c_cvPutText dst msg' ptPtr defaultFont colPtr
+                                -- cvPutText (castPtr dst) msg' (fi x) (fi y) 
+                                --            (fr r) (fr g) (fr b)
     -- where fi = fromIntegral
     --       fr = realToFrac
 {-# INLINE putText #-}

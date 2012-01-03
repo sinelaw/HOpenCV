@@ -46,7 +46,7 @@ int c_cvFindContours(CvArr *img, CvMemStorage *storage, CvSeq** first_contour,
                      int header_size, int mode, int method, int offset_x, 
                      int offset_y);
 
-void c_cvAvg(const CvArr *img, const CvArr *mask, double* avg);
+void c_cvAvg(const CvArr *img, const CvArr *mask, CvScalar* avg);
 
 CvSeq *c_cvHaarDetectObjects( const CvArr* image,
                               CvHaarClassifierCascade* cascade,

@@ -20,7 +20,7 @@ module AI.CV.OpenCV.Core.HIplImage (
   ) where
 import AI.CV.OpenCV.Core.CxCore (IplImage,Depth(..),iplDepth8u, iplDepth16u, 
                                  iplDepth16s, iplDepth32f, iplDepth64f, cvFree, 
-                                 CvRect(..))
+                                 CvRect(..), CvScalar(..))
 import AI.CV.OpenCV.Core.CV (cvCvtColor)
 import AI.CV.OpenCV.Core.ColorConversion (cv_GRAY2BGR, cv_BGR2GRAY)
 import Control.Applicative ((<$>))
@@ -126,50 +126,50 @@ instance HasDepth Double where
 -- ensure that a scalar value to be used in an operation with an image
 -- is compatible with that image.
 class HasDepth d => HasScalar c d where
-    type CvScalar c d
+    type CvScalarT c d
 
 instance HasDepth d => HasScalar Monochromatic d where
-    type CvScalar Monochromatic d = d
+    type CvScalarT Monochromatic d = d
 
 instance HasDepth d => HasScalar Trichromatic d where
-    type CvScalar Trichromatic d = (d,d,d)
+    type CvScalarT Trichromatic d = (d,d,d)
 
 -- |Scalar types are often round-tripped via doubles in OpenCV to
 -- allow for non-overloaded interfaces of functions with scalar
 -- parameters.
 class IsCvScalar x where
-    toCvScalar :: x -> (CDouble, CDouble, CDouble, CDouble)
-    fromCvScalar :: (CDouble, CDouble, CDouble, CDouble) -> x
+    toCvScalar :: x -> CvScalar
+    fromCvScalar :: CvScalar -> x
 
 instance IsCvScalar Word8 where
     toCvScalar = depthToScalar
-    fromCvScalar (r,_,_,_) = floor r
+    fromCvScalar (CvScalar r _ _ _) = floor r
 
 instance IsCvScalar Word16 where
     toCvScalar = depthToScalar
-    fromCvScalar (r,_,_,_) = floor r
+    fromCvScalar (CvScalar r _ _ _) = floor r
 
 instance IsCvScalar Int16 where
     toCvScalar = depthToScalar
-    fromCvScalar (r,_,_,_) = floor r
+    fromCvScalar (CvScalar r _ _ _) = floor r
 
 instance IsCvScalar Float where
     toCvScalar = depthToScalar
-    fromCvScalar (r,_,_,_) = realToFrac r
+    fromCvScalar (CvScalar r _ _ _) = realToFrac r
 
 instance IsCvScalar Double where
     toCvScalar = depthToScalar
-    fromCvScalar (r,_,_,_) = realToFrac r
+    fromCvScalar (CvScalar r _ _ _) = realToFrac r
 
 instance (HasDepth d, IsCvScalar d) => IsCvScalar (d,d,d) where
     toCvScalar (r,g,b) = let f = realToFrac . toDouble
-                         in (f r, f g, f b, 0)
-    fromCvScalar (r,g,b,_) = let f = fromDouble . realToFrac 
-                             in (f r, f g, f b)
+                         in CvScalar (f r) (f g) (f b) 0
+    fromCvScalar (CvScalar r g b _) = let f = fromDouble . realToFrac 
+                                      in (f r, f g, f b)
 
-depthToScalar :: HasDepth d => d -> (CDouble, CDouble, CDouble, CDouble)
+depthToScalar :: HasDepth d => d -> CvScalar
 depthToScalar x = let x' = realToFrac (toDouble x)
-                  in (x', x', x', x')
+                  in CvScalar x' x' x' x'
 
 bytesPerPixel :: HasDepth d => d -> Int
 bytesPerPixel = (`div` 8) . fromIntegral . unSign . unDepth . depth

@@ -1,11 +1,13 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, TypeFamilies #-}
 
 module AI.CV.OpenCV.Core.CxCore where
+import Control.Applicative
 import Foreign.C.Types
 import Foreign.C.String
 import Foreign.ForeignPtr
 import Foreign.ForeignPtrWrap
 import Foreign.Marshal.Alloc
+import Foreign.Marshal.Array
 import Foreign.Ptr
 import Foreign.Storable
 --import System.IO.Unsafe (unsafePerformIO)
@@ -91,6 +93,44 @@ instance AdditiveGroup CvRect where
 instance VectorSpace CvRect where
   type Scalar CvRect = Double -- todo: use CInt instead of Double here?
   a *^ r = liftCvRect (a*) r
+
+data CvPoint = CvPoint {-# UNPACK #-} !CInt {-# UNPACK #-} !CInt
+
+instance Storable CvPoint where
+  sizeOf _ = (#size CvPoint)
+  alignment _ = alignment (undefined :: CInt)
+  peek ptr = CvPoint <$> (#peek CvPoint, x) ptr 
+                     <*> (#peek CvPoint, y) ptr
+  poke ptr (CvPoint x y) = (#poke CvPoint, x) ptr x >>
+                           (#poke CvPoint, y) ptr y
+
+
+data CvScalar = CvScalar {-# UNPACK #-} !CDouble
+                         {-# UNPACK #-} !CDouble
+                         {-# UNPACK #-} !CDouble
+                         {-# UNPACK #-} !CDouble 
+                deriving Show
+
+instance Storable CvScalar where
+  sizeOf _ = (#size CvScalar)
+  alignment _ = alignment (undefined :: CDouble)
+  peek ptr = do [x,y,z,w] <- peekArray 4 $ (#ptr CvScalar, val) ptr
+                return $ CvScalar x y z w
+  poke ptr (CvScalar x y z w) = pokeArray ((#ptr CvScalar, val) ptr)
+                                          [x,y,z,w]
+
+liftCvScalar :: (CDouble -> CDouble) -> CvScalar -> CvScalar
+liftCvScalar f (CvScalar x y z w) = CvScalar (f x) (f y) (f z) (f w)
+
+instance AdditiveGroup CvScalar where
+  zeroV = CvScalar 0 0 0 0
+  CvScalar x1 y1 z1 w1 ^+^ CvScalar x2 y2 z2 w2 = 
+    CvScalar (x1+x2) (y1+y2) (z1+z2) (w1+w2)
+  negateV = liftCvScalar (0 -)
+
+instance VectorSpace CvScalar where
+  type Scalar CvScalar = CDouble
+  a *^ s = liftCvScalar (a*) s
 
 ------------------------------------------------------
 -- |A 'CvContour' has a bounding 'CvRect' and a color.
