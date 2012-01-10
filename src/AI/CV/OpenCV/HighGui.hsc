@@ -10,6 +10,7 @@ import Foreign.C.String
  
 import AI.CV.OpenCV.CxCore
 
+#include <highgui.h>
 
 ------------------------------------------------
 -- General
