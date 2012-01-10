@@ -41,7 +41,7 @@ library
       src/AI/CV/OpenCV/HOpenCV_wrap.c
    hs-Source-Dirs: src
    include-dirs: /usr/include/opencv
-   extra-libraries: cv,highgui
+   extra-libraries: cxcore,cv,highgui
    build-depends: base >=4 && <5, allocated-processor >= 0.0.1, vector-space
    ghc-options: -Wall -fno-warn-type-defaults
 
@@ -54,7 +54,7 @@ executable test-hopencv
   main-is: Test.hs
   Ghc-Options: -Wall -fno-warn-type-defaults
   Ghc-Prof-Options:  -prof -auto-all 
-  extra-libraries: cv,highgui
+  extra-libraries: cxcore,cv,highgui
   other-modules: AI.CV.OpenCV.CxCore, AI.CV.OpenCV.CV, AI.CV.OpenCV.HighGui, AI.CV.OpenCV.Types
 
 
