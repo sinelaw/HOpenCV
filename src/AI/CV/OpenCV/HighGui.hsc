@@ -10,6 +10,7 @@ import Foreign.C.String
  
 import AI.CV.OpenCV.CxCore
 
+#include <highgui.h>
 
 ------------------------------------------------
 -- General
@@ -72,3 +73,28 @@ foreign import ccall unsafe "HOpenCV_wrap.h show_image"
 
 foreign import ccall unsafe "highgui.h cvWaitKey"
   waitKey :: CInt -> IO CInt
+
+foreign import ccall unsafe "highgui.h cvNamedWindow"
+  cvNamedWindow :: CString -> CInt -> IO CInt
+
+type AutoSize = Bool
+
+titledWindow :: String -> AutoSize -> IO Int
+titledWindow s a
+  = do cs <- newCString s
+       i <- cvNamedWindow cs (fromToInteger $ fromEnum a)
+       return $ fromToInteger i
+
+fromToInteger :: (Integral a, Num b) => a -> b
+fromToInteger = fromInteger . toInteger
+
+newtype LoadImageColor = LoadImageColor { unLoadImageColor :: CInt }
+
+#{enum LoadImageColor, LoadImageColor
+    , loadImageColor     = CV_LOAD_IMAGE_COLOR
+    , loadImageGrayscale = CV_LOAD_IMAGE_GRAYSCALE
+    , loadImageUnchanged = CV_LOAD_IMAGE_UNCHANGED }
+
+foreign import ccall unsafe "highgui.h cvLoadImage"
+  cvLoadImage :: CString -> CInt -> IO (Ptr IplImage)
+
