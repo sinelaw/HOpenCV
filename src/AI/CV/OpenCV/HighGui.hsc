@@ -82,10 +82,8 @@ type AutoSize = Bool
 titledWindow :: String -> AutoSize -> IO Int
 titledWindow s a
   = do cs <- newCString s
-       i <- cvNamedWindow cs (autoSize a)
+       i <- cvNamedWindow cs (fromToInteger $ fromEnum a)
        return $ fromToInteger i
-
-  where autoSize b = if b then 1 else 0
 
 fromToInteger :: (Integral a, Num b) => a -> b
 fromToInteger = fromInteger . toInteger
