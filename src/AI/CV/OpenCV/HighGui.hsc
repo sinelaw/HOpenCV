@@ -2,6 +2,7 @@
  
 module AI.CV.OpenCV.HighGui where
  
+import Control.Monad
 import Foreign.ForeignPtrWrap
 import Foreign.C.Types
 import Foreign.Ptr
@@ -103,3 +104,14 @@ cvLoadImage filename (LoadImageColor color) = err' . checkPtr $ withCString file
   where
     err' = errorName $ "Failed to load from file: '" ++ filename ++ "'"
     f filenameC = c_cvLoadImage filenameC color
+
+foreign import ccall unsafe "highgui.h cvSaveImage"
+  c_cvSaveImage :: CString -> Ptr CvArr -> IO CInt
+
+cvSaveImage :: String -> Ptr IplImage -> IO CInt
+cvSaveImage filename image = withCString filename f
+  where
+    f filenameC = do
+      ret <- c_cvSaveImage filenameC (fromArr image)
+      when (ret == 0) $ fail $ "Failed to save to file: '" ++ filename ++ "'"
+      return ret
