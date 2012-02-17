@@ -96,5 +96,10 @@ newtype LoadImageColor = LoadImageColor { unLoadImageColor :: CInt }
     , loadImageUnchanged = CV_LOAD_IMAGE_UNCHANGED }
 
 foreign import ccall unsafe "highgui.h cvLoadImage"
-  cvLoadImage :: CString -> CInt -> IO (Ptr IplImage)
+  c_cvLoadImage :: CString -> CInt -> IO (Ptr IplImage)
 
+cvLoadImage :: String -> LoadImageColor -> IO (Ptr IplImage)
+cvLoadImage filename (LoadImageColor color) = err' . checkPtr $ withCString filename f
+  where
+    err' = errorName $ "Failed to load from file: '" ++ filename ++ "'"
+    f filenameC = c_cvLoadImage filenameC color
