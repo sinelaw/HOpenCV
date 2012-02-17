@@ -5,9 +5,11 @@ module AI.CV.OpenCV.CxCore where
 import Foreign.ForeignPtrWrap
 import Foreign.C.Types
 import Foreign.C.String
-import Foreign
+import Foreign hiding (unsafePerformIO)
 
 import Data.VectorSpace as VectorSpace
+
+import System.IO.Unsafe (unsafePerformIO)
 
 #include <cxcore.h>
 
