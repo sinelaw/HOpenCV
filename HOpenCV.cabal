@@ -37,12 +37,14 @@ library
       AI.CV.OpenCV.CxCore
       AI.CV.OpenCV.HighGui
       AI.CV.OpenCV.Types
+   other-modules:
+      Foreign.ForeignPtrWrap
    c-sources:
       src/AI/CV/OpenCV/HOpenCV_wrap.c
    hs-Source-Dirs: src
    include-dirs: /usr/include/opencv
    pkgconfig-depends: opencv
-   build-depends: base >= 4 && < 5, allocated-processor >= 0.0.1, vector-space
+   build-depends: base >= 4 && < 5, vector-space
    ghc-options: -Wall -fno-warn-type-defaults
 
 executable test-hopencv
