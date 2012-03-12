@@ -141,6 +141,6 @@ CvSeq *c_cvHaarDetectObjects( const CvArr* image,
                               int min_neighbors , int flags,
                               int width, int height)
 {
-    return cvHaarDetectObjects(image, cascade, storage, scale_factor, min_neighbors, flags, cvSize(width, height), cvSize(0, 0));
+    return cvHaarDetectObjects(image, cascade, storage, scale_factor, min_neighbors, flags, cvSize(width, height));
 }
 
