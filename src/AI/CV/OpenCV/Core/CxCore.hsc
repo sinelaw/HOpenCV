@@ -1,17 +1,15 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, TypeFamilies #-}
-
 module AI.CV.OpenCV.Core.CxCore where
 import Control.Applicative
+import Control.Monad ((>=>))
 import Foreign.C.Types
 import Foreign.C.String
 import Foreign.ForeignPtr
-import Foreign.ForeignPtrWrap
 import Foreign.Marshal.Alloc
 import Foreign.Marshal.Array
 import Foreign.Ptr
 import Foreign.Storable
---import System.IO.Unsafe (unsafePerformIO)
-
+import System.IO.Error (modifyIOError)
 import Data.VectorSpace as VectorSpace
 
 #include <opencv2/core/core_c.h>
@@ -407,6 +405,25 @@ newtype CmpOp = CmpOp { unCmpOp :: CInt }
 -- values.
 ptrToMaybe :: Ptr a -> Maybe (Ptr a)
 ptrToMaybe p = if p == nullPtr then Nothing else Just p
+
+-- |Add a 'String' name to a thrown error.
+-- NOTE: adapated from the allocated-processor packge.
+errorName :: String -> IO a -> IO a
+errorName = modifyIOError . const . userError
+
+-- |Fail if an action results in a null pointer. 
+-- NOTE: adapted from the allocated-processor package.
+checkPtr :: IO (Ptr a) -> IO (Ptr a)
+checkPtr = (>>= aux)
+  where aux r | r == nullPtr = fail "Null Pointer"
+              | otherwise = return r
+
+-- |Wrap a 'ForeignPtr' around a 'Ptr' after checking that the 'Ptr'
+-- is non-null. The supplied finalizer is attached to the
+-- 'ForeignPtr'.
+-- NOTE: adapted from the allocated-processor package.
+createForeignPtr :: FunPtr (Ptr a -> IO ()) -> IO (Ptr a) -> IO (ForeignPtr a)
+createForeignPtr = (checkPtr >=>) . newForeignPtr
 
 ------------------------------------------------------------------------------
 -- Debugging stuff, not part of opencv

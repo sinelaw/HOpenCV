@@ -13,7 +13,6 @@ module AI.CV.OpenCV.Core.HighGui
      windowFlagsToEnum, Event(..), EventFlag(..)) where
 
 import Data.Bits ((.&.), (.|.), shiftL) 
-import Foreign.ForeignPtrWrap
 import Foreign.C.Types
 import Foreign.Ptr
 import Foreign.ForeignPtr

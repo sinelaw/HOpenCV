@@ -1,5 +1,5 @@
 name: HOpenCV
-version: 0.2.1
+version: 0.2.2
 license: BSD3
 author: Noam Lewis <jones.noamle@gmail.com>
 maintainer: Anthony Cowley <acowley@gmail.com>
@@ -81,7 +81,6 @@ library
        extra-libraries: opencv_core,opencv_imgproc,opencv_highgui,opencv_video
    build-depends: base >=4 && <5, 
                   template-haskell,
-                  allocated-processor >= 0.0.1, 
                   vector-space >= 0.7.2,
                   directory >= 1.0.1.0 && < 2,
                   vector >= 0.7
