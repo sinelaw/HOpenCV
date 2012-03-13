@@ -7,9 +7,9 @@ module AI.CV.OpenCV.Core.HIplUtil
      compatibleImage, duplicateImage, fromPixels,
      withImagePixels, fromGrayPixels, fromColorPixels,
      withDuplicateImage, withCompatibleImage, setROI, resetROI,
-     mkHIplImage, width, height, mkBlackImage, HIplImage, NoROI, HasROI,
-     withHIplImage, Monochromatic, Trichromatic, HasChannels, ImgBuilder(..),
-     GrayImage, GrayImage16, GrayImage16S, ColorImage, 
+     mkHIplImage, width, height, numPixels, mkBlackImage, HIplImage, 
+     NoROI, HasROI, withHIplImage, Monochromatic, Trichromatic, HasChannels, 
+     ImgBuilder(..), GrayImage, GrayImage16, GrayImage16S, ColorImage, 
      c_cvSetImageROI, c_cvResetImageROI,
      HasDepth(..), HasScalar(..), IsCvScalar(..), colorDepth,
      ByteOrFloat, getRect, imageData, fromFile, unsafeWithHIplImage,
@@ -75,6 +75,10 @@ imgChannels _ = fromIntegral $ numChannels (undefined::c)
 -- 'HIplImage'.
 colorDepth :: forall c d r. HasDepth d => HIplImage c d r -> Int
 colorDepth _ = bytesPerPixel (undefined::d)
+
+-- |The number of pixels in the image: @width img * height img@.
+numPixels :: HIplImage c d r -> Int
+numPixels = fromIntegral . ((*) <$> width <*> height)
 
 -- |Apply the supplied function to a 'V.Vector' containing the pixels
 -- that make up an 'HIplImage'. This does not copy the underlying

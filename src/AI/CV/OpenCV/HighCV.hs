@@ -7,7 +7,7 @@ module AI.CV.OpenCV.HighCV (
                             fromFile, fromFileGray, fromFileColor, 
                             fromPGM16, toFile,
                             -- * Image Properties
-                            width, height, isColor, isMono,
+                            width, height, numPixels, isColor, isMono,
                             -- * Image Construction
                             fromPixels, fromGrayPixels, fromColorPixels, 
                             fromPtr,
