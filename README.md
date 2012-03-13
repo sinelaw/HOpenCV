@@ -1,7 +1,7 @@
 # HOpenCV
 
 [OpenCV](http://opencv.willowgarage.com/wiki/) bindings for Haskell
-(tested with OpenCV 2.1, 2.2, and 2.3).
+(tested with OpenCV 2.1, 2.2, 2.3.0, and 2.3.1).
 
 - Image color channel count and color depth are statically checked.
 
