@@ -9,7 +9,7 @@ module AI.CV.OpenCV.ArrayOps (subRS, absDiff, abs, convertScale,
                               ComparisonOp(..), isolateChannel, copy,
                               replaceChannel, convertScaleAbs, absSat) where
 import Data.Word (Word8)
-import Foreign.C.Types (CDouble, CInt)
+import Foreign.C.Types (CDouble(..), CInt(..))
 import Foreign.Ptr (Ptr, castPtr, nullPtr)
 import Foreign.Marshal.Array
 import Foreign.Marshal.Alloc

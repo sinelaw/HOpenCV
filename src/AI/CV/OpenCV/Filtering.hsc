@@ -5,7 +5,7 @@ module AI.CV.OpenCV.Filtering (smoothGaussian, smoothGaussian',
                                ApertureSize(..), DerivativeOrder(..)) where
 import Data.Word (Word8)
 import Data.Int (Int16)
-import Foreign.C.Types (CInt, CDouble)
+import Foreign.C.Types (CInt(..), CDouble(..))
 import Foreign.Ptr (Ptr, castPtr)
 import AI.CV.OpenCV.Core.CxCore
 import AI.CV.OpenCV.Core.HIplUtil

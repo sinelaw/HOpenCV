@@ -10,7 +10,7 @@ module AI.CV.OpenCV.Threshold (thresholdBinary, thresholdBinaryInv,
                                thresholdToZeroOtsu, thresholdToZeroOtsuInv) where
 import Data.Bits ((.|.))
 import Data.Word (Word8)
-import Foreign.C.Types (CDouble, CInt)
+import Foreign.C.Types (CDouble(..), CInt(..))
 import Foreign.Ptr (Ptr)
 import AI.CV.OpenCV.Core.CxCore 
 import AI.CV.OpenCV.Core.HIplUtil

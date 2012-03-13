@@ -2,7 +2,7 @@
 -- |Miscellaneous image transformations.
 module AI.CV.OpenCV.FloodFill (floodFill, FloodRange(..)) where
 import Data.Bits ((.|.))
-import Foreign.C.Types (CInt)
+import Foreign.C.Types (CInt(..))
 import Foreign.Ptr (Ptr, nullPtr, castPtr)
 import AI.CV.OpenCV.Core.CxCore 
 import AI.CV.OpenCV.Core.HIplUtil
