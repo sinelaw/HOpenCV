@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables, MultiParamTypeClasses, FlexibleInstances,
-             TypeSynonymInstances #-}
+             TypeSynonymInstances, CPP #-}
 -- |Combinators that fuse compositions of image processing operations
 -- for in-place mutation.
 --
@@ -81,9 +81,11 @@ bi2unary = CVOp . dupArg . binop
 unary2bi :: CVOp c d -> BinOp (c,d) (c,d)
 unary2bi = BinOp . const . op
 
+#ifdef MAX_VERSION_base(4,4,0)
 (<>) :: Monoid m => m -> m -> m
 (<>) = mappend
 {-# INLINE (<>) #-}
+#endif
 
 -- |Some operations benefit from operating in-place over a defined
 -- region-of-interest (ROI). If an operation must recompute every
