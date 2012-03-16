@@ -144,3 +144,12 @@ getTrackbarPos trackbarName winName
     withCString winName      $ \wn ->
       do i <- cvGetTrackbarPos tb wn
          return $ fromIntegral i
+
+foreign import ccall unsafe "highgui.h cvSetTrackbarPos"
+  cvSetTrackbarPos :: CString -> CString -> CInt -> IO ()
+
+setTrackbarPos :: String -> String -> Int -> IO ()
+setTrackbarPos trackbarName winName pos
+  = withCString trackbarName $ \tb ->
+    withCString winName      $ \wn ->
+      cvSetTrackbarPos tb wn (fromIntegral pos)
