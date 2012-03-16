@@ -10,6 +10,7 @@ import Foreign.ForeignPtr
 import Foreign.C.String
  
 import AI.CV.OpenCV.CxCore
+import AI.CV.OpenCV.Util (fromToInteger)
 
 #include <highgui.h>
 
@@ -79,15 +80,14 @@ foreign import ccall unsafe "highgui.h cvNamedWindow"
   cvNamedWindow :: CString -> CInt -> IO CInt
 
 type AutoSize = Bool
+autoSize   = True
+noAutoSize = False
 
-titledWindow :: String -> AutoSize -> IO Int
-titledWindow s a
-  = do cs <- newCString s
-       i <- cvNamedWindow cs (fromToInteger $ fromEnum a)
-       return $ fromToInteger i
-
-fromToInteger :: (Integral a, Num b) => a -> b
-fromToInteger = fromInteger . toInteger
+namedWindow :: String -> AutoSize -> IO Int
+namedWindow s a
+  = withCString s $ \cs ->
+      do i <- cvNamedWindow cs (fromToInteger $ fromEnum a)
+         return $ fromToInteger i
 
 newtype LoadImageColor = LoadImageColor { unLoadImageColor :: CInt }
 
