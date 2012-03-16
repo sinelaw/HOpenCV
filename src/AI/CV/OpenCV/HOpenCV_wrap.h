@@ -39,3 +39,10 @@ int wrap_createTrackbar( const char* trackbarName,
                          int*        startPos,
                          int         maxVal,
                          CvTrackbarCallback onChange );
+
+CvVideoWriter *
+wrap_cvCreateVideoWriter( const char *file
+                        , int fourcc
+                        , double fps
+                        , int width
+                        , int height);

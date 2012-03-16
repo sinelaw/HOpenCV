@@ -153,5 +153,16 @@ int wrap_createTrackbar( const char* trackbarName
                        , int*        startPos
                        , int         maxVal)
 {
-  cvCreateTrackbar(trackbarName, winName, startPos, maxVal, doNothing);
+  return cvCreateTrackbar(trackbarName, winName, startPos, maxVal, doNothing);
+}
+
+/****************************************************************************/
+
+CvVideoWriter *
+wrap_cvCreateVideoWriter( const char *file
+                        , int fourcc
+                        , double fps
+                        , int height, int width)
+{
+  return cvCreateVideoWriter(file, fourcc, fps, cvSize(width, height), 1);
 }
