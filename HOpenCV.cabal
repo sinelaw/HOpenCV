@@ -37,6 +37,7 @@ library
       AI.CV.OpenCV.CxCore
       AI.CV.OpenCV.HighGui
       AI.CV.OpenCV.Types
+      AI.CV.OpenCV.Video
    c-sources:
       src/AI/CV/OpenCV/HOpenCV_wrap.c
    hs-Source-Dirs: src
