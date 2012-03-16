@@ -138,10 +138,10 @@ foreign import ccall unsafe "cxcore.h cvCreateMemStorage"
 cvCreateMemStorage :: CInt -> IO (Ptr CvMemStorage)
 cvCreateMemStorage = errorName "Failed to create mem storage" . checkPtr . c_cvCreateMemStorage 
 
-foreign import ccall unsafe "HOpenCV_warp.h release_mem_storage"
+foreign import ccall unsafe "HOpenCV_wrap.h release_mem_storage"
   cvReleaseMemStorage :: Ptr CvMemStorage -> IO ()
 
-foreign import ccall unsafe "HOpenCV_warp.h &release_mem_storage"
+foreign import ccall unsafe "HOpenCV_wrap.h &release_mem_storage"
   cp_release_mem_storage :: FunPtr (Ptr CvMemStorage -> IO ())
 
 createMemStorageF :: CInt -> IO (ForeignPtr CvMemStorage)
@@ -150,16 +150,16 @@ createMemStorageF = (createForeignPtr cp_release_mem_storage) . cvCreateMemStora
 
 -- images / matrices / arrays
 
-foreign import ccall unsafe "HOpenCV_warp.h create_image"
+foreign import ccall unsafe "HOpenCV_wrap.h create_image"
   c_cvCreateImage :: CInt -> CInt -> CInt -> CInt -> IO (Ptr IplImage)
 
 cvCreateImage :: CvSize -> CInt -> Depth -> IO (Ptr IplImage)
 cvCreateImage size numChans depth = errorName "Failed to create image" . checkPtr $ c_cvCreateImage (sizeWidth size) (sizeHeight size) (unDepth depth) numChans
 
-foreign import ccall unsafe "HOpenCV_warp.h release_image"
+foreign import ccall unsafe "HOpenCV_wrap.h release_image"
   cvReleaseImage :: Ptr IplImage -> IO ()
 
-foreign import ccall unsafe "HOpenCV_warp.h &release_image"
+foreign import ccall unsafe "HOpenCV_wrap.h &release_image"
   cp_release_image :: FunPtr (Ptr IplImage -> IO ())
 
 createImageF :: CvSize -> CInt -> Depth -> IO (ForeignPtr IplImage)
@@ -174,7 +174,7 @@ cvCloneImage = errorName "Failed to clone image" . checkPtr . c_cvCloneImage
 cloneImageF :: Ptr IplImage -> IO (ForeignPtr IplImage)
 cloneImageF x = createForeignPtr cp_release_image $ cvCloneImage x
   
-foreign import ccall unsafe "HOpenCV_warp.h get_size"
+foreign import ccall unsafe "HOpenCV_wrap.h get_size"
   c_get_size :: Ptr CvArr -> Ptr CvSize -> IO ()
 
 foreign import ccall unsafe "cxcore.h cvCopy"
@@ -191,7 +191,7 @@ cvGetSize p = unsafePerformIO $
                 size <- peek cvSizePtr
                 return size
 
-foreign import ccall unsafe "HOpenCV_warp.h get_depth"
+foreign import ccall unsafe "HOpenCV_wrap.h get_depth"
   c_get_depth :: Ptr IplImage -> IO CInt
 
 getDepth :: Ptr IplImage -> IO Depth
@@ -201,7 +201,7 @@ getDepth img = do
     Nothing -> fail "Bad depth in image struct"
     Just depth -> return depth
 
-foreign import ccall unsafe "HOpenCV_warp.h get_nChannels"
+foreign import ccall unsafe "HOpenCV_wrap.h get_nChannels"
   c_get_nChannels :: Ptr IplImage -> IO CInt
 
 getNumChannels :: Integral a => Ptr IplImage -> IO a
@@ -212,7 +212,7 @@ foreign import ccall unsafe "cxcore.h cvConvertScale"
   cvConvertScale :: Ptr CvArr -> Ptr CvArr -> CDouble -> CDouble -> IO ()
 
                                 
-foreign import ccall unsafe "HOpenCV_warp.h cv_free"
+foreign import ccall unsafe "HOpenCV_wrap.h cv_free"
   cvFree :: Ptr a -> IO ()
             
 foreign import ccall unsafe "cxcore.h cvLoad"
@@ -236,10 +236,10 @@ cvLoad filename memstorage name = withCString filename cvLoad'
 foreign import ccall unsafe "cxcore.h cvGetSeqElem"
   cvGetSeqElem :: Ptr (CvSeq a) -> CInt -> IO (Ptr a)
   
--- foreign import ccall unsafe "HOpenCV_warp.h c_rect_cvGetSeqElem"
+-- foreign import ccall unsafe "HOpenCV_wrap.h c_rect_cvGetSeqElem"
 --   cvGetSeqElemRect :: Ptr (CvSeq (Ptr CvRect)) -> CInt -> IO (Ptr CvRect)
 
-foreign import ccall unsafe "HOpenCV_warp.h seq_total"
+foreign import ccall unsafe "HOpenCV_wrap.h seq_total"
   seqNumElems :: Ptr (CvSeq a) -> IO CInt
 
 seqToPList :: Ptr (CvSeq a) -> IO [Ptr a]
@@ -263,7 +263,7 @@ seqToList pseq = do
 --     rect <- peek rectP
 --     return rect
 
-foreign import ccall unsafe "HOpenCV_warp.h c_cvRectangle"
+foreign import ccall unsafe "HOpenCV_wrap.h c_cvRectangle"
   c_cvRectangle :: Ptr CvArr -> CInt -> CInt -> CInt -> CInt -> IO ()
 
 cvRectangle :: IplArrayType a => Ptr a -> CvRect -> IO ()
@@ -273,5 +273,5 @@ cvRectangle dst (CvRect x y w h) = c_cvRectangle (fromArr dst) x y w h
 -- Debugging stuff, not part of opencv
 
 -- | Debugging function to print some of the internal details of an IplImage structure
-foreign import ccall unsafe "HOpenCV_warp.h debug_print_image_header"
+foreign import ccall unsafe "HOpenCV_wrap.h debug_print_image_header"
   c_debug_print_image_header :: Ptr IplImage -> IO ()
