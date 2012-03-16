@@ -8,9 +8,10 @@ import Foreign.C.Types
 import Foreign.Ptr
 import Foreign.ForeignPtr
 import Foreign.C.String
+import Foreign.Marshal
+import Foreign.Storable
  
 import AI.CV.OpenCV.CxCore
-import AI.CV.OpenCV.Util (fromToInteger)
 
 #include <highgui.h>
 
@@ -65,7 +66,7 @@ foreign import ccall unsafe "HOpenCV_wrap.h new_window"
   c_newWindow :: CInt -> CInt -> IO ()
 
 newWindow :: CInt -> Bool -> IO ()
-newWindow num autoSize = c_newWindow num (if autoSize then 1 else 0)
+newWindow num autoSiz = c_newWindow num (if autoSiz then 1 else 0)
 
 foreign import ccall unsafe "HOpenCV_wrap.h del_window"
   delWindow :: CInt -> IO ()
@@ -80,14 +81,15 @@ foreign import ccall unsafe "highgui.h cvNamedWindow"
   cvNamedWindow :: CString -> CInt -> IO CInt
 
 type AutoSize = Bool
+autoSize, noAutoSize :: AutoSize
 autoSize   = True
 noAutoSize = False
 
 namedWindow :: String -> AutoSize -> IO Int
 namedWindow s a
   = withCString s $ \cs ->
-      do i <- cvNamedWindow cs (fromToInteger $ fromEnum a)
-         return $ fromToInteger i
+      do i <- cvNamedWindow cs (fromIntegral $ fromEnum a)
+         return $ fromIntegral i
 
 newtype LoadImageColor = LoadImageColor { unLoadImageColor :: CInt }
 
@@ -115,3 +117,30 @@ cvSaveImage filename image = withCString filename f
       ret <- c_cvSaveImage filenameC (fromArr image)
       when (ret == 0) $ fail $ "Failed to save to file: '" ++ filename ++ "'"
       return ret
+
+------------------------------------------------
+-- Trackbar
+
+foreign import ccall unsafe "HOpenCV_Wrap.h wrap_createTrackbar"
+  wrap_createTrackbar :: CString -> CString -> Ptr CInt -> CInt -> IO ()
+
+createTrackbar :: String -> String -> Maybe Int -> Int -> IO ()
+createTrackbar trackbarName winName startPosition maxValue
+  = withCString trackbarName $ \tb ->
+    withCString winName      $ \wn ->
+    alloca                   $ \sp -> 
+      do maybeToPtr sp startPosition
+         wrap_createTrackbar tb wn sp (fromIntegral maxValue)
+ where
+  maybeToPtr mem (Just i) = poke mem (fromIntegral i)
+  maybeToPtr mem Nothing  = poke mem (fromIntegral 0)
+
+foreign import ccall unsafe "highgui.h cvGetTrackbarPos"
+  cvGetTrackbarPos :: CString -> CString -> IO CInt
+
+getTrackbarPos :: String -> String -> IO Int
+getTrackbarPos trackbarName winName
+  = withCString trackbarName $ \tb ->
+    withCString winName      $ \wn ->
+      do i <- cvGetTrackbarPos tb wn
+         return $ fromIntegral i

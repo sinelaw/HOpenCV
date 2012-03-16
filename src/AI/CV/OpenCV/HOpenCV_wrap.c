@@ -144,3 +144,14 @@ CvSeq *c_cvHaarDetectObjects( const CvArr* image,
     return cvHaarDetectObjects(image, cascade, storage, scale_factor, min_neighbors, flags, cvSize(width, height), cvSize(0, 0));
 }
 
+/****************************************************************************/
+
+void doNothing( int newPos ) { return; }
+
+int wrap_createTrackbar( const char* trackbarName
+                       , const char* winName
+                       , int*        startPos
+                       , int         maxVal)
+{
+  cvCreateTrackbar(trackbarName, winName, startPos, maxVal, doNothing);
+}
