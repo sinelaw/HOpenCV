@@ -41,7 +41,7 @@ library
    c-sources:
       src/AI/CV/OpenCV/HOpenCV_wrap.c
    hs-Source-Dirs: src
-   include-dirs: /usr/include/opencv
+   include-dirs: /usr/include/opencv2
    pkgconfig-depends: opencv
    build-depends: base >= 4 && < 5, allocated-processor >= 0.0.1, vector-space
    ghc-options: -Wall -fno-warn-type-defaults
@@ -49,8 +49,8 @@ library
 executable test-hopencv
   c-sources:
      src/AI/CV/OpenCV/HOpenCV_wrap.c
-  include-dirs: /usr/include/opencv
-  hs-source-dirs:  src
+  include-dirs: /usr/include/opencv2
+  hs-source-dirs: demo,src
   Build-Depends: base >= 4 && < 5
   main-is: Test.hs
   Ghc-Options: -Wall -fno-warn-type-defaults
