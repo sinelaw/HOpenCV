@@ -4,7 +4,7 @@ import AI.CV.OpenCV
 import Control.Monad (when)
 import Data.Maybe (isNothing)
 
-showFrames :: Int -> IplImage -> Capture -> IO ()
+showFrames :: String -> IplImage -> Capture -> IO ()
 showFrames winNum target cap  = do
   frame <- queryFrame cap
   convertImage frame target 0
@@ -15,8 +15,8 @@ showFrames winNum target cap  = do
 
 main :: IO ()
 main = do
-  let winNum = 0
-  newWindow winNum autoSize
+  let winNum = "0"
+  namedWindow winNum autoSize
   cap    <- createCameraCapture 0
   frame  <- queryFrame cap
   target <- createImage (getSize frame) 1 iplDepth8u

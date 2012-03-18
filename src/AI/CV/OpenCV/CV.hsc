@@ -17,6 +17,7 @@ import AI.CV.OpenCV.Util
 foreign import ccall unsafe "cv.h cvCanny"
   c_cvCanny :: Ptr Priv_CvArr -> Ptr Priv_CvArr -> CDouble -> CDouble -> CInt -> IO ()
 
+-- | Find edges using the Canny algorithm
 canny :: (IplArrayType i1, IplArrayType i2) =>
            i1 -> i2 -> Double -> Double -> Int -> IO ()
 canny src dst threshold1 threshold2 apertureSize
@@ -37,6 +38,7 @@ data InterpolationMethod = CV_INTER_NN
 foreign import ccall unsafe "cv.h cvResize"
   c_cvResize :: Ptr Priv_CvArr -> Ptr Priv_CvArr -> CInt -> IO ()
 
+-- | Resizes an image using the specified interpolation method
 resize :: (IplArrayType i1, IplArrayType i2) => i1 -> i2 -> InterpolationMethod -> IO ()
 resize src dst interp
    = do CvArr src' <- fromArr src
@@ -47,6 +49,7 @@ resize src dst interp
 foreign import ccall unsafe "HOpenCV_wrap.h dilate"
   c_dilate :: Ptr Priv_CvArr -> Ptr Priv_CvArr -> CInt -> IO ()
 
+-- | Dilates an image using a specific structuring element
 dilate :: (IplArrayType i1, IplArrayType i2) => i1 -> i2  -> Int -> IO ()
 dilate src dst iter
   = do CvArr src' <- fromArr src
@@ -62,6 +65,7 @@ foreign import ccall unsafe "cv.h cvPyrDown"
 constCvGaussian5x5 :: CInt
 constCvGaussian5x5 = 7
 
+-- | Smooths an image and downsamples it, currently only gaussian5x5 is supported
 pyrDown :: (IplArrayType i1, IplArrayType i2) => i1 -> i2 -> IO ()
 pyrDown src dst
   = do CvArr src' <- fromArr src
@@ -99,6 +103,7 @@ foreign import ccall unsafe "HOpenCV_wrap.h c_cvHaarDetectObjects"
                         -> CInt -> CInt                     -- ^ min_size
                         -> IO (Ptr (Priv_CvSeq CvRect))
 
+-- | Detects objects in the image. Matches are returned as a list of rectangles
 haarDetectObjects :: (IplArrayType i)
                   => i                       -- ^ image
                   -> HaarClassifierCascade -- ^ cascade

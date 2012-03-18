@@ -33,11 +33,11 @@ extra-source-files:
 
 library
    exposed-modules:
-      AI.CV.OpenCV
-      AI.CV.OpenCV.CV
-      AI.CV.OpenCV.CxCore
-      AI.CV.OpenCV.HighGui
-      AI.CV.OpenCV.Video
+     AI.CV.OpenCV
+   other-modules:
+     AI.CV.OpenCV.CxCore
+     AI.CV.OpenCV.CV
+     AI.CV.OpenCV.HighGui
    c-sources:
       src/AI/CV/OpenCV/HOpenCV_wrap.c
    hs-Source-Dirs: src

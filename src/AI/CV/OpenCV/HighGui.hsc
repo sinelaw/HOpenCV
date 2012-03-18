@@ -31,8 +31,7 @@ convertImage src dst flags
 ------------------------------------------------
 -- Capturing
 data Priv_CvCapture
-type Capture  = Ptr        Priv_CvCapture
-type CaptureF = ForeignPtr Priv_CvCapture
+type Capture = ForeignPtr Priv_CvCapture
 
 
 foreign import ccall unsafe "highgui.h cvCreateCameraCapture"
@@ -40,13 +39,16 @@ foreign import ccall unsafe "highgui.h cvCreateCameraCapture"
                           
 createCameraCapture :: Int -> IO Capture
 createCameraCapture x
-  = errorName "Failed to create camera" . checkPtr $ c_cvCreateCameraCapture . fromIntegral $ x
+  = do p <- errorName "Failed to create camera" . checkPtr $ c_cvCreateCameraCapture . fromIntegral $ x
+       newForeignPtr cp_release_capture p
   
 foreign import ccall unsafe "highgui.h cvCreateFileCapture"
   c_cvCreateFileCapture :: CString -> IO (Ptr Priv_CvCapture)
                           
 createFileCapture :: String -> IO Capture
-createFileCapture filename = err' . checkPtr $ withCString filename f
+createFileCapture filename
+  = do c <- err' . checkPtr $ withCString filename f
+       newForeignPtr cp_release_capture c
     where err' = errorName $ "Failed to capture from file: '" ++ filename ++ "'"
           f filenameC = c_cvCreateFileCapture filenameC
   
@@ -62,29 +64,41 @@ foreign import ccall unsafe "highgui.h cvQueryFrame"
 
 queryFrame :: Capture -> IO IplImage
 queryFrame cap
-  = do i <- errorName "Failed to query frame from camera" . checkPtr
-            $ c_cvQueryFrame cap
+  = do i <- withForeignPtr cap $ \c ->
+              errorName "Failed to query frame from camera" . checkPtr
+              $ c_cvQueryFrame c
        fp <- newForeignPtr cp_release_image i
        return $ IplImage fp
 
 -------------------------------------------------
 -- Windows
-foreign import ccall unsafe "HOpenCV_wrap.h new_window"
-  c_newWindow :: CInt -> CInt -> IO ()
+foreign import ccall unsafe "highgui.h cvNamedWindow"
+  cvNamedWindow :: CString -> CInt -> IO CInt
 
-newWindow :: Int -> Bool -> IO ()
-newWindow num autoSiz
-  = c_newWindow (fromIntegral num) (if autoSiz then 1 else 0)
+type AutoSize = Bool
+autoSize :: AutoSize
+autoSize   = True
 
-foreign import ccall unsafe "HOpenCV_wrap.h del_window"
-  delWindow :: CInt -> IO ()
+namedWindow :: String -> AutoSize -> IO ()
+namedWindow s a
+  = withCString s $ \cs ->
+      do _ <- cvNamedWindow cs (fromIntegral $ fromEnum a)
+         return ()
+
+foreign import ccall unsafe "highgui.h cvDestroyWindow"
+  cvDestroyWindow :: CString -> IO ()
+
+destroyWindow :: String -> IO ()
+destroyWindow wId
+  = withCString wId cvDestroyWindow
 
 foreign import ccall unsafe "HOpenCV_wrap.h show_image"
-  cvShowImage :: CInt -> Ptr Priv_IplImage -> IO ()
+  cvShowImage :: CString -> Ptr Priv_IplImage -> IO ()
 
-showImage :: Int -> IplImage -> IO ()
-showImage i (IplImage p)
- = withForeignPtr p $ cvShowImage (fromIntegral i)
+showImage :: String -> IplImage -> IO ()
+showImage winId (IplImage p)
+ = withCString winId $ \w ->
+   withForeignPtr p $ cvShowImage w
 
 foreign import ccall unsafe "highgui.h cvWaitKey"
   cvWaitKey :: CInt -> IO CInt
@@ -95,19 +109,6 @@ waitKey milliSecs
        if i == (-1)
          then return Nothing
          else return $ Just $ fromIntegral i
-
-foreign import ccall unsafe "highgui.h cvNamedWindow"
-  cvNamedWindow :: CString -> CInt -> IO CInt
-
-type AutoSize = Bool
-autoSize :: AutoSize
-autoSize   = True
-
-namedWindow :: String -> AutoSize -> IO Int
-namedWindow s a
-  = withCString s $ \cs ->
-      do i <- cvNamedWindow cs (fromIntegral $ fromEnum a)
-         return $ fromIntegral i
 
 newtype LoadImageColor = LoadImageColor { unLoadImageColor :: CInt }
 
@@ -175,3 +176,37 @@ setTrackbarPos trackbarName winName pos
   = withCString trackbarName $ \tb ->
     withCString winName      $ \wn ->
       cvSetTrackbarPos tb wn (fromIntegral pos)
+
+-- Video
+
+data Priv_CvVideoWriter
+
+type VideoWriter = ForeignPtr Priv_CvVideoWriter
+
+foreign import ccall unsafe "HOpenCV_wrap.h wrap_cvCreateVideoWriter"
+  wrap_cvCreateVideoWriter :: CString -> CInt -> CDouble -> CInt -> CInt -> IO (Ptr Priv_CvVideoWriter)
+
+type FourCC = String
+
+createVideoWriter :: String -> FourCC -> Double -> CvSize -> IO VideoWriter
+createVideoWriter file fourCC fps size
+  = do p  <- withCString file $ \f  ->
+             wrap_cvCreateVideoWriter f (toCInt fourCC)
+                                        (realToFrac fps)
+                                        (sizeWidth size) (sizeHeight size)
+       newForeignPtr releaseVideoWriter p
+ where
+  toCInt = fromIntegral . sum . map fromEnum
+
+foreign import ccall unsafe "highgui.h &cvReleaseVideoWriter"
+  releaseVideoWriter :: FunPtr (Ptr Priv_CvVideoWriter -> IO ())
+
+foreign import ccall unsafe "highgui.h cvWriteFrame"
+  cvWriteFrame :: Ptr Priv_CvVideoWriter -> Ptr Priv_IplImage -> IO CInt
+
+writeFrame :: VideoWriter -> IplImage -> IO Int
+writeFrame vw (IplImage im)
+  = do i <- withForeignPtr2 vw im
+             $ \v' i' -> cvWriteFrame v' i'
+       return $ fromIntegral i
+

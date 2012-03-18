@@ -237,6 +237,15 @@ getNumChannels (IplImage img)
 foreign import ccall unsafe "cxcore.h cvConvertScale"
   cvConvertScale :: Ptr Priv_CvArr -> Ptr Priv_CvArr -> CDouble -> CDouble -> IO ()
 
+convertScale :: IplArrayType a => a -> a -> Double -> Double -> IO ()
+convertScale a b c d
+  = do CvArr a' <- fromArr a
+       CvArr b' <- fromArr b
+       withForeignPtr2 a' b'
+        $ \a'' b'' -> cvConvertScale a'' b''
+                                     (realToFrac c)
+                                     (realToFrac d)
+
 foreign import ccall unsafe "HOpenCV_wrap.h cv_free"
   cvFree :: Ptr a -> IO ()
 
