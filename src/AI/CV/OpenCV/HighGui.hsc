@@ -72,6 +72,7 @@ queryFrame cap
 
 -------------------------------------------------
 -- Windows
+
 foreign import ccall unsafe "highgui.h cvNamedWindow"
   cvNamedWindow :: CString -> CInt -> IO CInt
 
@@ -90,15 +91,15 @@ foreign import ccall unsafe "highgui.h cvDestroyWindow"
 
 destroyWindow :: String -> IO ()
 destroyWindow wId
-  = withCString wId cvDestroyWindow
+  = withCString wId cvDestroyWindow 
 
-foreign import ccall unsafe "HOpenCV_wrap.h show_image"
+foreign import ccall unsafe "highgui.h cvShowImage"
   cvShowImage :: CString -> Ptr Priv_IplImage -> IO ()
 
 showImage :: String -> IplImage -> IO ()
-showImage winId (IplImage p)
- = withCString winId $ \w ->
-   withForeignPtr p $ cvShowImage w
+showImage wId (IplImage p)
+ = withCString wId $ \w ->
+    withForeignPtr p $ cvShowImage w
 
 foreign import ccall unsafe "highgui.h cvWaitKey"
   cvWaitKey :: CInt -> IO CInt
