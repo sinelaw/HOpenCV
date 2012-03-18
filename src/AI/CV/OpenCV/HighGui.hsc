@@ -12,6 +12,7 @@ import Foreign.Marshal
 import Foreign.Storable
  
 import AI.CV.OpenCV.CxCore
+import AI.CV.OpenCV.Util
 
 #include <highgui.h>
 
@@ -20,31 +21,32 @@ import AI.CV.OpenCV.CxCore
 foreign import ccall unsafe "highgui.h cvConvertImage"
   c_cvConvertImage :: Ptr Priv_CvArr -> Ptr Priv_CvArr -> CInt -> IO ()
 
-cvConvertImage :: (IplArrayType a, IplArrayType a1) => a -> a1 -> Int -> IO ()
-cvConvertImage src dst flags
-  = let CvArr src' = fromArr src
-        CvArr dst' = fromArr dst
-    in c_cvConvertImage src' dst' (fromIntegral flags)
+convertImage :: (IplArrayType a, IplArrayType a1) => a -> a1 -> Int -> IO ()
+convertImage src dst flags
+  = do CvArr src' <- fromArr src
+       CvArr dst' <- fromArr dst
+       withForeignPtr2 src' dst'
+        $ \s d -> c_cvConvertImage s d (fromIntegral flags)
 
 ------------------------------------------------
 -- Capturing
 data Priv_CvCapture
-type CvCapture  = Ptr        Priv_CvCapture
-type CvCaptureF = ForeignPtr Priv_CvCapture
+type Capture  = Ptr        Priv_CvCapture
+type CaptureF = ForeignPtr Priv_CvCapture
 
 
 foreign import ccall unsafe "highgui.h cvCreateCameraCapture"
   c_cvCreateCameraCapture :: CInt -> IO (Ptr Priv_CvCapture)
                           
-cvCreateCameraCapture :: Int -> IO CvCapture
-cvCreateCameraCapture x
+createCameraCapture :: Int -> IO Capture
+createCameraCapture x
   = errorName "Failed to create camera" . checkPtr $ c_cvCreateCameraCapture . fromIntegral $ x
   
 foreign import ccall unsafe "highgui.h cvCreateFileCapture"
   c_cvCreateFileCapture :: CString -> IO (Ptr Priv_CvCapture)
                           
-cvCreateFileCapture :: String -> IO CvCapture
-cvCreateFileCapture filename = err' . checkPtr $ withCString filename f
+createFileCapture :: String -> IO Capture
+createFileCapture filename = err' . checkPtr $ withCString filename f
     where err' = errorName $ "Failed to capture from file: '" ++ filename ++ "'"
           f filenameC = c_cvCreateFileCapture filenameC
   
@@ -55,20 +57,15 @@ foreign import ccall unsafe "HOpenCV_wrap.h release_capture"
 foreign import ccall unsafe "HOpenCV_wrap.h &release_capture"
   cp_release_capture  :: FunPtr (Ptr Priv_CvCapture -> IO ())
  
-createCameraCaptureF :: Int -> IO CvCaptureF
-createCameraCaptureF
-  = createForeignPtr cp_release_capture
-  . cvCreateCameraCapture
-  . fromIntegral
-
 foreign import ccall unsafe "highgui.h cvQueryFrame"
   c_cvQueryFrame :: Ptr Priv_CvCapture -> IO (Ptr Priv_IplImage)
 
-cvQueryFrame :: CvCapture -> IO IplImage
-cvQueryFrame cap
+queryFrame :: Capture -> IO IplImage
+queryFrame cap
   = do i <- errorName "Failed to query frame from camera" . checkPtr
             $ c_cvQueryFrame cap
-       return $ IplImage i
+       fp <- newForeignPtr cp_release_image i
+       return $ IplImage fp
 
 -------------------------------------------------
 -- Windows
@@ -87,15 +84,17 @@ foreign import ccall unsafe "HOpenCV_wrap.h show_image"
 
 showImage :: Int -> IplImage -> IO ()
 showImage i (IplImage p)
- = cvShowImage (fromIntegral i) p
+ = withForeignPtr p $ cvShowImage (fromIntegral i)
 
 foreign import ccall unsafe "highgui.h cvWaitKey"
   cvWaitKey :: CInt -> IO CInt
 
-waitKey :: Int -> IO Int
+waitKey :: Int -> IO (Maybe Int)
 waitKey milliSecs
   = do i <- cvWaitKey $ fromIntegral milliSecs
-       return $ fromIntegral i
+       if i == (-1)
+         then return Nothing
+         else return $ Just $ fromIntegral i
 
 foreign import ccall unsafe "highgui.h cvNamedWindow"
   cvNamedWindow :: CString -> CInt -> IO CInt
@@ -120,23 +119,24 @@ newtype LoadImageColor = LoadImageColor { unLoadImageColor :: CInt }
 foreign import ccall unsafe "highgui.h cvLoadImage"
   c_cvLoadImage :: CString -> CInt -> IO (Ptr Priv_IplImage)
 
-cvLoadImage :: String -> LoadImageColor -> IO IplImage
-cvLoadImage filename (LoadImageColor color)
+loadImage :: String -> LoadImageColor -> IO IplImage
+loadImage filename (LoadImageColor color)
   = do i <- err' . checkPtr $ withCString filename 
             $ \fn -> c_cvLoadImage fn color
-       return $ IplImage i
+       fp <- newForeignPtr cp_release_image i
+       return $ IplImage fp
  where
    err' = errorName $ "Failed to load from file: '" ++ filename ++ "'"
 
 foreign import ccall unsafe "highgui.h cvSaveImage"
   c_cvSaveImage :: CString -> Ptr Priv_CvArr -> IO CInt
 
-cvSaveImage :: String -> IplImage -> IO Int
-cvSaveImage filename image = withCString filename f
+saveImage :: String -> IplImage -> IO Int
+saveImage filename image = withCString filename f
   where
     f filenameC = do
-      let CvArr i = fromArr image
-      ret <- c_cvSaveImage filenameC i
+      CvArr i <- fromArr image
+      ret <- withForeignPtr i $ c_cvSaveImage filenameC
       when (ret == 0) $ fail $ "Failed to save to file: '" ++ filename ++ "'"
       return $ fromIntegral ret
 
