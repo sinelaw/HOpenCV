@@ -51,6 +51,7 @@ module AI.CV.OpenCV
   , queryFrame
   -- * Video support
   , VideoWriter
+  , FourCC
   , createVideoWriter
   , writeFrame
   -- * Gui operations
