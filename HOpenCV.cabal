@@ -33,10 +33,10 @@ extra-source-files:
 
 library
    exposed-modules:
+      AI.CV.OpenCV
       AI.CV.OpenCV.CV
       AI.CV.OpenCV.CxCore
       AI.CV.OpenCV.HighGui
-      AI.CV.OpenCV.Types
       AI.CV.OpenCV.Video
    c-sources:
       src/AI/CV/OpenCV/HOpenCV_wrap.c
@@ -56,7 +56,7 @@ executable test-hopencv
   Ghc-Options: -Wall -fno-warn-type-defaults
   Ghc-Prof-Options:  -prof -auto-all 
   pkgconfig-depends: opencv
-  other-modules: AI.CV.OpenCV.CxCore, AI.CV.OpenCV.CV, AI.CV.OpenCV.HighGui, AI.CV.OpenCV.Types
+  other-modules: AI.CV.OpenCV.CxCore, AI.CV.OpenCV.CV, AI.CV.OpenCV.HighGui
 
 
 --source-repository head
