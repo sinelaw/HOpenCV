@@ -34,13 +34,13 @@ extra-source-files:
 library
    exposed-modules:
      AI.CV.OpenCV
-     AI.CV.OpenCV.Gtk
    other-modules:
      AI.CV.OpenCV.Util
      AI.CV.OpenCV.CxCore
      AI.CV.OpenCV.CV
      AI.CV.OpenCV.HighGui
      AI.CV.OpenCV.ImgProc
+     AI.CV.OpenCV.Gtk
    c-sources:
       src/AI/CV/OpenCV/HOpenCV_wrap.c
    hs-Source-Dirs: src
