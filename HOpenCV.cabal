@@ -34,28 +34,41 @@ extra-source-files:
 library
    exposed-modules:
      AI.CV.OpenCV
+     AI.CV.OpenCV.Gtk
    other-modules:
+     AI.CV.OpenCV.Util
      AI.CV.OpenCV.CxCore
      AI.CV.OpenCV.CV
      AI.CV.OpenCV.HighGui
+     AI.CV.OpenCV.ImgProc
    c-sources:
       src/AI/CV/OpenCV/HOpenCV_wrap.c
    hs-Source-Dirs: src
    pkgconfig-depends: opencv
-   build-depends: base >= 4 && < 5, allocated-processor >= 0.0.1, vector-space
+   build-depends: base >= 4 && < 5, allocated-processor >= 0.0.1, vector-space, gtk
    ghc-options: -Wall -fno-warn-type-defaults
 
-executable test-hopencv
+executable cannyVideo
   c-sources:
      src/AI/CV/OpenCV/HOpenCV_wrap.c
   hs-source-dirs: demo,src
   Build-Depends: base >= 4 && < 5
-  main-is: Test.hs
+  main-is: cannyVideo.hs
   Ghc-Options: -Wall -fno-warn-type-defaults
   Ghc-Prof-Options:  -prof -auto-all 
   pkgconfig-depends: opencv
   other-modules: AI.CV.OpenCV.CxCore, AI.CV.OpenCV.CV, AI.CV.OpenCV.HighGui
 
+executable usingOpenCV_WithGtk
+  c-sources:
+     src/AI/CV/OpenCV/HOpenCV_wrap.c
+  hs-source-dirs: demo,src
+  Build-Depends: base >= 4 && < 5
+  main-is: usingOpenCV_WithGtk.hs
+  Ghc-Options: -Wall -fno-warn-type-defaults
+  Ghc-Prof-Options:  -prof -auto-all 
+  pkgconfig-depends: opencv
+  other-modules: AI.CV.OpenCV.CxCore, AI.CV.OpenCV.CV, AI.CV.OpenCV.HighGui
 
 --source-repository head
 --  type: git

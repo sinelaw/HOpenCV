@@ -2,11 +2,10 @@
 
 module AI.CV.OpenCV.CxCore where
 
+import Foreign
 import Foreign.ForeignPtrWrap
 import Foreign.C.Types
 import Foreign.C.String
-import Foreign hiding (unsafePerformIO)
-import System.IO.Unsafe
 
 import Data.VectorSpace as VectorSpace
 
@@ -206,10 +205,16 @@ copy src dst
        CvArr dst' <- fromArr dst
        withForeignPtr2 src' dst' $ \s d -> c_cvCopy s d nullPtr
 
-getSize :: IplArrayType a => a -> CvSize
+foreign import ccall unsafe "HOpenCV_wrap.h wrap_getImageData"
+  wrap_getImageData :: Ptr Priv_IplImage -> IO (Ptr CUChar)
+
+getImageData :: IplImage -> IO (Ptr CUChar)
+getImageData (IplImage i)
+  = withForeignPtr i wrap_getImageData
+
+getSize :: IplArrayType a => a -> IO CvSize
 getSize a
-  = unsafePerformIO $
-    alloca $ \cvSizePtr -> do
+  = alloca $ \cvSizePtr -> do
       CvArr p' <- fromArr a
       withForeignPtr p' $ \p'' -> c_get_size (castPtr p'') cvSizePtr
       size <- peek cvSizePtr
@@ -233,6 +238,13 @@ getNumChannels (IplImage img)
   = do i <- withForeignPtr img c_get_nChannels
        return $ fromIntegral i
 
+foreign import ccall unsafe "HOpenCV_wrap.h wrap_getWidthStep"
+  wrap_getWidthStep :: Ptr Priv_IplImage -> IO CInt
+
+getWidthStep :: IplImage -> IO Int
+getWidthStep (IplImage im)
+  = do i <- withForeignPtr im wrap_getWidthStep
+       return $ fromIntegral i
 
 foreign import ccall unsafe "cxcore.h cvConvertScale"
   cvConvertScale :: Ptr Priv_CvArr -> Ptr Priv_CvArr -> CDouble -> CDouble -> IO ()

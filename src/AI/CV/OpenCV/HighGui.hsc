@@ -37,6 +37,13 @@ type Capture = ForeignPtr Priv_CvCapture
 foreign import ccall unsafe "highgui.h cvCreateCameraCapture"
   c_cvCreateCameraCapture :: CInt -> IO (Ptr Priv_CvCapture)
                           
+-- | self-documenting camera specifications
+pickAnyCam :: Int
+pickAnyCam = -1
+
+cam :: Int -> Int
+cam = id
+
 createCameraCapture :: Int -> IO Capture
 createCameraCapture x
   = do p <- errorName "Failed to create camera" . checkPtr $ c_cvCreateCameraCapture . fromIntegral $ x

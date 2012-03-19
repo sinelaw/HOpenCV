@@ -19,5 +19,6 @@ main = do
   namedWindow win autoSize
   cap    <- createCameraCapture 0
   frame  <- queryFrame cap
-  target <- createImage (getSize frame) 1 iplDepth8u
+  size   <- getSize frame
+  target <- createImage size 1 iplDepth8u
   showFrames win target cap

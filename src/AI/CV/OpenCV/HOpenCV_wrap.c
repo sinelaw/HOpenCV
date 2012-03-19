@@ -74,6 +74,14 @@ void release_image(IplImage *image)
     return cvReleaseImage(&temp);
 }
 
+char *wrap_getImageData(const IplImage *im) {
+  return im->imageData;
+}
+
+int wrap_getWidthStep(IplImage *im) {
+  return im->widthStep;
+}
+
 /* Notice that according to opencv docs, cvGetSize returns the ROI for images, not the image.width and .height */
 void get_size(const CvArr *arr, CvSize *size)
 {

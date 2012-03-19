@@ -35,11 +35,15 @@ module AI.CV.OpenCV
   , saveImage
   , cloneImage
   , copy
+  , getImageData
   , getSize
   , getDepth
   , getNumChannels
+  , getWidthStep
   , convertImage
   , convertScale
+  , CvtColorFlag(..)
+  , cvtColor
   , InterpolationMethod(..)
   , resize
   , dilate
@@ -47,6 +51,8 @@ module AI.CV.OpenCV
   -- * Capturing images
   , Capture()
   , createCameraCapture
+  , pickAnyCam
+  , cam
   , createFileCapture
   , queryFrame
   -- * Video support
@@ -55,6 +61,7 @@ module AI.CV.OpenCV
   , createVideoWriter
   , writeFrame
   -- * Gui operations
+  , toGtkPixbuf
   , namedWindow
   , AutoSize
   , autoSize
@@ -83,3 +90,5 @@ where
 import AI.CV.OpenCV.CxCore
 import AI.CV.OpenCV.CV
 import AI.CV.OpenCV.HighGui
+import AI.CV.OpenCV.ImgProc
+import AI.CV.OpenCV.Gtk
