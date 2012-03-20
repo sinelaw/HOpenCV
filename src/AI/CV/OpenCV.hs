@@ -7,10 +7,9 @@ module AI.CV.OpenCV
   , CvRect(..)
   , liftCvRect
   , liftCvRect2
-  -- * CvArr, CvSeq, IplArrayType
+  -- * CvArr, CvSeq
   , CvArr
   , CvSeq
-  , IplArrayType()
   -- * Depth
   , Depth
   , iplDepth1u 

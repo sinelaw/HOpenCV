@@ -21,12 +21,11 @@ import AI.CV.OpenCV.Util
 foreign import ccall unsafe "highgui.h cvConvertImage"
   c_cvConvertImage :: Ptr Priv_CvArr -> Ptr Priv_CvArr -> CInt -> IO ()
 
-convertImage :: (IplArrayType a, IplArrayType a1) => a -> a1 -> Int -> IO ()
+convertImage :: IplImage -> IplImage -> Int -> IO ()
 convertImage src dst flags
-  = do CvArr src' <- fromArr src
-       CvArr dst' <- fromArr dst
-       withForeignPtr2 src' dst'
-        $ \s d -> c_cvConvertImage s d (fromIntegral flags)
+  = withForeignPtr2 src dst
+     $ \s d -> c_cvConvertImage (castPtr s) (castPtr d)
+                                (fromIntegral flags)
 
 ------------------------------------------------
 -- Capturing
@@ -75,7 +74,7 @@ queryFrame cap
               errorName "Failed to query frame from camera" . checkPtr
               $ c_cvQueryFrame c
        fp <- newForeignPtr cp_release_image i
-       return $ IplImage fp
+       return fp
 
 -------------------------------------------------
 -- Windows
@@ -104,7 +103,7 @@ foreign import ccall unsafe "highgui.h cvShowImage"
   cvShowImage :: CString -> Ptr Priv_IplImage -> IO ()
 
 showImage :: String -> IplImage -> IO ()
-showImage wId (IplImage p)
+showImage wId p
  = withCString wId $ \w ->
     withForeignPtr p $ cvShowImage w
 
@@ -133,7 +132,7 @@ loadImage filename (LoadImageColor color)
   = do i <- err' . checkPtr $ withCString filename 
             $ \fn -> c_cvLoadImage fn color
        fp <- newForeignPtr cp_release_image i
-       return $ IplImage fp
+       return fp
  where
    err' = errorName $ "Failed to load from file: '" ++ filename ++ "'"
 
@@ -144,8 +143,8 @@ saveImage :: String -> IplImage -> IO Int
 saveImage filename image = withCString filename f
   where
     f filenameC = do
-      CvArr i <- fromArr image
-      ret <- withForeignPtr i $ c_cvSaveImage filenameC
+      ret <- withForeignPtr image $ \i ->
+             c_cvSaveImage filenameC (castPtr i)
       when (ret == 0) $ fail $ "Failed to save to file: '" ++ filename ++ "'"
       return $ fromIntegral ret
 
@@ -213,7 +212,7 @@ foreign import ccall unsafe "highgui.h cvWriteFrame"
   cvWriteFrame :: Ptr Priv_CvVideoWriter -> Ptr Priv_IplImage -> IO CInt
 
 writeFrame :: VideoWriter -> IplImage -> IO Int
-writeFrame vw (IplImage im)
+writeFrame vw im
   = do i <- withForeignPtr2 vw im
              $ \v' i' -> cvWriteFrame v' i'
        return $ fromIntegral i

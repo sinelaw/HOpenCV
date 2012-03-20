@@ -91,31 +91,11 @@ instance VectorSpace CvRect where
 
 
 ------------------------------------------------------
-class IplArrayType a
- where
-  fromArr :: a -> IO CvArr
-
 data Priv_CvArr
-newtype CvArr = CvArr (ForeignPtr Priv_CvArr)
-
-unArr :: IplArrayType a => a -> IO (ForeignPtr Priv_CvArr)
-unArr iplArrayType
-  = do CvArr fp <- fromArr iplArrayType
-       return fp
-
-instance IplArrayType CvArr
- where
-  fromArr = return . id
+type CvArr = ForeignPtr Priv_CvArr
 
 data Priv_IplImage
-newtype IplImage = IplImage (ForeignPtr Priv_IplImage)
-
-instance IplArrayType IplImage
- where
-  fromArr (IplImage p)
-    = do p' <- withForeignPtr p $ return . castPtr
-         fp <- newForeignPtr cvFree_finalizer p'
-         return $ CvArr fp
+type IplImage = ForeignPtr Priv_IplImage
 
 data Priv_CvMemStorage
 type MemStorage = ForeignPtr Priv_CvMemStorage
@@ -180,7 +160,7 @@ createImage size numChans depth
                                (unDepth depth)
                                (fromIntegral numChans)
        fp <- newForeignPtr cp_release_image im
-       return $ IplImage fp
+       return fp
 
 foreign import ccall unsafe "HOpenCV_wrap.h release_image"
   cvReleaseImage :: Ptr Priv_IplImage -> IO ()
@@ -193,11 +173,11 @@ foreign import ccall unsafe "cxcore.h cvCloneImage"
   c_cvCloneImage :: Ptr Priv_IplImage -> IO (Ptr Priv_IplImage)
 
 cloneImage :: IplImage -> IO IplImage
-cloneImage (IplImage p)
+cloneImage p
   = do p' <- errorName "Failed to clone image" . checkPtr 
              $ withForeignPtr p c_cvCloneImage
        fp <- newForeignPtr cp_release_image p'
-       return $ IplImage fp 
+       return fp 
                   
 foreign import ccall unsafe "HOpenCV_wrap.h get_size"
   c_get_size :: Ptr Priv_CvArr -> Ptr CvSize -> IO ()
@@ -206,39 +186,31 @@ foreign import ccall unsafe "cxcore.h cvCopy"
   c_cvCopy :: Ptr Priv_CvArr -> Ptr Priv_CvArr -> Ptr Priv_CvArr -> IO ()
                    
 -- todo add mask support
-copy :: IplArrayType a => a -> a -> IO ()
+copy :: IplImage -> IplImage -> IO ()
 copy src dst
-  = do CvArr src' <- fromArr src
-       CvArr dst' <- fromArr dst
-       withForeignPtr2 src' dst' $ \s d -> c_cvCopy s d nullPtr
+  = withForeignPtr2 src dst $ \s d ->
+    c_cvCopy (castPtr s) (castPtr d) nullPtr
 
 foreign import ccall unsafe "cxcore.h cvMerge"
   cvMerge :: Ptr Priv_CvArr -> Ptr Priv_CvArr -> Ptr Priv_CvArr
     -> Ptr Priv_CvArr -> Ptr Priv_CvArr -> IO ()
 
-merge :: (IplArrayType a, IplArrayType b, IplArrayType c, IplArrayType d, IplArrayType e)
-  => a -> b -> c -> d -> e -> IO ()
+merge :: IplImage -> IplImage -> IplImage -> IplImage -> IplImage -> IO ()
 merge a b c d e
-  = do CvArr a' <- fromArr a
-       CvArr b' <- fromArr b
-       CvArr c' <- fromArr c
-       CvArr d' <- fromArr d
-       CvArr e' <- fromArr e
-       withForeignPtr5 a' b' c' d' e'
-        $ \a'' b'' c'' d'' e'' -> cvMerge a'' b'' c'' d'' e''
+  = withForeignPtr5 a b c d e $ \a' b' c' d' e' ->
+     cvMerge (castPtr a') (castPtr b') (castPtr c') (castPtr d') (castPtr e')
 
 foreign import ccall unsafe "HOpenCV_wrap.h wrap_getImageData"
   wrap_getImageData :: Ptr Priv_IplImage -> IO (Ptr CUChar)
 
 getImageData :: IplImage -> IO (Ptr CUChar)
-getImageData (IplImage i)
+getImageData i
   = withForeignPtr i wrap_getImageData
 
-getSize :: IplArrayType a => a -> IO CvSize
+getSize :: IplImage -> IO CvSize
 getSize a
   = alloca $ \cvSizePtr -> do
-      CvArr p' <- fromArr a
-      withForeignPtr p' $ \p'' -> c_get_size (castPtr p'') cvSizePtr
+      withForeignPtr a $ \a' -> c_get_size (castPtr a') cvSizePtr
       size <- peek cvSizePtr
       return size
 
@@ -246,7 +218,7 @@ foreign import ccall unsafe "HOpenCV_wrap.h get_depth"
   c_get_depth :: Ptr Priv_IplImage -> IO CInt
 
 getDepth :: IplImage -> IO Depth
-getDepth (IplImage img) = do
+getDepth img = do
   depthInt <- withForeignPtr img c_get_depth 
   case numToDepth depthInt of
     Nothing -> fail "Bad depth in image struct"
@@ -256,7 +228,7 @@ foreign import ccall unsafe "HOpenCV_wrap.h get_nChannels"
   c_get_nChannels :: Ptr Priv_IplImage -> IO CInt
 
 getNumChannels :: Integral a => IplImage -> IO a
-getNumChannels (IplImage img)
+getNumChannels img
   = do i <- withForeignPtr img c_get_nChannels
        return $ fromIntegral i
 
@@ -264,21 +236,20 @@ foreign import ccall unsafe "HOpenCV_wrap.h wrap_getWidthStep"
   wrap_getWidthStep :: Ptr Priv_IplImage -> IO CInt
 
 getWidthStep :: IplImage -> IO Int
-getWidthStep (IplImage im)
+getWidthStep im
   = do i <- withForeignPtr im wrap_getWidthStep
        return $ fromIntegral i
 
 foreign import ccall unsafe "cxcore.h cvConvertScale"
   cvConvertScale :: Ptr Priv_CvArr -> Ptr Priv_CvArr -> CDouble -> CDouble -> IO ()
 
-convertScale :: IplArrayType a => a -> a -> Double -> Double -> IO ()
+convertScale :: IplImage -> IplImage -> Double -> Double -> IO ()
 convertScale a b c d
-  = do CvArr a' <- fromArr a
-       CvArr b' <- fromArr b
-       withForeignPtr2 a' b'
-        $ \a'' b'' -> cvConvertScale a'' b''
-                                     (realToFrac c)
-                                     (realToFrac d)
+  = withForeignPtr2 a b $ \a' b' ->
+     cvConvertScale (castPtr a')
+                    (castPtr b')
+                    (realToFrac c)
+                    (realToFrac d)
 
 foreign import ccall unsafe "HOpenCV_wrap.h cv_free"
   cvFree :: Ptr a -> IO ()
@@ -347,10 +318,10 @@ seqToList pseq = do
 foreign import ccall unsafe "HOpenCV_wrap.h c_cvRectangle"
   c_cvRectangle :: Ptr Priv_CvArr -> CInt -> CInt -> CInt -> CInt -> IO ()
 
-rectangle :: IplArrayType a => a -> CvRect -> IO ()
+rectangle :: IplImage -> CvRect -> IO ()
 rectangle dst (CvRect x y w h)
-  = do CvArr dst' <- fromArr dst
-       withForeignPtr dst' $ \d -> c_cvRectangle d x y w h
+  = withForeignPtr dst $ \d ->
+    c_cvRectangle (castPtr d) x y w h
 
 ------------------------------------------------------------------------------
 -- Debugging stuff, not part of opencv

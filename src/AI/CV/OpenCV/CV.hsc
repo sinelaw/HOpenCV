@@ -18,16 +18,13 @@ foreign import ccall unsafe "cv.h cvCanny"
   c_cvCanny :: Ptr Priv_CvArr -> Ptr Priv_CvArr -> CDouble -> CDouble -> CInt -> IO ()
 
 -- | Find edges using the Canny algorithm
-canny :: (IplArrayType i1, IplArrayType i2) =>
-           i1 -> i2 -> Double -> Double -> Int -> IO ()
+canny :: IplImage -> IplImage -> Double -> Double -> Int -> IO ()
 canny src dst threshold1 threshold2 apertureSize
-  = do CvArr src' <- fromArr src
-       CvArr dst' <- fromArr dst
-       withForeignPtr2 src' dst'
-        $ \s d -> c_cvCanny s d
-                    (realToFrac threshold1)
-                    (realToFrac threshold2)
-                    (fromIntegral apertureSize)
+  = withForeignPtr2 src dst $ \s d -> 
+    c_cvCanny (castPtr s) (castPtr d)
+              (realToFrac threshold1)
+              (realToFrac threshold2)
+              (fromIntegral apertureSize)
 
 data InterpolationMethod = CV_INTER_NN 
                          | CV_INTER_LINEAR 
@@ -39,23 +36,19 @@ foreign import ccall unsafe "cv.h cvResize"
   c_cvResize :: Ptr Priv_CvArr -> Ptr Priv_CvArr -> CInt -> IO ()
 
 -- | Resizes an image using the specified interpolation method
-resize :: (IplArrayType i1, IplArrayType i2) => i1 -> i2 -> InterpolationMethod -> IO ()
+resize :: IplImage -> IplImage -> InterpolationMethod -> IO ()
 resize src dst interp
-   = do CvArr src' <- fromArr src
-        CvArr dst' <- fromArr dst
-        withForeignPtr2 src' dst'
-         $ \s d -> c_cvResize s d (fromIntegral . fromEnum $ interp)
+   = withForeignPtr2 src dst $ \s d ->
+      c_cvResize (castPtr s) (castPtr d) (fromIntegral . fromEnum $ interp)
 
 foreign import ccall unsafe "HOpenCV_wrap.h dilate"
   c_dilate :: Ptr Priv_CvArr -> Ptr Priv_CvArr -> CInt -> IO ()
 
 -- | Dilates an image using a specific structuring element
-dilate :: (IplArrayType i1, IplArrayType i2) => i1 -> i2  -> Int -> IO ()
+dilate :: IplImage -> IplImage -> Int -> IO ()
 dilate src dst iter
-  = do CvArr src' <- fromArr src
-       CvArr dst' <- fromArr dst
-       withForeignPtr2 src' dst'
-        $ \s d -> c_dilate s d $ fromIntegral iter
+  = withForeignPtr2 src dst
+     $ \s d -> c_dilate (castPtr s) (castPtr d) $ fromIntegral iter
 
 
 foreign import ccall unsafe "cv.h cvPyrDown"
@@ -66,12 +59,10 @@ constCvGaussian5x5 :: CInt
 constCvGaussian5x5 = 7
 
 -- | Smooths an image and downsamples it, currently only gaussian5x5 is supported
-pyrDown :: (IplArrayType i1, IplArrayType i2) => i1 -> i2 -> IO ()
+pyrDown :: IplImage -> IplImage -> IO ()
 pyrDown src dst
-  = do CvArr src' <- fromArr src
-       CvArr dst' <- fromArr dst
-       withForeignPtr2 src' dst'
-        $ \s d -> c_cvPyrDown s d constCvGaussian5x5
+  = withForeignPtr2 src dst
+     $ \s d -> c_cvPyrDown (castPtr s) (castPtr d) constCvGaussian5x5
 
 ------------------------------------------------------------------------------
 
@@ -104,19 +95,17 @@ foreign import ccall unsafe "HOpenCV_wrap.h c_cvHaarDetectObjects"
                         -> IO (Ptr (Priv_CvSeq CvRect))
 
 -- | Detects objects in the image. Matches are returned as a list of rectangles
-haarDetectObjects :: (IplArrayType i)
-                  => i                       -- ^ image
+haarDetectObjects :: IplImage              -- ^ image
                   -> HaarClassifierCascade -- ^ cascade
                   -> MemStorage            -- ^ storage
-                  -> Double                 -- ^ scale_factor
-                  -> Int                    -- ^ min_neighbors
-                  -> HaarDetectFlag          -- ^ flags
-                  -> CvSize                  -- ^ min_size
+                  -> Double                -- ^ scale_factor
+                  -> Int                   -- ^ min_neighbors
+                  -> HaarDetectFlag        -- ^ flags
+                  -> CvSize                -- ^ min_size
                   -> IO (CvSeq CvRect)
 haarDetectObjects image cascade storage scaleFactor minNeighbors flags minSize
-  = do CvArr im <- fromArr image
-       p  <- withForeignPtr2 im storage $ \im' s' -> 
-             c_cvHaarDetectObjects im' cascade s'
+  = do p  <- withForeignPtr2 image storage $ \im' s' -> 
+             c_cvHaarDetectObjects (castPtr im') cascade s'
                                    (realToFrac scaleFactor)
                                    (fromIntegral minNeighbors)
                                    (unHaarDetectFlag flags)
