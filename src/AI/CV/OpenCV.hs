@@ -21,6 +21,7 @@ module AI.CV.OpenCV
   , iplDepth32s
   , iplDepth32f
   , iplDepth64f
+  , numBits
   -- * MemStorage
   , MemStorage()
   , createMemStorage
@@ -35,6 +36,7 @@ module AI.CV.OpenCV
   , saveImage
   , cloneImage
   , copy
+  , merge
   , getImageData
   , getSize
   , getDepth

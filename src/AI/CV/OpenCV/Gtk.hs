@@ -9,13 +9,15 @@ toGtkPixbuf i
   = do imageData <- getImageData i
        size      <- getSize i
        rowStride <- getWidthStep i
+       d         <- getDepth i
+       let depth = numBits d
        pixbufNewFromData
          imageData
          ColorspaceRgb
          noAlphaChannel
-         (fromIntegral 8)
+         (fromIntegral depth)
          (fromIntegral . sizeWidth  $ size)
          (fromIntegral . sizeHeight $ size)
-         (fromIntegral rowStride)
+         rowStride
  where
   noAlphaChannel = False

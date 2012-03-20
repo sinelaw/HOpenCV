@@ -174,3 +174,7 @@ wrap_cvCreateVideoWriter( const char *file
 {
   return cvCreateVideoWriter(file, fourcc, fps, cvSize(width, height), 1);
 }
+
+void freeNothing(void *a) {
+ return;
+}

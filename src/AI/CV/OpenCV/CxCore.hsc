@@ -98,6 +98,11 @@ class IplArrayType a
 data Priv_CvArr
 newtype CvArr = CvArr (ForeignPtr Priv_CvArr)
 
+unArr :: IplArrayType a => a -> IO (ForeignPtr Priv_CvArr)
+unArr iplArrayType
+  = do CvArr fp <- fromArr iplArrayType
+       return fp
+
 instance IplArrayType CvArr
  where
   fromArr = return . id
@@ -141,6 +146,8 @@ depthsLookupList = map (\d -> (unDepth d, d)) validDepths
 numToDepth :: CInt -> Maybe Depth
 numToDepth x = lookup x depthsLookupList
   
+numBits :: Depth -> Int
+numBits = fromIntegral . unDepth
 
 ---------------------------------------------------------------
 -- mem storage
@@ -204,6 +211,21 @@ copy src dst
   = do CvArr src' <- fromArr src
        CvArr dst' <- fromArr dst
        withForeignPtr2 src' dst' $ \s d -> c_cvCopy s d nullPtr
+
+foreign import ccall unsafe "cxcore.h cvMerge"
+  cvMerge :: Ptr Priv_CvArr -> Ptr Priv_CvArr -> Ptr Priv_CvArr
+    -> Ptr Priv_CvArr -> Ptr Priv_CvArr -> IO ()
+
+merge :: (IplArrayType a, IplArrayType b, IplArrayType c, IplArrayType d, IplArrayType e)
+  => a -> b -> c -> d -> e -> IO ()
+merge a b c d e
+  = do CvArr a' <- fromArr a
+       CvArr b' <- fromArr b
+       CvArr c' <- fromArr c
+       CvArr d' <- fromArr d
+       CvArr e' <- fromArr e
+       withForeignPtr5 a' b' c' d' e'
+        $ \a'' b'' c'' d'' e'' -> cvMerge a'' b'' c'' d'' e''
 
 foreign import ccall unsafe "HOpenCV_wrap.h wrap_getImageData"
   wrap_getImageData :: Ptr Priv_IplImage -> IO (Ptr CUChar)
