@@ -19,12 +19,12 @@ import AI.CV.OpenCV.Util
 ------------------------------------------------
 -- General
 foreign import ccall unsafe "highgui.h cvConvertImage"
-  c_cvConvertImage :: Ptr Priv_CvArr -> Ptr Priv_CvArr -> CInt -> IO ()
+  c_cvConvertImage :: Ptr Priv_IplImage -> Ptr Priv_IplImage -> CInt -> IO ()
 
 convertImage :: IplImage -> IplImage -> Int -> IO ()
 convertImage src dst flags
   = withForeignPtr2 src dst
-     $ \s d -> c_cvConvertImage (castPtr s) (castPtr d)
+     $ \s d -> c_cvConvertImage s d
                                 (fromIntegral flags)
 
 ------------------------------------------------
@@ -73,7 +73,7 @@ queryFrame cap
   = do i <- withForeignPtr cap $ \c ->
               errorName "Failed to query frame from camera" . checkPtr
               $ c_cvQueryFrame c
-       fp <- newForeignPtr cp_release_image i
+       fp <- newForeignPtr cvFree i
        return fp
 
 -------------------------------------------------
@@ -131,20 +131,20 @@ loadImage :: String -> LoadImageColor -> IO IplImage
 loadImage filename (LoadImageColor color)
   = do i <- err' . checkPtr $ withCString filename 
             $ \fn -> c_cvLoadImage fn color
-       fp <- newForeignPtr cp_release_image i
+       fp <- newForeignPtr cvFree i
        return fp
  where
    err' = errorName $ "Failed to load from file: '" ++ filename ++ "'"
 
 foreign import ccall unsafe "highgui.h cvSaveImage"
-  c_cvSaveImage :: CString -> Ptr Priv_CvArr -> IO CInt
+  c_cvSaveImage :: CString -> Ptr Priv_IplImage -> IO CInt
 
 saveImage :: String -> IplImage -> IO Int
 saveImage filename image = withCString filename f
   where
     f filenameC = do
       ret <- withForeignPtr image $ \i ->
-             c_cvSaveImage filenameC (castPtr i)
+             c_cvSaveImage filenameC i
       when (ret == 0) $ fail $ "Failed to save to file: '" ++ filename ++ "'"
       return $ fromIntegral ret
 

@@ -15,13 +15,13 @@ import AI.CV.OpenCV.Util
 
 
 foreign import ccall unsafe "cv.h cvCanny"
-  c_cvCanny :: Ptr Priv_CvArr -> Ptr Priv_CvArr -> CDouble -> CDouble -> CInt -> IO ()
+  c_cvCanny :: Ptr Priv_IplImage -> Ptr Priv_IplImage -> CDouble -> CDouble -> CInt -> IO ()
 
 -- | Find edges using the Canny algorithm
 canny :: IplImage -> IplImage -> Double -> Double -> Int -> IO ()
 canny src dst threshold1 threshold2 apertureSize
   = withForeignPtr2 src dst $ \s d -> 
-    c_cvCanny (castPtr s) (castPtr d)
+    c_cvCanny s d
               (realToFrac threshold1)
               (realToFrac threshold2)
               (fromIntegral apertureSize)
@@ -33,26 +33,26 @@ data InterpolationMethod = CV_INTER_NN
                            deriving (Enum,Eq)
 
 foreign import ccall unsafe "cv.h cvResize"
-  c_cvResize :: Ptr Priv_CvArr -> Ptr Priv_CvArr -> CInt -> IO ()
+  c_cvResize :: Ptr Priv_IplImage -> Ptr Priv_IplImage -> CInt -> IO ()
 
 -- | Resizes an image using the specified interpolation method
 resize :: IplImage -> IplImage -> InterpolationMethod -> IO ()
 resize src dst interp
    = withForeignPtr2 src dst $ \s d ->
-      c_cvResize (castPtr s) (castPtr d) (fromIntegral . fromEnum $ interp)
+      c_cvResize s d (fromIntegral . fromEnum $ interp)
 
 foreign import ccall unsafe "HOpenCV_wrap.h dilate"
-  c_dilate :: Ptr Priv_CvArr -> Ptr Priv_CvArr -> CInt -> IO ()
+  c_dilate :: Ptr Priv_IplImage -> Ptr Priv_IplImage -> CInt -> IO ()
 
 -- | Dilates an image using a specific structuring element
 dilate :: IplImage -> IplImage -> Int -> IO ()
 dilate src dst iter
   = withForeignPtr2 src dst
-     $ \s d -> c_dilate (castPtr s) (castPtr d) $ fromIntegral iter
+     $ \s d -> c_dilate s d $ fromIntegral iter
 
 
 foreign import ccall unsafe "cv.h cvPyrDown"
-  c_cvPyrDown :: Ptr Priv_CvArr -> Ptr Priv_CvArr -> CInt -> IO ()
+  c_cvPyrDown :: Ptr Priv_IplImage -> Ptr Priv_IplImage -> CInt -> IO ()
 
 -- for now only one filter type is supported so no need for the CInt (filter type)
 constCvGaussian5x5 :: CInt
@@ -62,7 +62,7 @@ constCvGaussian5x5 = 7
 pyrDown :: IplImage -> IplImage -> IO ()
 pyrDown src dst
   = withForeignPtr2 src dst
-     $ \s d -> c_cvPyrDown (castPtr s) (castPtr d) constCvGaussian5x5
+     $ \s d -> c_cvPyrDown s d constCvGaussian5x5
 
 ------------------------------------------------------------------------------
 
@@ -85,7 +85,7 @@ combineHaarFlags :: [HaarDetectFlag] -> HaarDetectFlag
 combineHaarFlags = HaarDetectFlag . foldr ((.|.) . unHaarDetectFlag) 0
   
 foreign import ccall unsafe "HOpenCV_wrap.h c_cvHaarDetectObjects"
-  c_cvHaarDetectObjects :: Ptr Priv_CvArr                   -- ^ image
+  c_cvHaarDetectObjects :: Ptr Priv_IplImage -- ^ image
                         -> Ptr Priv_CvHaarClassifierCascade -- ^ cascade
                         -> Ptr Priv_CvMemStorage            -- ^ storage
                         -> CDouble                          -- ^ scale_factor
@@ -105,10 +105,10 @@ haarDetectObjects :: IplImage              -- ^ image
                   -> IO (CvSeq CvRect)
 haarDetectObjects image cascade storage scaleFactor minNeighbors flags minSize
   = do p  <- withForeignPtr2 image storage $ \im' s' -> 
-             c_cvHaarDetectObjects (castPtr im') cascade s'
+             c_cvHaarDetectObjects im' cascade s'
                                    (realToFrac scaleFactor)
                                    (fromIntegral minNeighbors)
                                    (unHaarDetectFlag flags)
                                    (sizeWidth minSize) (sizeHeight minSize)
-       newForeignPtr cvFree_finalizer p 
+       newForeignPtr cvFree p 
   

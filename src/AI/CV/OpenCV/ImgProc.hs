@@ -9,12 +9,12 @@ import AI.CV.OpenCV.CxCore
 import AI.CV.OpenCV.Util
 
 foreign import ccall unsafe "imgproc.h cvCvtColor"
-  cvCvtColor :: Ptr Priv_CvArr -> Ptr Priv_CvArr -> CInt -> IO ()
+  cvCvtColor :: Ptr Priv_IplImage -> Ptr Priv_IplImage -> CInt -> IO ()
 
 cvtColor :: IplImage -> IplImage -> CvtColorFlag -> IO ()
 cvtColor i j f
   = withForeignPtr2 i j
-     $ \i' j' -> cvCvtColor (castPtr i') (castPtr j') $ fromCvtColorFlag f
+     $ \i' j' -> cvCvtColor i' j' $ fromCvtColorFlag f
 
 -- yes i edited this by hand because i did not know how to refer to an anonymous enum
 data CvtColorFlag

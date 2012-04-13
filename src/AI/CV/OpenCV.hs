@@ -7,8 +7,7 @@ module AI.CV.OpenCV
   , CvRect(..)
   , liftCvRect
   , liftCvRect2
-  -- * CvArr, CvSeq
-  , CvArr
+  -- * CvSeq
   , CvSeq
   -- * Depth
   , Depth
@@ -20,10 +19,10 @@ module AI.CV.OpenCV
   , iplDepth32s
   , iplDepth32f
   , iplDepth64f
-  , numBits
   -- * MemStorage
   , MemStorage()
   , createMemStorage
+  , releaseMemStorage
   -- * IplImage
   , IplImage
   , createImage

@@ -20,5 +20,5 @@ main = do
   cap    <- createCameraCapture 0
   frame  <- queryFrame cap
   size   <- getSize frame
-  target <- createImage size 1 iplDepth8u
+  target <- createImage size iplDepth8u 1
   showFrames win target cap

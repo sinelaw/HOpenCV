@@ -57,7 +57,7 @@ executable cannyVideo
   Ghc-Options: -Wall -fno-warn-type-defaults
   Ghc-Prof-Options:  -prof -auto-all 
   pkgconfig-depends: opencv
-  other-modules: AI.CV.OpenCV.CxCore, AI.CV.OpenCV.CV, AI.CV.OpenCV.HighGui
+  other-modules: AI.CV.OpenCV.CxCore, AI.CV.OpenCV.CV, AI.CV.OpenCV.HighGui, AI.CV.OpenCV.Gtk
 
 executable usingOpenCV_WithGtk
   c-sources:
@@ -68,7 +68,7 @@ executable usingOpenCV_WithGtk
   Ghc-Options: -Wall -fno-warn-type-defaults
   Ghc-Prof-Options:  -prof -auto-all 
   pkgconfig-depends: opencv
-  other-modules: AI.CV.OpenCV.CxCore, AI.CV.OpenCV.CV, AI.CV.OpenCV.HighGui
+  other-modules: AI.CV.OpenCV.CxCore, AI.CV.OpenCV.CV, AI.CV.OpenCV.HighGui, AI.CV.OpenCV.Gtk
 
 --source-repository head
 --  type: git

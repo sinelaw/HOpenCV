@@ -23,6 +23,7 @@ toFromIntegral2 f x y = round (f (fromIntegral x) (fromIntegral y))
 
 data CvSize  = CvSize { sizeWidth :: CInt, sizeHeight :: CInt }
                deriving (Show, Eq)
+
 instance Storable CvSize where
     sizeOf    _ = (#size CvSize)
     alignment _ = alignment (undefined :: CInt)
@@ -50,7 +51,6 @@ instance AdditiveGroup CvSize where
 instance VectorSpace CvSize where
   type Scalar CvSize = Double -- todo: use CInt instead of Double here?
   a *^ s = liftCvSize (a*) s
-
 
 data CvRect  = CvRect { rectX :: CInt, rectY :: CInt, rectWidth :: CInt, rectHeight :: CInt }
                deriving (Show, Eq)
@@ -88,11 +88,11 @@ instance VectorSpace CvRect where
   type Scalar CvRect = Double -- todo: use CInt instead of Double here?
   a *^ r = liftCvRect (a*) r
   
-
-
 ------------------------------------------------------
+{-
 data Priv_CvArr
 type CvArr = ForeignPtr Priv_CvArr
+-}
 
 data Priv_IplImage
 type IplImage = ForeignPtr Priv_IplImage
@@ -126,47 +126,44 @@ depthsLookupList = map (\d -> (unDepth d, d)) validDepths
 numToDepth :: CInt -> Maybe Depth
 numToDepth x = lookup x depthsLookupList
   
-numBits :: Depth -> Int
-numBits = fromIntegral . unDepth
-
 ---------------------------------------------------------------
 -- mem storage
 
 foreign import ccall unsafe "cxcore.h cvCreateMemStorage"
   c_cvCreateMemStorage :: CInt -> IO (Ptr Priv_CvMemStorage)
 
+foreign import ccall unsafe "core_c.h &cvReleaseMemStorage"
+  releaseMemStorage :: FunPtr (Ptr a -> IO ())
+
 createMemStorage :: Int -> IO MemStorage
 createMemStorage i 
   = do p <- errorName "Failed to create mem storage" 
             . checkPtr . c_cvCreateMemStorage $ fromIntegral i
-       newForeignPtr cp_release_mem_storage p
-
-foreign import ccall unsafe "HOpenCV_wrap.h release_mem_storage"
-  cvReleaseMemStorage :: Ptr Priv_CvMemStorage -> IO ()
-
-foreign import ccall unsafe "HOpenCV_wrap.h &release_mem_storage"
-  cp_release_mem_storage :: FunPtr (Ptr Priv_CvMemStorage -> IO ())
+       newForeignPtr releaseMemStorage p
 
 ---------------------------------------------------------------
 -- images / matrices / arrays
 
+foreign import ccall unsafe "HOpenCV_wrap.h &cv_free"
+  cvFree :: FunPtr (Ptr a -> IO ())
+
 foreign import ccall unsafe "HOpenCV_wrap.h create_image"
   c_cvCreateImage :: CInt -> CInt -> CInt -> CInt -> IO (Ptr Priv_IplImage)
 
-createImage :: CvSize -> Int -> Depth -> IO IplImage
-createImage size numChans depth
+createImage :: CvSize -> Depth -> Int -> IO IplImage
+createImage size depth numChans
   = do im <- errorName "Failed to create image" . checkPtr 
              $ c_cvCreateImage (sizeWidth size) (sizeHeight size)
                                (unDepth depth)
                                (fromIntegral numChans)
-       fp <- newForeignPtr cp_release_image im
+       fp <- newForeignPtr cvFree im
        return fp
 
-foreign import ccall unsafe "HOpenCV_wrap.h release_image"
-  cvReleaseImage :: Ptr Priv_IplImage -> IO ()
+-- foreign import ccall unsafe "HOpenCV_wrap.h release_image"
+  -- cvReleaseImage :: Ptr Priv_IplImage -> IO ()
 
-foreign import ccall unsafe "HOpenCV_wrap.h &release_image"
-  cp_release_image :: FunPtr (Ptr Priv_IplImage -> IO ())
+-- foreign import ccall unsafe "HOpenCV_wrap.h &release_image"
+  -- cp_release_image :: FunPtr (Ptr Priv_IplImage -> IO ())
 
 
 foreign import ccall unsafe "cxcore.h cvCloneImage"
@@ -176,29 +173,29 @@ cloneImage :: IplImage -> IO IplImage
 cloneImage p
   = do p' <- errorName "Failed to clone image" . checkPtr 
              $ withForeignPtr p c_cvCloneImage
-       fp <- newForeignPtr cp_release_image p'
+       fp <- newForeignPtr cvFree p'
        return fp 
                   
 foreign import ccall unsafe "HOpenCV_wrap.h get_size"
-  c_get_size :: Ptr Priv_CvArr -> Ptr CvSize -> IO ()
+  c_get_size :: Ptr Priv_IplImage -> Ptr CvSize -> IO ()
 
 foreign import ccall unsafe "cxcore.h cvCopy"
-  c_cvCopy :: Ptr Priv_CvArr -> Ptr Priv_CvArr -> Ptr Priv_CvArr -> IO ()
+  c_cvCopy :: Ptr Priv_IplImage -> Ptr Priv_IplImage -> Ptr Priv_IplImage -> IO ()
                    
 -- todo add mask support
 copy :: IplImage -> IplImage -> IO ()
 copy src dst
   = withForeignPtr2 src dst $ \s d ->
-    c_cvCopy (castPtr s) (castPtr d) nullPtr
+    c_cvCopy s d nullPtr
 
 foreign import ccall unsafe "cxcore.h cvMerge"
-  cvMerge :: Ptr Priv_CvArr -> Ptr Priv_CvArr -> Ptr Priv_CvArr
-    -> Ptr Priv_CvArr -> Ptr Priv_CvArr -> IO ()
+  cvMerge :: Ptr Priv_IplImage -> Ptr Priv_IplImage -> Ptr Priv_IplImage
+             -> Ptr Priv_IplImage -> Ptr Priv_IplImage -> IO ()
 
 merge :: IplImage -> IplImage -> IplImage -> IplImage -> IplImage -> IO ()
 merge a b c d e
   = withForeignPtr5 a b c d e $ \a' b' c' d' e' ->
-     cvMerge (castPtr a') (castPtr b') (castPtr c') (castPtr d') (castPtr e')
+     cvMerge a' b' c' d' e'
 
 foreign import ccall unsafe "HOpenCV_wrap.h wrap_getImageData"
   wrap_getImageData :: Ptr Priv_IplImage -> IO (Ptr CUChar)
@@ -210,7 +207,7 @@ getImageData i
 getSize :: IplImage -> IO CvSize
 getSize a
   = alloca $ \cvSizePtr -> do
-      withForeignPtr a $ \a' -> c_get_size (castPtr a') cvSizePtr
+      withForeignPtr a $ \a' -> c_get_size a' cvSizePtr
       size <- peek cvSizePtr
       return size
 
@@ -241,22 +238,15 @@ getWidthStep im
        return $ fromIntegral i
 
 foreign import ccall unsafe "cxcore.h cvConvertScale"
-  cvConvertScale :: Ptr Priv_CvArr -> Ptr Priv_CvArr -> CDouble -> CDouble -> IO ()
+  cvConvertScale :: Ptr Priv_IplImage -> Ptr Priv_IplImage -> CDouble -> CDouble -> IO ()
 
 convertScale :: IplImage -> IplImage -> Double -> Double -> IO ()
 convertScale a b c d
   = withForeignPtr2 a b $ \a' b' ->
-     cvConvertScale (castPtr a')
-                    (castPtr b')
+     cvConvertScale a' b'
                     (realToFrac c)
                     (realToFrac d)
 
-foreign import ccall unsafe "HOpenCV_wrap.h cv_free"
-  cvFree :: Ptr a -> IO ()
-
-foreign import ccall unsafe "HOpenCV_wrap.h &cv_free"
-  cvFree_finalizer :: FunPtr (Ptr a -> IO ())
-            
 foreign import ccall unsafe "cxcore.h cvLoad"
   c_cvLoad :: CString -> Ptr Priv_CvMemStorage -> CString -> Ptr CString -> IO (Ptr a)
 
@@ -276,8 +266,8 @@ load filename mem name
            realName <- if realNameC == nullPtr 
                          then return Nothing 
                          else fmap Just $ peekCString realNameC
-           cvFree realNameC
-           fp <- newForeignPtr cvFree_finalizer ptrObj
+           -- cvFree realNameC
+           fp <- newForeignPtr cvFree ptrObj
            return (fp, realName)
               
 foreign import ccall unsafe "cxcore.h cvGetSeqElem"
@@ -297,7 +287,7 @@ seqToPList pseq = do
   fetchElem i
     = do p <- withForeignPtr pseq
               $ \p -> cvGetSeqElem p i
-         newForeignPtr cvFree_finalizer p
+         newForeignPtr cvFree p
 
 seqToList :: Storable a => CvSeq a -> IO [a]
 seqToList pseq = do
@@ -316,12 +306,12 @@ seqToList pseq = do
 --     return rect
 
 foreign import ccall unsafe "HOpenCV_wrap.h c_cvRectangle"
-  c_cvRectangle :: Ptr Priv_CvArr -> CInt -> CInt -> CInt -> CInt -> IO ()
+  c_cvRectangle :: Ptr Priv_IplImage -> CInt -> CInt -> CInt -> CInt -> IO ()
 
 rectangle :: IplImage -> CvRect -> IO ()
 rectangle dst (CvRect x y w h)
   = withForeignPtr dst $ \d ->
-    c_cvRectangle (castPtr d) x y w h
+    c_cvRectangle d x y w h
 
 ------------------------------------------------------------------------------
 -- Debugging stuff, not part of opencv

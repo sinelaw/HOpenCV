@@ -34,6 +34,7 @@ void release_capture(CvCapture *capture)
 
 /****************************************************************************/
 
+/*
 void num_to_name(int num, char *name, int length)
 {
     snprintf(name, length, "win-%d", num);
@@ -59,7 +60,7 @@ void show_image(int num, IplImage *image)
     num_to_name(num, name, sizeof(name));
     cvShowImage(name, image);
 }
-
+*/
 /**********************************************************/
 
 /* Haskell's FFI doesn't know how to pass structs by value, I think. */
@@ -106,12 +107,13 @@ void dilate(const CvArr *src, CvArr *dest, int iterations)
 }
 
 /**********************************************************/
-
+/*
 void release_mem_storage(CvMemStorage *mem_store)
 {
     CvMemStorage *temp = mem_store;
     cvReleaseMemStorage(&temp);
 }
+*/
 
 void cv_free(void *obj)
 {

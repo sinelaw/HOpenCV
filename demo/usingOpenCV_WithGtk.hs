@@ -37,8 +37,8 @@ main
 
        -- setup space for cannied frame and gtk image
        size <- getSize frame
-       cannyImage      <- createImage size 1 iplDepth8u
-       backTo3Channels <- createImage size 3 iplDepth8u
+       cannyImage      <- createImage size iplDepth8u 1 
+       backTo3Channels <- createImage size iplDepth8u 3
        gtkImage        <- imageNew
        containerAdd win gtkImage
 
