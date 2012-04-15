@@ -34,3 +34,15 @@ CvSeq *c_cvHaarDetectObjects( const CvArr* image,
                               int min_neighbors , int flags,
                               int width, int height);
 
+int wrap_createTrackbar( const char* trackbarName,
+                         const char* winName,
+                         int*        startPos,
+                         int         maxVal,
+                         CvTrackbarCallback onChange );
+
+CvVideoWriter *
+wrap_cvCreateVideoWriter( const char *file
+                        , int fourcc
+                        , double fps
+                        , int width
+                        , int height);

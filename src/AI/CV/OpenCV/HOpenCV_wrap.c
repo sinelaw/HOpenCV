@@ -34,6 +34,7 @@ void release_capture(CvCapture *capture)
 
 /****************************************************************************/
 
+/*
 void num_to_name(int num, char *name, int length)
 {
     snprintf(name, length, "win-%d", num);
@@ -59,7 +60,7 @@ void show_image(int num, IplImage *image)
     num_to_name(num, name, sizeof(name));
     cvShowImage(name, image);
 }
-
+*/
 /**********************************************************/
 
 /* Haskell's FFI doesn't know how to pass structs by value, I think. */
@@ -72,6 +73,14 @@ void release_image(IplImage *image)
 {
     IplImage *temp = image;
     return cvReleaseImage(&temp);
+}
+
+char *wrap_getImageData(const IplImage *im) {
+  return im->imageData;
+}
+
+int wrap_getWidthStep(IplImage *im) {
+  return im->widthStep;
 }
 
 /* Notice that according to opencv docs, cvGetSize returns the ROI for images, not the image.width and .height */
@@ -98,12 +107,13 @@ void dilate(const CvArr *src, CvArr *dest, int iterations)
 }
 
 /**********************************************************/
-
+/*
 void release_mem_storage(CvMemStorage *mem_store)
 {
     CvMemStorage *temp = mem_store;
     cvReleaseMemStorage(&temp);
 }
+*/
 
 void cv_free(void *obj)
 {
@@ -144,3 +154,29 @@ CvSeq *c_cvHaarDetectObjects( const CvArr* image,
     return cvHaarDetectObjects(image, cascade, storage, scale_factor, min_neighbors, flags, cvSize(width, height));
 }
 
+/****************************************************************************/
+
+void doNothing( int newPos ) { return; }
+
+int wrap_createTrackbar( const char* trackbarName
+                       , const char* winName
+                       , int*        startPos
+                       , int         maxVal)
+{
+  return cvCreateTrackbar(trackbarName, winName, startPos, maxVal, doNothing);
+}
+
+/****************************************************************************/
+
+CvVideoWriter *
+wrap_cvCreateVideoWriter( const char *file
+                        , int fourcc
+                        , double fps
+                        , int height, int width)
+{
+  return cvCreateVideoWriter(file, fourcc, fps, cvSize(width, height), 1);
+}
+
+void freeNothing(void *a) {
+ return;
+}
