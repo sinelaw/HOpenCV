@@ -36,10 +36,11 @@ type Capture = ForeignPtr Priv_CvCapture
 foreign import ccall unsafe "highgui.h cvCreateCameraCapture"
   c_cvCreateCameraCapture :: CInt -> IO (Ptr Priv_CvCapture)
                           
--- | self-documenting camera specifications
+-- | self-documenting camera specification
 pickAnyCam :: Int
 pickAnyCam = -1
 
+-- | self-documenting camera specification
 cam :: Int -> Int
 cam = id
 
@@ -83,6 +84,8 @@ foreign import ccall unsafe "highgui.h cvNamedWindow"
   cvNamedWindow :: CString -> CInt -> IO CInt
 
 type AutoSize = Bool
+
+-- | self-documenting window sizing specification
 autoSize :: AutoSize
 autoSize   = True
 

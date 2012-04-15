@@ -22,7 +22,6 @@ module AI.CV.OpenCV
   -- * MemStorage
   , MemStorage()
   , createMemStorage
-  , releaseMemStorage
   -- * IplImage
   , IplImage
   , createImage
