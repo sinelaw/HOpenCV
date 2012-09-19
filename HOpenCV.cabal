@@ -8,7 +8,7 @@ category: AI, Graphics
 synopsis: A binding for the OpenCV computer vision library.
 Tested-With:   GHC==7.0.3
 description:
-   Limited bindings to OpenCV 2.3. (See: <http://opencv.willowgarage.com/wiki/Welcome>)
+   Limited bindings to OpenCV 2.4. (See: <http://opencv.willowgarage.com/wiki/Welcome>)
    .
    /Installation/
    .
@@ -16,12 +16,12 @@ description:
    .
    /Usage/
    .
-   The "AI.CV.OpenCV.HighCV" module exposes the most commonly used functionality. Other modules not in the @Core@ directory provide specific types of operations. While the @Core@ modules contain to low-level OpenCV interfaces.
+   The "OpenCV.HighCV" module exposes the most commonly used functionality. Other modules not in the @Core@ directory provide specific types of operations. While the @Core@ modules contain to low-level OpenCV interfaces.
    .
    See @src\/Examples\/VideoFunhouse@ for an example application.
 build-type:         Custom
 cabal-version:      >= 1.8
-extra-source-files: src/AI/CV/OpenCV/Core/HOpenCV_wrap.h 
+extra-source-files: src/OpenCV/Core/HOpenCV_wrap.h 
                     src/Examples/VideoFunhouse/Makefile 
                     src/Examples/VideoFunhouse/Rate.hs
                     src/Examples/VideoFunhouse/VideoFunhouse.hs
@@ -40,35 +40,35 @@ Flag MotionAnalysis
 
 library
    exposed-modules:
-      AI.CV.OpenCV.Core.CV
-      AI.CV.OpenCV.Core.CVOp 
-      AI.CV.OpenCV.Core.CxCore
-      AI.CV.OpenCV.Core.HighGui
-      AI.CV.OpenCV.Core.HIplImage
-      AI.CV.OpenCV.Core.HIplUtil
-      AI.CV.OpenCV.Core.ColorConversion
-      AI.CV.OpenCV.HighCV
-      AI.CV.OpenCV.GUI
-      AI.CV.OpenCV.Video
-      AI.CV.OpenCV.FloodFill
-      AI.CV.OpenCV.PixelUtils
-      AI.CV.OpenCV.ColorConversion
-      AI.CV.OpenCV.Drawing
-      AI.CV.OpenCV.Contours
-      AI.CV.OpenCV.Threshold
-      AI.CV.OpenCV.ArrayOps
-      AI.CV.OpenCV.Filtering
-      AI.CV.OpenCV.FeatureDetection
-      AI.CV.OpenCV.Histograms
+      OpenCV.Core.CV
+      OpenCV.Core.CVOp 
+      OpenCV.Core.CxCore
+      OpenCV.Core.HighGui
+      OpenCV.Core.HIplImage
+      OpenCV.Core.HIplUtil
+      OpenCV.Core.ColorConversion
+      OpenCV.HighCV
+      OpenCV.GUI
+      OpenCV.Video
+      OpenCV.FloodFill
+      OpenCV.PixelUtils
+      OpenCV.ColorConversion
+      OpenCV.Drawing
+      OpenCV.Contours
+      OpenCV.Threshold
+      OpenCV.ArrayOps
+      OpenCV.Filtering
+      OpenCV.FeatureDetection
+      OpenCV.Histograms
    c-sources:
-      src/AI/CV/OpenCV/Core/HOpenCV_wrap.c
-      src/AI/CV/OpenCV/ArrayOps_hsc.c
-      src/AI/CV/OpenCV/FloodFill_hsc.c
-      src/AI/CV/OpenCV/Drawing_hsc.c
-   other-modules: AI.CV.OpenCV.Core.StorableUtil
+      src/OpenCV/Core/HOpenCV_wrap.c
+      src/OpenCV/ArrayOps_hsc.c
+      src/OpenCV/FloodFill_hsc.c
+      src/OpenCV/Drawing_hsc.c
+   other-modules: OpenCV.Core.StorableUtil
    hs-Source-Dirs: src
    if flag(MotionAnalysis)
-     exposed-modules:   AI.CV.OpenCV.Motion
+     exposed-modules:   OpenCV.Motion
    if os(windows)
      include-dirs:	C:\\OpenCV2.2\\include
      extra-lib-dirs:	C:\\OpenCV2.2\\bin
@@ -84,4 +84,4 @@ library
                   vector-space >= 0.7.2,
                   directory >= 1.0.1.0 && < 2,
                   vector >= 0.7
-   ghc-options: -Wall -fno-warn-type-defaults -fno-warn-name-shadowing -O2 -funbox-strict-fields
+   ghc-options: -Wall -fno-warn-name-shadowing -O2 -funbox-strict-fields
