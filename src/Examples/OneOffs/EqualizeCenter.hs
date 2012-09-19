@@ -1,7 +1,7 @@
 import Control.Applicative
-import AI.CV.OpenCV.HighCV
-import AI.CV.OpenCV.ArrayOps
-import AI.CV.OpenCV.Histograms
+import OpenCV.HighCV
+import OpenCV.ArrayOps
+import OpenCV.Histograms
 
 boostSaturation :: ColorImage -> ColorImage
 boostSaturation img = convertHSVToBGR $ replaceChannel 1 s hsv

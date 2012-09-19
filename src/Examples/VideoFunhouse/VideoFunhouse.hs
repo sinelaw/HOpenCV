@@ -2,10 +2,10 @@
 -- the video feed from an attached webcam or a video file specified as
 -- a command line argument. The executable prints usage instructions
 -- to the console when run.
-import AI.CV.OpenCV.HighCV
-import AI.CV.OpenCV.ArrayOps
-import AI.CV.OpenCV.Filtering
-import AI.CV.OpenCV.Histograms
+import OpenCV.HighCV
+import OpenCV.ArrayOps
+import OpenCV.Filtering
+import OpenCV.Histograms
 import Control.Applicative
 import Control.Parallel
 import System.Environment (getArgs)

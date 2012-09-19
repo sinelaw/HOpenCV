@@ -1,12 +1,12 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 -- |Motion analysis functions.
-module AI.CV.OpenCV.Motion (calcOpticalFlowBM) where
+module OpenCV.Motion (calcOpticalFlowBM) where
 import Data.Word (Word8)
 import Foreign.C.Types (CInt)
 import Foreign.Ptr (Ptr)
 import System.IO.Unsafe
-import AI.CV.OpenCV.Core.CxCore
-import AI.CV.OpenCV.Core.HIplImage
+import OpenCV.Core.CxCore
+import OpenCV.Core.HIplImage
 
 foreign import ccall "opencv2/video/tracking.hpp cvCalcOpticalFlowBM"
   c_cvCalcOpticalFlowBM :: Ptr CvArr -> Ptr CvArr -> CInt -> CInt -> 

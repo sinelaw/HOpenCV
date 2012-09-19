@@ -1,13 +1,13 @@
 {-# LANGUAGE ForeignFunctionInterface, TypeFamilies, ScopedTypeVariables,
              FlexibleContexts #-}
 -- |Array operations.
-module AI.CV.OpenCV.ArrayOps (subRS, absDiff, abs, convertScale, 
-                              cvAnd, andMask, scaleAdd, cvAndS,
-                              cvOr, cvOrS, set, cvAbs, cvAbsDiffS,
-                              mul, mulS, add, addS, sub, subMask,
-                              cmpS, avg, avgMask, cvNot, withROI,
-                              ComparisonOp(..), isolateChannel, copy,
-                              replaceChannel, convertScaleAbs, absSat) where
+module OpenCV.ArrayOps (subRS, absDiff, abs, convertScale, 
+                        cvAnd, andMask, scaleAdd, cvAndS,
+                        cvOr, cvOrS, set, cvAbs, cvAbsDiffS,
+                        mul, mulS, add, addS, sub, subMask,
+                        cmpS, avg, avgMask, cvNot, withROI,
+                        ComparisonOp(..), isolateChannel, copy,
+                        replaceChannel, convertScaleAbs, absSat) where
 import Data.Word (Word8)
 import Foreign.C.Types (CDouble(..), CInt(..))
 import Foreign.Ptr (Ptr, castPtr, nullPtr)
@@ -15,11 +15,11 @@ import Foreign.Marshal.Array
 import Foreign.Marshal.Alloc
 import Foreign.Storable (poke, peek)
 import System.IO.Unsafe (unsafePerformIO)
-import AI.CV.OpenCV.Core.CxCore (CvArr, CvRect(..), CmpOp(..), CvScalar(..),
-                                 cmpEq, cmpGT, cmpGE, cmpLT, cmpLE, cmpNE)
-import AI.CV.OpenCV.Core.HIplUtil
-import AI.CV.OpenCV.Core.CVOp
-import AI.CV.OpenCV.Core.StorableUtil
+import OpenCV.Core.CxCore (CvArr, CvRect(..), CmpOp(..), CvScalar(..),
+                           cmpEq, cmpGT, cmpGE, cmpLT, cmpLE, cmpNE)
+import OpenCV.Core.HIplUtil
+import OpenCV.Core.CVOp
+import OpenCV.Core.StorableUtil
 
 type M = Monochromatic
 

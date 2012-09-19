@@ -1,8 +1,8 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 -- |Incomplete support for cvFindContours.
-module AI.CV.OpenCV.Contours (ContourMode(..), ContourMethod(..), 
-                              cvFindContours, followContourList) where
-import AI.CV.OpenCV.Core.CxCore
+module OpenCV.Contours (ContourMode(..), ContourMethod(..), 
+                        cvFindContours, followContourList) where
+import OpenCV.Core.CxCore
 import Foreign.C.Types (CInt)
 import Foreign.Ptr (Ptr, castPtr, nullPtr)
 import Foreign.Storable

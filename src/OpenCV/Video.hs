@@ -1,14 +1,14 @@
 -- |Interfaces for grabbing images from cameras and video files, and
 -- for writing to video files.
-module AI.CV.OpenCV.Video (createFileCapture, createFileCaptureLoop, 
-                           createCameraCapture, createVideoWriter, 
-                           FourCC, mpeg4CC) where
+module OpenCV.Video (createFileCapture, createFileCaptureLoop, 
+                     createCameraCapture, createVideoWriter, 
+                     FourCC, mpeg4CC) where
 import Data.Maybe (fromMaybe)
 import Foreign.Ptr
 import Foreign.ForeignPtr (withForeignPtr)
-import AI.CV.OpenCV.Core.CxCore
-import AI.CV.OpenCV.Core.HIplUtil
-import AI.CV.OpenCV.Core.HighGui
+import OpenCV.Core.CxCore
+import OpenCV.Core.HIplUtil
+import OpenCV.Core.HighGui
 
 -- |Raise an error if 'cvQueryFrame' returns 'Nothing'; otherwise
 -- returns a 'Ptr' 'IplImage'.

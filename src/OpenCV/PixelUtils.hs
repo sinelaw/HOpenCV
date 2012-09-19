@@ -3,10 +3,10 @@
 -- pixels arranged in BGR order and pad image rows with unused
 -- bytes. This module provides mechanisms to drop the unused packing
 -- bytes.
-module AI.CV.OpenCV.PixelUtils where
-import AI.CV.OpenCV.Core.HIplImage
-import AI.CV.OpenCV.Core.HIplUtil
-import AI.CV.OpenCV.ColorConversion (convertRGBToGray)
+module OpenCV.PixelUtils where
+import OpenCV.Core.HIplImage
+import OpenCV.Core.HIplUtil
+import OpenCV.ColorConversion (convertRGBToGray)
 import Control.Monad.ST (runST)
 import qualified Data.Vector.Storable as V
 import qualified Data.Vector.Storable.Mutable as VM

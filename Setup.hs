@@ -12,7 +12,7 @@ runHsc2hs f = system $ "hsc2hs "++f++" "++libs'
   where libs' = intercalate " " $ map ("-L -l"++) libs
 
 srcPath :: FilePath
-srcPath = "src/AI/CV/OpenCV"
+srcPath = "src/OpenCV"
 
 main :: IO ()
 main = do mapM_ (runHsc2hs . (srcPath </>) . flip addExtension "hsc")

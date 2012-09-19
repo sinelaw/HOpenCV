@@ -2,19 +2,19 @@
              MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
 -- |Image thresholding operations. These operations will perform
 -- destructive, in-place updates when used in compositions.
-module AI.CV.OpenCV.Threshold (thresholdBinary, thresholdBinaryInv,
-                               thresholdTruncate, 
-                               thresholdToZero, thresholdToZeroInv,
-                               thresholdBinaryOtsu, thresholdBinaryOtsuInv,
-                               thresholdTruncateOtsu,
-                               thresholdToZeroOtsu, thresholdToZeroOtsuInv) where
+module OpenCV.Threshold (thresholdBinary, thresholdBinaryInv,
+                         thresholdTruncate, 
+                         thresholdToZero, thresholdToZeroInv,
+                         thresholdBinaryOtsu, thresholdBinaryOtsuInv,
+                         thresholdTruncateOtsu,
+                         thresholdToZeroOtsu, thresholdToZeroOtsuInv) where
 import Data.Bits ((.|.))
 import Data.Word (Word8)
 import Foreign.C.Types (CDouble(..), CInt(..))
 import Foreign.Ptr (Ptr)
-import AI.CV.OpenCV.Core.CxCore 
-import AI.CV.OpenCV.Core.HIplUtil
-import AI.CV.OpenCV.Core.CVOp
+import OpenCV.Core.CxCore 
+import OpenCV.Core.HIplUtil
+import OpenCV.Core.CVOp
 
 data ThresholdType = ThreshBinary
                    | ThreshBinaryInv

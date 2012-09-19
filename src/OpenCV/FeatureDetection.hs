@@ -1,11 +1,11 @@
 {-# LANGUAGE ForeignFunctionInterface, FlexibleContexts #-}
 -- |Feature Detection.
-module AI.CV.OpenCV.FeatureDetection (cornerHarris, cornerHarris', canny) where
+module OpenCV.FeatureDetection (cornerHarris, cornerHarris', canny) where
 import Foreign.C.Types (CInt(..), CDouble(..))
 import Foreign.Ptr (Ptr, castPtr)
-import AI.CV.OpenCV.Core.CxCore
-import AI.CV.OpenCV.Core.HIplUtil
-import AI.CV.OpenCV.Core.CVOp
+import OpenCV.Core.CxCore
+import OpenCV.Core.HIplUtil
+import OpenCV.Core.CVOp
 
 foreign import ccall "opencv2/imgproc/imgproc_c.h cvCornerHarris"
   c_cvHarris :: Ptr CvArr -> Ptr CvArr -> CInt -> CInt -> CDouble -> IO ()

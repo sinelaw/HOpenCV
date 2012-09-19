@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables, BangPatterns, MultiParamTypeClasses, 
              FlexibleInstances #-}
 -- |Functions for working with 'HIplImage's.
-module AI.CV.OpenCV.Core.HIplUtil
+module OpenCV.Core.HIplUtil
     (isColor, isMono, imgChannels, withPixelVector, pixels,
      fromPtr, fromFileColor, fromFileGray, fromPGM16, toFile, 
      compatibleImage, duplicateImage, fromPixels,
@@ -14,11 +14,11 @@ module AI.CV.OpenCV.Core.HIplUtil
      HasDepth(..), HasScalar(..), IsCvScalar(..), colorDepth,
      ByteOrFloat, getRect, imageData, fromFile, unsafeWithHIplImage,
      duplicateImagePtr, compatibleImagePtr, compatibleImagePtrPtr) where
-import AI.CV.OpenCV.Core.CxCore (IplImage, cvFree, cvFreePtr, createImageF, 
-                                 CvSize(..), cloneImageF, cvCreateImage, 
-                                 getNumChannels, getDepth, cvGetSize)
-import AI.CV.OpenCV.Core.HighGui (cvLoadImage, cvSaveImage, LoadColor(..))
-import AI.CV.OpenCV.Core.HIplImage
+import OpenCV.Core.CxCore (IplImage, cvFree, cvFreePtr, createImageF, 
+                           CvSize(..), cloneImageF, cvCreateImage, 
+                           getNumChannels, getDepth, cvGetSize)
+import OpenCV.Core.HighGui (cvLoadImage, cvSaveImage, LoadColor(..))
+import OpenCV.Core.HIplImage
 import Control.Applicative
 import Control.Arrow (second, (***))
 import Control.Monad (when, unless, join)

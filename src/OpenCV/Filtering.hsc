@@ -1,15 +1,15 @@
 {-# LANGUAGE ForeignFunctionInterface, TypeFamilies #-}
 -- |Image filtering operations.
-module AI.CV.OpenCV.Filtering (smoothGaussian, smoothGaussian', 
-                               sobel, sobelDX, sobelDY,
-                               ApertureSize(..), DerivativeOrder(..)) where
+module OpenCV.Filtering (smoothGaussian, smoothGaussian', 
+                         sobel, sobelDX, sobelDY,
+                         ApertureSize(..), DerivativeOrder(..)) where
 import Data.Word (Word8)
 import Data.Int (Int16)
 import Foreign.C.Types (CInt(..), CDouble(..))
 import Foreign.Ptr (Ptr, castPtr)
-import AI.CV.OpenCV.Core.CxCore
-import AI.CV.OpenCV.Core.HIplUtil
-import AI.CV.OpenCV.Core.CVOp
+import OpenCV.Core.CxCore
+import OpenCV.Core.HIplUtil
+import OpenCV.Core.CVOp
 
 #include <opencv2/imgproc/types_c.h>
 

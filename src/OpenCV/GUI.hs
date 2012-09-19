@@ -1,10 +1,10 @@
 -- |Very simple tools for showing images in a window. The 'runWindow'
 -- and 'runNamedWindow' interfaces are the recommended entrypoints.
-module AI.CV.OpenCV.GUI (namedWindow, WindowFlag(..), MouseCallback, 
-                         waitKey, cvInit, runWindow, runNamedWindow) where
-import AI.CV.OpenCV.Core.HIplImage
-import AI.CV.OpenCV.Core.HighGui
-import AI.CV.OpenCV.Core.CxCore (fromArr)
+module OpenCV.GUI (namedWindow, WindowFlag(..), MouseCallback, 
+                   waitKey, cvInit, runWindow, runNamedWindow) where
+import OpenCV.Core.HIplImage
+import OpenCV.Core.HighGui
+import OpenCV.Core.CxCore (fromArr)
 import Control.Monad ((>=>))
 import Data.Bits ((.&.))
 import Data.Word (Word8)

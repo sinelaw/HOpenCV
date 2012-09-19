@@ -1,13 +1,13 @@
 {-# LANGUAGE ForeignFunctionInterface, TypeFamilies #-}
 -- |Miscellaneous image transformations.
-module AI.CV.OpenCV.FloodFill (floodFill, FloodRange(..)) where
+module OpenCV.FloodFill (floodFill, FloodRange(..)) where
 import Data.Bits ((.|.))
 import Foreign.C.Types (CInt(..))
 import Foreign.Ptr (Ptr, nullPtr, castPtr)
-import AI.CV.OpenCV.Core.CxCore 
-import AI.CV.OpenCV.Core.HIplUtil
-import AI.CV.OpenCV.Core.CVOp
-import AI.CV.OpenCV.Core.StorableUtil
+import OpenCV.Core.CxCore 
+import OpenCV.Core.HIplUtil
+import OpenCV.Core.CVOp
+import OpenCV.Core.StorableUtil
 
 -- |Flag used to indicate whether pixels under consideration for
 -- addition to a connected component should be compared to the seed

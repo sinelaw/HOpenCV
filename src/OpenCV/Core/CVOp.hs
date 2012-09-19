@@ -18,10 +18,10 @@
 -- with such an operation, must have a destination image
 -- allocated. This is cheaper than duplicating the input image as with
 -- operations wrapped by the `cv` combinator.
-module AI.CV.OpenCV.Core.CVOp (cv, Inplace(..)) where
-import AI.CV.OpenCV.Core.CxCore (IplArrayType, CvArr)
-import AI.CV.OpenCV.Core.HIplUtil
-import AI.CV.OpenCV.Core.HIplImage
+module OpenCV.Core.CVOp (cv, Inplace(..)) where
+import OpenCV.Core.CxCore (IplArrayType, CvArr)
+import OpenCV.Core.HIplUtil
+import OpenCV.Core.HIplImage
 import Control.Monad ((>=>), void)
 import Data.Int
 import Data.Monoid

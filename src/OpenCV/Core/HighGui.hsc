@@ -1,5 +1,5 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls #-}
-module AI.CV.OpenCV.Core.HighGui 
+module OpenCV.Core.HighGui 
     (cvLoadImage, LoadColor(..), cvSaveImage, 
      CvCapture, cvCreateCameraCapture, 
      createCameraCaptureF, createFileCaptureF,
@@ -19,7 +19,7 @@ import Foreign.ForeignPtr
 import Foreign.C.String
 
 import Data.List (foldl') 
-import AI.CV.OpenCV.Core.CxCore
+import OpenCV.Core.CxCore
 
 #include <opencv2/highgui/highgui_c.h>
 

@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeSynonymInstances #-}
-import AI.CV.OpenCV.HighCV
-import AI.CV.OpenCV.ArrayOps
-import AI.CV.OpenCV.Filtering
+import OpenCV.HighCV
+import OpenCV.ArrayOps
+import OpenCV.Filtering
 import Control.Parallel
 import Criterion.Main
 

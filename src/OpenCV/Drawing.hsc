@@ -1,10 +1,10 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
-module AI.CV.OpenCV.Drawing (prepFont, prepFontAlt, putText, FontFace(..), 
-                             LineType(..), RGB, drawLines, fillConvexPoly) where
-import AI.CV.OpenCV.Core.CxCore
-import AI.CV.OpenCV.Core.HIplUtil
-import AI.CV.OpenCV.Core.CVOp
-import AI.CV.OpenCV.Core.StorableUtil
+module OpenCV.Drawing (prepFont, prepFontAlt, putText, FontFace(..), 
+                       LineType(..), RGB, drawLines, fillConvexPoly) where
+import OpenCV.Core.CxCore
+import OpenCV.Core.HIplUtil
+import OpenCV.Core.CVOp
+import OpenCV.Core.StorableUtil
 import Data.Bits ((.|.))
 import Foreign.C.String
 import Foreign.C.Types

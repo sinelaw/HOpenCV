@@ -2,56 +2,56 @@
 -- operations will be performed in-place under composition. For
 -- example, @dilate 8 . erode 8@ will allocate one new image rather
 -- than two.
-module AI.CV.OpenCV.HighCV (
-                            -- * Image Files
-                            fromFile, fromFileGray, fromFileColor, 
-                            fromPGM16, toFile,
-                            -- * Image Properties
-                            width, height, numPixels, isColor, isMono,
-                            -- * Image Construction
-                            fromPixels, fromGrayPixels, fromColorPixels, 
-                            fromPtr,
-                            -- * Image Data Accessors
-                            pixels, withPixelVector, withImagePixels, 
-                            sampleLine, getRect,
-                            -- * Image Processing
-                            erode, dilate, houghStandard, houghProbabilistic, 
-                            normalize, resize, setROI, resetROI,
-                            module AI.CV.OpenCV.ColorConversion,
-                            module AI.CV.OpenCV.Threshold,
-                            module AI.CV.OpenCV.FloodFill,
-                            module AI.CV.OpenCV.FeatureDetection,
-                            Connectivity(..), 
-                            CvRect(..), liftCvRect,
-                            cv_L2, cv_MinMax, 
-                            InterpolationMethod(..), 
-                            -- * GUI and Drawing
-                            module AI.CV.OpenCV.GUI, 
-                            module AI.CV.OpenCV.Drawing,
-                            -- * Video
-                            module AI.CV.OpenCV.Video,
-                            -- * Image types
-                            HIplImage, Monochromatic, Trichromatic, 
-                            HasChannels, HasDepth, 
-                            GrayImage, ColorImage, GrayImage16, GrayImage16S,
-                            Word8, Word16
+module OpenCV.HighCV (
+                      -- * Image Files
+                      fromFile, fromFileGray, fromFileColor, 
+                      fromPGM16, toFile,
+                      -- * Image Properties
+                      width, height, numPixels, isColor, isMono,
+                      -- * Image Construction
+                      fromPixels, fromGrayPixels, fromColorPixels, 
+                      fromPtr,
+                      -- * Image Data Accessors
+                      pixels, withPixelVector, withImagePixels, 
+                      sampleLine, getRect,
+                      -- * Image Processing
+                      erode, dilate, houghStandard, houghProbabilistic, 
+                      normalize, resize, setROI, resetROI,
+                      module OpenCV.ColorConversion,
+                      module OpenCV.Threshold,
+                      module OpenCV.FloodFill,
+                      module OpenCV.FeatureDetection,
+                      Connectivity(..), 
+                      CvRect(..), liftCvRect,
+                      cv_L2, cv_MinMax, 
+                      InterpolationMethod(..), 
+                      -- * GUI and Drawing
+                      module OpenCV.GUI, 
+                      module OpenCV.Drawing,
+                      -- * Video
+                      module OpenCV.Video,
+                      -- * Image types
+                      HIplImage, Monochromatic, Trichromatic, 
+                      HasChannels, HasDepth, 
+                      GrayImage, ColorImage, GrayImage16, GrayImage16S,
+                      Word8, Word16
     ) where
-import AI.CV.OpenCV.Core.CxCore
-import AI.CV.OpenCV.Core.CV
-import AI.CV.OpenCV.Drawing
-import AI.CV.OpenCV.Core.HIplUtil
-import AI.CV.OpenCV.Core.CVOp
-import AI.CV.OpenCV.ColorConversion
+import OpenCV.Core.CxCore
+import OpenCV.Core.CV
+import OpenCV.Drawing
+import OpenCV.Core.HIplUtil
+import OpenCV.Core.CVOp
+import OpenCV.ColorConversion
 import Data.Word (Word8, Word16)
 import Foreign.C.Types (CDouble)
 import Foreign.Ptr
 import Foreign.Storable
 import System.IO.Unsafe (unsafePerformIO)
-import AI.CV.OpenCV.GUI
-import AI.CV.OpenCV.Threshold
-import AI.CV.OpenCV.FloodFill
-import AI.CV.OpenCV.FeatureDetection
-import AI.CV.OpenCV.Video
+import OpenCV.GUI
+import OpenCV.Threshold
+import OpenCV.FloodFill
+import OpenCV.FeatureDetection
+import OpenCV.Video
 
 -- |Erode an 'HIplImage' with a 3x3 structuring element for the
 -- specified number of iterations.

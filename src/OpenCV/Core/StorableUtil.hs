@@ -1,4 +1,4 @@
-module AI.CV.OpenCV.Core.StorableUtil where
+module OpenCV.Core.StorableUtil where
 import Foreign.Marshal.Alloc (alloca)
 import Foreign.Storable (Storable(poke))
 import Foreign.Ptr (Ptr)

@@ -1,5 +1,5 @@
 -- |Constants for color conversion
-module AI.CV.OpenCV.Core.ColorConversion where
+module OpenCV.Core.ColorConversion where
 import Foreign.C.Types (CInt)
 
 #include <opencv2/imgproc/imgproc_c.h>

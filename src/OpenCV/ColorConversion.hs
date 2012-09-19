@@ -1,14 +1,14 @@
 {-# LANGUAGE FlexibleContexts #-}
 -- |Type-safe color conversion functions. 
-module AI.CV.OpenCV.ColorConversion
+module OpenCV.ColorConversion
     (convertGrayToRGB, convertGrayToBGR, 
      convertBGRToGray, convertRGBToGray,
      convertBayerBgToBGR, convertBayerBgToRGB,
      convertRGBToHSV, convertBGRToHSV, convertHSVToBGR) where
-import AI.CV.OpenCV.Core.CV
-import AI.CV.OpenCV.Core.HIplUtil
-import AI.CV.OpenCV.Core.ColorConversion
-import AI.CV.OpenCV.Core.CVOp
+import OpenCV.Core.CV
+import OpenCV.Core.HIplUtil
+import OpenCV.Core.ColorConversion
+import OpenCV.Core.CVOp
 
 type M = Monochromatic
 type T = Trichromatic

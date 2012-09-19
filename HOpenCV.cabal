@@ -1,12 +1,12 @@
 name: HOpenCV
-version: 0.2.2
+version: 0.3.0
 license: BSD3
 author: Noam Lewis <jones.noamle@gmail.com>
 maintainer: Anthony Cowley <acowley@gmail.com>
 stability: experimental
 category: AI, Graphics
 synopsis: A binding for the OpenCV computer vision library.
-Tested-With:   GHC==7.0.3
+Tested-With:   GHC==7.4.1
 description:
    Limited bindings to OpenCV 2.4. (See: <http://opencv.willowgarage.com/wiki/Welcome>)
    .

@@ -1,6 +1,6 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, ScopedTypeVariables #-}
 -- |Support for features from the OpenCV Image Filtering library.
-module AI.CV.OpenCV.Core.CV 
+module OpenCV.Core.CV 
     ( InterpolationMethod(..),
       cvResize, cvDilate, cvErode, cvPyrDown, cvHoughLines2, 
       --CvHaarClassifierCascade, HaarDetectFlag,
@@ -16,8 +16,8 @@ import Foreign.Marshal.Alloc (allocaBytes)
 import Foreign.Marshal.Array (peekArray)
 import Foreign.Storable (Storable, sizeOf)
 import Foreign.Ptr
-import AI.CV.OpenCV.Core.CxCore
-import AI.CV.OpenCV.Core.ColorConversion
+import OpenCV.Core.CxCore
+import OpenCV.Core.ColorConversion
 
 #include <opencv/cv.h>
 

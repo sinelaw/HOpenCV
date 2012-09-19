@@ -1,9 +1,9 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
-module AI.CV.OpenCV.Histograms (equalizeHist) where
+module OpenCV.Histograms (equalizeHist) where
 import Foreign.Ptr (Ptr)
-import AI.CV.OpenCV.Core.CxCore
-import AI.CV.OpenCV.Core.HIplUtil
-import AI.CV.OpenCV.Core.CVOp
+import OpenCV.Core.CxCore
+import OpenCV.Core.HIplUtil
+import OpenCV.Core.CVOp
 
 foreign import ccall "opencv2/imgproc/imgproc_c.h cvEqualizeHist"
   c_cvEqualizeHist :: Ptr CvArr -> Ptr CvArr -> IO ()

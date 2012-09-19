@@ -2,7 +2,7 @@
              TypeFamilies, MultiParamTypeClasses, FlexibleInstances, GADTs, 
              BangPatterns, FlexibleContexts, TypeSynonymInstances #-}
 {-# OPTIONS_GHC -funbox-strict-fields #-}
-module AI.CV.OpenCV.Core.HIplImage (
+module OpenCV.Core.HIplImage (
     -- * Phantom types that statically describe image properties
     Trichromatic, Monochromatic, HasROI, NoROI,
 
@@ -18,11 +18,11 @@ module AI.CV.OpenCV.Core.HIplImage (
     c_cvResetImageROI, origin, width, height, imageSize, roi, imageData, 
     widthStep, imageDataOrigin, setROI, resetROI, ImgBuilder(..)
   ) where
-import AI.CV.OpenCV.Core.CxCore (IplImage,Depth(..),iplDepth8u, iplDepth16u, 
-                                 iplDepth16s, iplDepth32f, iplDepth64f, cvFree, 
-                                 CvRect(..), CvScalar(..))
-import AI.CV.OpenCV.Core.CV (cvCvtColor)
-import AI.CV.OpenCV.Core.ColorConversion (cv_GRAY2BGR, cv_BGR2GRAY)
+import OpenCV.Core.CxCore (IplImage,Depth(..),iplDepth8u, iplDepth16u, 
+                           iplDepth16s, iplDepth32f, iplDepth64f, cvFree, 
+                           CvRect(..), CvScalar(..))
+import OpenCV.Core.CV (cvCvtColor)
+import OpenCV.Core.ColorConversion (cv_GRAY2BGR, cv_BGR2GRAY)
 import Control.Applicative ((<$>))
 import Control.Monad (when)
 import Data.Bits (complement, (.&.))

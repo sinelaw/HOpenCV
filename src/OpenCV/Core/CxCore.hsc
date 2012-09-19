@@ -1,5 +1,5 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, TypeFamilies #-}
-module AI.CV.OpenCV.Core.CxCore where
+module OpenCV.Core.CxCore where
 import Control.Applicative
 import Control.Monad ((>=>))
 import Foreign.C.Types
