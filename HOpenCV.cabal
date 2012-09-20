@@ -6,7 +6,7 @@ maintainer: Anthony Cowley <acowley@gmail.com>
 stability: experimental
 category: AI, Graphics
 synopsis: A binding for the OpenCV computer vision library.
-Tested-With:   GHC==7.4.1
+Tested-With:   GHC==7.6.1
 description:
    Limited bindings to OpenCV 2.4. (See: <http://opencv.willowgarage.com/wiki/Welcome>)
    .
@@ -44,8 +44,8 @@ library
       OpenCV.Core.CVOp 
       OpenCV.Core.CxCore
       OpenCV.Core.HighGui
-      OpenCV.Core.HIplImage
-      OpenCV.Core.HIplUtil
+      OpenCV.Core.Image
+      OpenCV.Core.ImageUtil
       OpenCV.Core.ColorConversion
       OpenCV.HighCV
       OpenCV.GUI
@@ -83,5 +83,6 @@ library
                   template-haskell,
                   vector-space >= 0.7.2,
                   directory >= 1.0.1.0 && < 2,
-                  vector >= 0.7
+                  vector >= 0.7,
+                  singletons, tagged
    ghc-options: -Wall -fno-warn-name-shadowing -O2 -funbox-strict-fields
