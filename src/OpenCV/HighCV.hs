@@ -12,8 +12,8 @@ module OpenCV.HighCV (
                       -- * Image Construction
                       fromPixels, fromGrayPixels, fromColorPixels, peekIpl,
                       -- * Image Data Accessors
-                      pixels, withPixelVector, withImagePixels, 
-                      sampleLine, getRect,
+                      pixelVector, withPixelVector, withImagePixels, 
+                      withDuplicatePixels, sampleLine, getRect,
                       -- * Image Processing
                       erode, dilate, houghStandard, houghProbabilistic, 
                       normalize, resize, setROI, resetROI,

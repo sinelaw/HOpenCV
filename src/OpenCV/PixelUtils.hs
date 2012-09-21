@@ -23,7 +23,7 @@ import Unsafe.Coerce (unsafeCoerce)
 packPixels :: Image c d NoROI -> V.Vector d
 packPixels img@Image{} = 
     if w' == stride 
-    then pixels img
+    then pixelVector img
     else runST $ do v <- VM.new (w*h*nc)
                     let sliceSrc x = V.unsafeSlice x w' pix
                         sliceDst x = VM.unsafeSlice x w' v
@@ -41,7 +41,7 @@ packPixels img@Image{} =
           nc = imgChannels img
           w' = w * nc
           stride = fromIntegral $ widthStep img
-          pix = pixels img
+          pix = pixelVector img
 {-# INLINE packPixels #-}
 
 -- |Return a Vector of bytes of a single color channel from a
@@ -60,7 +60,7 @@ isolateChannel ch img@Image{} =
     where w = fromIntegral $ width img
           h = fromIntegral $ height img
           margin = fromIntegral (widthStep img) - (w  * 3)
-          pix = pixels img
+          pix = pixelVector img
           get = V.unsafeIndex pix
 {-# INLINE isolateChannel #-}
 

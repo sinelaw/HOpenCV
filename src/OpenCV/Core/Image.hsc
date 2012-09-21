@@ -184,14 +184,14 @@ bytesPerPixel = (`div` 8) . fromIntegral . unSign . unDepth . depth
 -- region-of-interest (ROI) set ('HasROI' or 'NoROI').
 data Image (c::Channels) d (r::ROIEnabled) where
   Image :: (SingI c, HasDepth d, SingI r, UpdateROI r) => 
-           { origin :: !CInt
-           , width :: !CInt
-           , height :: !CInt
-           , roi :: !(Maybe CvRect)
-           , imageSize :: !CInt
-           , imageData :: !(ForeignPtr d)
+           { origin          :: !Int
+           , width           :: !Int
+           , height          :: !Int
+           , roi             :: !(Maybe CvRect)
+           , imageSize       :: !Int
+           , imageData       :: !(ForeignPtr d)
            , imageDataOrigin :: !(ForeignPtr d)
-           , widthStep :: !CInt
+           , widthStep       :: !Int
            } -> Image c d r
 
 
@@ -262,6 +262,12 @@ withIplImage img@(Image{}) f = alloca $ \p ->
                                               (\hp -> do pokeIpl img p (castPtr hp)
                                                          withROI img p f)
 
+h2c :: Int -> CInt
+h2c = fromIntegral
+
+c2h :: CInt -> Int
+c2h = fromIntegral
+
 -- |Read a 'Image' from a 'Ptr' 'IplImage'
 peekIpl :: (SingI c, HasDepth d, SingI r, UpdateROI r) => 
            Ptr IplImage -> IO (Image c d r)
@@ -278,19 +284,18 @@ pokeIpl himg ptr hp =
        (#poke IplImage, nChannels) ptr (numChannels (Proxy::Proxy c))
        (#poke IplImage, depth) ptr (unDepth (depth (undefined::d)))
        (#poke IplImage, dataOrder) ptr (0::Int)
-       (#poke IplImage, origin) ptr (origin himg)
-       (#poke IplImage, align) ptr (4::Int)
-       (#poke IplImage, width) ptr (width himg)
-       (#poke IplImage, height) ptr (height himg)
+       (#poke IplImage, origin) ptr (h2c $ origin himg)
+       (#poke IplImage, align) ptr (4::CInt)
+       (#poke IplImage, width) ptr (h2c $ width himg)
+       (#poke IplImage, height) ptr (h2c $ height himg)
        (#poke IplImage, roi) ptr nullPtr
        (#poke IplImage, maskROI) ptr nullPtr
        (#poke IplImage, imageId) ptr nullPtr
        (#poke IplImage, tileInfo) ptr nullPtr
-       (#poke IplImage, imageSize) ptr (imageSize himg)
+       (#poke IplImage, imageSize) ptr (h2c $ imageSize himg)
        (#poke IplImage, imageData) ptr hp
-       (#poke IplImage, widthStep) ptr (widthStep himg)
+       (#poke IplImage, widthStep) ptr (h2c $ widthStep himg)
        (#poke IplImage, imageDataOrigin) ptr hp
-
 
 foreign import ccall "HOpenCV_wrap.h c_cvGetROI"
   c_cvGetImageROI :: Ptr IplImage -> Ptr CInt -> IO ()
@@ -334,16 +339,16 @@ instance forall c d r. (SingI c, HasDepth d, SingI r, UpdateROI r) =>
     alignment _ = alignment (undefined :: CDouble)
     poke = error "Poking a 'Ptr Image' is unsafe."
     peek ptr = do
-      numChannels' <- (#peek IplImage, nChannels) ptr :: IO CInt
+      numChannels' <- c2h <$> (#peek IplImage, nChannels) ptr
       depth' <- Depth <$> (#peek IplImage, depth) ptr
-      width' <- (#peek IplImage, width) ptr
-      height' <- (#peek IplImage, height) ptr
+      width' <- c2h <$> (#peek IplImage, width) ptr
+      height' <- c2h <$> (#peek IplImage, height) ptr
       roir <- (#peek IplImage, roi) ptr >>= maybePeekROI (castPtr ptr)
       when (depth' /= (depth (undefined::d)))
            (error $ "IplImage has depth "++show depth'++
                     " but desired Image has depth "++
                     show (depth (undefined::d)))
-      if numChannels (Proxy::Proxy c) /= fromIntegral numChannels'
+      if numChannels (Proxy::Proxy c) /= numChannels'
         then do img2' <- mallocImage width' height' :: IO (Image c d NoROI)
                 let img2 = updateROI roir img2' :: Image c d r
                 let conv = if numChannels' == 1 

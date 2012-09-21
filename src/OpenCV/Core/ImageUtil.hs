@@ -2,7 +2,7 @@
              FlexibleInstances, DataKinds, KindSignatures #-}
 -- |Functions for working with 'HIplImage's.
 module OpenCV.Core.ImageUtil
-    (isColor, isMono, imgChannels, withPixelVector, pixels,
+    (isColor, isMono, imgChannels, withPixelVector, pixelVector,
      peekIpl, fromFileColor, fromFileGray, fromPGM16, toFile, 
      compatibleImage, duplicateImage, fromPixels,
      withImagePixels, fromGrayPixels, fromColorPixels,
@@ -10,7 +10,7 @@ module OpenCV.Core.ImageUtil
      mkImage, mallocImage, numPixels, blackImage, Image(..), 
      ROIEnabled(..), withIplImage, Channels(..), 
      GrayImage, GrayImage16, GrayImage16S, ColorImage, 
-     c_cvSetImageROI, c_cvResetImageROI,
+     withDuplicatePixels, c_cvSetImageROI, c_cvResetImageROI,
      HasDepth(..), CvScalarT, AsCvScalar(..), ScalarOK,
      colorDepth, UpdateROI, SingI,
      ByteOrFloat, getRect, fromFile, unsafeWithHIplImage,
@@ -26,6 +26,7 @@ import Control.Monad (when, unless, join)
 import Data.Int (Int16)
 import Data.Proxy
 import qualified Data.Vector.Storable as V
+import qualified Data.Vector.Storable.Mutable as VM
 import Data.Singletons (SingI)
 import Data.Word (Word8, Word16)
 import Foreign.ForeignPtr
@@ -90,18 +91,28 @@ withImagePixels :: Image c d NoROI -> (V.Vector d -> r) -> r
 withImagePixels img@Image{} f = f $ V.unsafeFromForeignPtr (imageData img) 0 n
     where n = fromIntegral (imageSize img) `div` colorDepth img
 
+-- |Apply the supplied function to a mutable 'VM.IOVector' containing
+-- a copy of the pixel data from the input image. Returns the new
+-- image and any result of the 'IO' action.
+withDuplicatePixels :: Image c d NoROI -> (VM.IOVector d -> IO r) -> 
+                       IO (Image c d NoROI, r)
+withDuplicatePixels img1@Image{} f = do img2 <- duplicateImage img1
+                                        let ptr = imageDataOrigin img2
+                                        r <- f $ VM.unsafeFromForeignPtr0 ptr n
+                                        return (img2, r)
+  where n = numPixels img1 * imgChannels img1
+
 -- |Return a 'V.Vector' containing a copy of the pixels that make up a
 -- 'HIplImage'.
-pixels :: Storable d => Image c d NoROI -> V.Vector d
-pixels img = unsafePerformIO $ 
-             do ptr <- mallocForeignPtrBytes len
-                withForeignPtr ptr $ \dst -> 
-                    withForeignPtr (imageData img) $ \src -> 
-                        copyBytes dst src len
-                return $ V.unsafeFromForeignPtr ptr 0 len
+pixelVector :: Storable d => Image c d NoROI -> V.Vector d
+pixelVector img = unsafePerformIO $ 
+                  do ptr <- mallocForeignPtrBytes len
+                     withForeignPtr ptr $ \dst -> 
+                       withForeignPtr (imageData img) $ \src -> 
+                         copyBytes dst src len
+                     return $ V.unsafeFromForeignPtr ptr 0 len
     where len = fromIntegral $ imageSize img
-{-# NOINLINE pixels #-}
-
+{-# NOINLINE pixelVector #-}
 
 -- Ensure that a file exists.
 checkFile :: FilePath -> IO ()
