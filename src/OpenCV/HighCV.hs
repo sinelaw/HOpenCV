@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 -- |High-level Haskell bindings to OpenCV operations. Some of these
 -- operations will be performed in-place under composition. For
 -- example, @dilate 8 . erode 8@ will allocate one new image rather
@@ -9,8 +10,7 @@ module OpenCV.HighCV (
                       -- * Image Properties
                       width, height, numPixels, isColor, isMono,
                       -- * Image Construction
-                      fromPixels, fromGrayPixels, fromColorPixels, 
-                      fromPtr,
+                      fromPixels, fromGrayPixels, fromColorPixels, peekIpl,
                       -- * Image Data Accessors
                       pixels, withPixelVector, withImagePixels, 
                       sampleLine, getRect,
@@ -31,15 +31,14 @@ module OpenCV.HighCV (
                       -- * Video
                       module OpenCV.Video,
                       -- * Image types
-                      HIplImage, Monochromatic, Trichromatic, 
-                      HasChannels, HasDepth, 
+                      Image, Channels(..), HasDepth, 
                       GrayImage, ColorImage, GrayImage16, GrayImage16S,
                       Word8, Word16
     ) where
 import OpenCV.Core.CxCore
 import OpenCV.Core.CV
 import OpenCV.Drawing
-import OpenCV.Core.HIplUtil
+import OpenCV.Core.ImageUtil
 import OpenCV.Core.CVOp
 import OpenCV.ColorConversion
 import Data.Word (Word8, Word16)
@@ -53,17 +52,17 @@ import OpenCV.FloodFill
 import OpenCV.FeatureDetection
 import OpenCV.Video
 
--- |Erode an 'HIplImage' with a 3x3 structuring element for the
--- specified number of iterations.
-erode :: (HasChannels c, HasDepth d, Inplace r c d c d) =>
-         Int -> HIplImage c d r -> HIplImage c d r
+-- |Erode an 'Image' with a 3x3 structuring element for the specified
+-- number of iterations.
+erode :: (HasDepth d, Inplace r c d c d) =>
+         Int -> Image c d r -> Image c d r
 erode n = cv2 $ \src dst -> cvErode src dst (fromIntegral n)
 {-# INLINE erode #-}
 
--- |Dilate an 'HIplImage' with a 3x3 structuring element for the
+-- |Dilate an 'Image' with a 3x3 structuring element for the
 -- specified number of iterations.
-dilate :: (HasChannels c, HasDepth d, Inplace r c d c d) =>
-          Int -> HIplImage c d r -> HIplImage c d r
+dilate :: (HasDepth d, Inplace r c d c d) =>
+          Int -> Image c d r -> Image c d r
 dilate n = cv2 $ \src dst -> cvDilate src dst (fromIntegral n)
 {-# INLINE dilate #-}
 
@@ -71,22 +70,20 @@ dilate n = cv2 $ \src dst -> cvDilate src dst (fromIntegral n)
 -- the end points. Parameters are the two endpoints, the line
 -- connectivity to use when sampling, and an image; returns the list
 -- of pixel values.
-sampleLine :: (HasChannels c, HasDepth d, ImgBuilder r) =>
-              (Int, Int) -> (Int, Int) -> Connectivity -> HIplImage c d r -> [d]
-sampleLine pt1 pt2 conn img = unsafePerformIO . withHIplImage img $ 
-                                \p -> cvSampleLine p pt1 pt2 conn
+sampleLine :: (Int, Int) -> (Int, Int) -> Connectivity -> Image c d r -> [d]
+sampleLine pt1 pt2 conn img@Image{} = unsafePerformIO . withIplImage img $ 
+                                      \p -> cvSampleLine p pt1 pt2 conn
 {-# NOINLINE sampleLine #-}
 
 -- |Line detection in a binary image using a standard Hough
 -- transform. Parameters are @rho@, the distance resolution in
 -- pixels; @theta@, the angle resolution in radians; @threshold@, the
 -- line classification accumulator threshold; and the input image.
-houghStandard :: ImgBuilder r =>
-                 Double -> Double -> Int -> HIplImage Monochromatic Word8 r -> 
+houghStandard :: Double -> Double -> Int -> Image Monochromatic Word8 r -> 
                  [((Int, Int),(Int,Int))]
 houghStandard rho theta threshold img = unsafePerformIO $
     do storage <- cvCreateMemStorage (min 0 (fromIntegral threshold))
-       cvSeq <- withHIplImage img $ 
+       cvSeq <- withIplImage img $ 
                 \p -> cvHoughLines2 p storage 0 rho theta threshold 0 0
        hlines <- mapM (\p -> do f1 <- peek p
                                 f2 <- peek (plusPtr p (sizeOf (undefined::Float)))
@@ -114,9 +111,8 @@ houghStandard rho theta threshold img = unsafePerformIO $
 -- transform. Parameters are @rho@, the distance resolution in pixels;
 -- @theta@, the angle resolution in radians; @threshold@, the line
 -- classification accumulator threshold; and the input image.
-houghProbabilistic :: ImgBuilder r =>
-                      Double -> Double -> Int -> Double -> Double -> 
-                      HIplImage Monochromatic Word8 r -> [((Int, Int),(Int,Int))]
+houghProbabilistic :: Double -> Double -> Int -> Double -> Double -> 
+                      Image Monochromatic Word8 r -> [((Int, Int),(Int,Int))]
 houghProbabilistic rho theta threshold minLength maxGap img = 
     unsafePerformIO $
     do storage <- cvCreateMemStorage (min 0 (fromIntegral threshold))
@@ -150,16 +146,15 @@ findContours img = snd $ withDuplicateImage img $
 -- captured in the type. That said, it would be nice to be able to do
 -- in-place updates to the output of 'resize'.
 
--- |Resize the supplied 'HIplImage' to the given width and height using
+-- |Resize the supplied 'Image' to the given width and height using
 -- the supplied 'InterpolationMethod'.
-resize :: (HasChannels c, HasDepth d) => 
-          InterpolationMethod -> Int -> Int -> HIplImage c d NoROI -> 
-          HIplImage c d NoROI
-resize method w h img = 
+resize :: InterpolationMethod -> Int -> Int -> 
+          Image c d NoROI -> Image c d NoROI
+resize method w h img@Image{} = 
     unsafePerformIO $
-    do img' <- mkHIplImage w h
-       _ <- withHIplImage img $ \src ->
-              withHIplImage img' $ \dst ->
+    do img' <- mallocImage w h
+       _ <- withIplImage img $ \src ->
+              withIplImage img' $ \dst ->
                 cvResize src dst method
        return img'
 {-# NOINLINE resize #-}
@@ -167,8 +162,8 @@ resize method w h img =
 -- |Normalize the range of color values in an image to the given
 -- range. Example usage with a grayscale image is @normalize cv_MinMax
 -- 0 255 img@
-normalize :: (HasChannels c, HasDepth d, Inplace r c d c d) => 
-             ArrayNorm -> CDouble -> CDouble -> HIplImage c d r -> HIplImage c d r
+normalize :: (HasDepth d, Inplace r c d c d) => 
+             ArrayNorm -> CDouble -> CDouble -> Image c d r -> Image c d r
 normalize ntype a b = cv2 $ \img dst -> 
                       cvNormalize img dst a b (unNorm ntype) nullPtr
 {-# INLINE normalize #-}

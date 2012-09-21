@@ -1,11 +1,11 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns, DataKinds #-}
 -- |Images obtained from OpenCV usually have the components of color
 -- pixels arranged in BGR order and pad image rows with unused
 -- bytes. This module provides mechanisms to drop the unused packing
 -- bytes.
 module OpenCV.PixelUtils where
-import OpenCV.Core.HIplImage
-import OpenCV.Core.HIplUtil
+import OpenCV.Core.Image
+import OpenCV.Core.ImageUtil
 import OpenCV.ColorConversion (convertRGBToGray)
 import Control.Monad.ST (runST)
 import qualified Data.Vector.Storable as V
@@ -20,8 +20,8 @@ import Unsafe.Coerce (unsafeCoerce)
 -- pixel data that excludes these unused bytes. If the original image
 -- data is already packed, it is returned as a 'V.Vector' without
 -- copying.
-packPixels :: (HasChannels c, HasDepth d) => HIplImage c d NoROI -> V.Vector d
-packPixels img = 
+packPixels :: Image c d NoROI -> V.Vector d
+packPixels img@Image{} = 
     if w' == stride 
     then pixels img
     else runST $ do v <- VM.new (w*h*nc)
@@ -46,9 +46,8 @@ packPixels img =
 
 -- |Return a Vector of bytes of a single color channel from a
 -- tri-chromatic image. The desired channel must be one of 0, 1, or 2.
-isolateChannel :: HasDepth d => 
-                  Int -> HIplImage Trichromatic d NoROI -> V.Vector d
-isolateChannel ch img = 
+isolateChannel :: Int -> Image Trichromatic d NoROI -> V.Vector d
+isolateChannel ch img@Image{} = 
     if ch < 0 || ch >= 3
     then error $ "Invalid channel "++show ch++" for trichromatic image"
     else runST $ do v <- VM.new (w*h)
@@ -65,9 +64,9 @@ isolateChannel ch img =
           get = V.unsafeIndex pix
 {-# INLINE isolateChannel #-}
 
--- |Convert an 'HIplImage' \'s pixel data to a 'V.Vector' of monochromatic bytes.
-toMono :: (HasChannels c, HasDepth d, Integral d) => 
-          HIplImage c d NoROI -> V.Vector d
-toMono img = if imgChannels img == 1 then packPixels img
-             else packPixels . convertRGBToGray . isColor $ unsafeCoerce img
+-- |Convert an 'Image' \'s pixel data to a 'V.Vector' of monochromatic bytes.
+toMono :: Integral d => Image c d NoROI -> V.Vector d
+toMono img@Image{} = if imgChannels img == 1 then packPixels img
+                     else packPixels . convertRGBToGray . isColor $ 
+                          unsafeCoerce img
 

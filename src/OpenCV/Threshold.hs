@@ -1,5 +1,5 @@
 {-# LANGUAGE ForeignFunctionInterface, ScopedTypeVariables, TypeFamilies,
-             MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
+             MultiParamTypeClasses, FlexibleInstances, FlexibleContexts, DataKinds #-}
 -- |Image thresholding operations. These operations will perform
 -- destructive, in-place updates when used in compositions.
 module OpenCV.Threshold (thresholdBinary, thresholdBinaryInv,
@@ -13,7 +13,7 @@ import Data.Word (Word8)
 import Foreign.C.Types (CDouble(..), CInt(..))
 import Foreign.Ptr (Ptr)
 import OpenCV.Core.CxCore 
-import OpenCV.Core.HIplUtil
+import OpenCV.Core.ImageUtil
 import OpenCV.Core.CVOp
 
 data ThresholdType = ThreshBinary
@@ -75,8 +75,8 @@ cvThreshold1 threshold maxValue tType =
 
 -- The worker function that calls c_cvThreshold.
 cvThreshold2 :: (ByteOrFloat d1, SameOrByte d1 d2, Inplace r M d1 M d2) =>
-                d1 -> d1 -> CInt -> HIplImage Monochromatic d1 r ->
-                HIplImage Monochromatic d2 r
+                d1 -> d1 -> CInt -> Image Monochromatic d1 r ->
+                Image Monochromatic d2 r
 cvThreshold2 threshold maxValue tType = 
     cv2 $ \src dst ->
         do _r <- c_cvThreshold src dst threshold' maxValue' tType'
@@ -92,7 +92,7 @@ cvThreshold2 threshold maxValue tType =
 -- cvThreshold = doThreshold
 cvThreshold :: (ByteOrFloat d1, SameOrByte d1 d2, Inplace r M d1 M d2) =>
                d1 -> d1 -> CInt -> 
-               HIplImage Monochromatic d1 r -> HIplImage Monochromatic d2 r
+               Image Monochromatic d1 r -> Image Monochromatic d2 r
 cvThreshold = cvThreshold2
 
 {-# INLINE cvThreshold #-}
@@ -100,8 +100,8 @@ cvThreshold = cvThreshold2
 -- Use Otsu's method to determine an optimal threshold value which is
 -- returned along with the thresholded image.
 cvThresholdOtsu :: Inplace r M Word8 M Word8 =>
-                   Word8 -> CInt -> HIplImage Monochromatic Word8 r ->
-                   HIplImage Monochromatic Word8 r
+                   Word8 -> CInt -> Image Monochromatic Word8 r ->
+                   Image Monochromatic Word8 r
 cvThresholdOtsu maxValue tType = cvThreshold 0 maxValue tType'
     where otsu = 8
           tType' = tType .|. otsu
@@ -111,47 +111,47 @@ type M = Monochromatic
 
 -- |Binary thresholding. Parameters are the @threshold@ value, the
 -- @maxValue@ passing pixels are mapped to, and the source
--- 'HIplImage'. Each pixel greater than @threshold@ is mapped to
+-- 'Image'. Each pixel greater than @threshold@ is mapped to
 -- @maxValue@, while all others are mapped to zero.
 thresholdBinary :: (SameOrByte d1 d2, ByteOrFloat d1, Inplace r M d1 M d2) => 
                    d1 -> d1 -> 
-                   HIplImage Monochromatic d1 r -> HIplImage Monochromatic d2 r
+                   Image Monochromatic d1 r -> Image Monochromatic d2 r
 thresholdBinary th maxValue = cvThreshold th maxValue (fromEnumC ThreshBinary)
 {-# INLINE thresholdBinary #-}
 
 -- |Inverse binary thresholding. Parameters are the @threshold@ value,
 -- the @maxValue@ passing pixels are mapped to, and the source
--- 'HIplImage'. Each pixel greater than @threshold@ is mapped to zero,
+-- 'Image'. Each pixel greater than @threshold@ is mapped to zero,
 -- while all others are mapped to @maxValue@.
 thresholdBinaryInv :: (SameOrByte d1 d2, ByteOrFloat d1, Inplace r M d1 M d2) => 
                       d1 -> d1 -> 
-                      HIplImage Monochromatic d1 r -> HIplImage Monochromatic d2 r
+                      Image Monochromatic d1 r -> Image Monochromatic d2 r
 thresholdBinaryInv th maxValue = cvThreshold th maxValue tType
     where tType = fromEnumC ThreshBinaryInv
 {-# INLINE thresholdBinaryInv #-}
 
 -- |Truncation thresholding (i.e. clamping). Parameters are the
--- @threshold@ value and the source 'HIplImage'. Maps pixels that are
+-- @threshold@ value and the source 'Image'. Maps pixels that are
 -- greater than @threshold@ to the @threshold@ value; leaves all other
 -- pixels unchanged.
 thresholdTruncate :: (SameOrByte d1 d2, ByteOrFloat d1, Inplace r M d1 M d2) => 
-                     d1 -> HIplImage Monochromatic d1 r -> HIplImage Monochromatic d2 r
+                     d1 -> Image Monochromatic d1 r -> Image Monochromatic d2 r
 thresholdTruncate threshold = cvThreshold threshold 0 (fromEnumC ThreshTrunc)
 {-# INLINE thresholdTruncate #-}
 
 -- |Maps pixels that are less than or equal to @threshold@ to zero;
 -- leaves all other pixels unchanged. Parameters the @threshold@ value
--- and the source 'HIplImage'.
+-- and the source 'Image'.
 thresholdToZero :: (SameOrByte d1 d2, ByteOrFloat d1, Inplace r M d1 M d2) => 
-                   d1 -> HIplImage Monochromatic d1 r -> HIplImage Monochromatic d2 r
+                   d1 -> Image Monochromatic d1 r -> Image Monochromatic d2 r
 thresholdToZero threshold = cvThreshold threshold 0 (fromEnumC ThreshToZero)
 {-# INLINE thresholdToZero #-}
 
 -- |Maps pixels that are greater than @threshold@ to zero; leaves all
 -- other pixels unchanged. Parameters the @threshold@ value and the
--- source 'HIplImage'.
+-- source 'Image'.
 thresholdToZeroInv :: (SameOrByte d1 d2, ByteOrFloat d1, Inplace r M d1 M d2) => 
-                      d1 -> HIplImage Monochromatic d1 r -> HIplImage Monochromatic d2 r
+                      d1 -> Image Monochromatic d1 r -> Image Monochromatic d2 r
 thresholdToZeroInv threshold = cvThreshold threshold 0 tType
     where tType = fromEnumC ThreshToZeroInv
 {-# INLINE thresholdToZeroInv #-}
@@ -159,10 +159,10 @@ thresholdToZeroInv threshold = cvThreshold threshold 0 tType
 -- |Binary thresholding using Otsu's method to determine an optimal
 -- threshold value. The chosen value is returned along with the
 -- thresholded image. Takes the @maxValue@ used to replace pixels that
--- pass the threshold with and the source 'HIplImage'.
+-- pass the threshold with and the source 'Image'.
 thresholdBinaryOtsu :: (Inplace r M Word8 M Word8) =>
-                       Word8 -> HIplImage Monochromatic Word8 r ->
-                       HIplImage Monochromatic Word8 r
+                       Word8 -> Image Monochromatic Word8 r ->
+                       Image Monochromatic Word8 r
 thresholdBinaryOtsu maxValue = cvThresholdOtsu maxValue tType
     where tType = fromEnumC ThreshBinary
 {-# INLINE thresholdBinaryOtsu #-}
@@ -170,22 +170,22 @@ thresholdBinaryOtsu maxValue = cvThresholdOtsu maxValue tType
 -- |Binary thresholding using Otsu's method to determine an optimal
 -- threshold value. The chosen value is returned along with the
 -- thresholded image. Takes the @maxValue@ to replace pixels that pass
--- the threshold with and the source 'HIplImage'. The sense of the
+-- the threshold with and the source 'Image'. The sense of the
 -- thresholding operation is inverted, as in 'thresholdBinaryInv'.
 thresholdBinaryOtsuInv :: (Inplace r M Word8 M Word8) =>
-                          Word8 -> HIplImage Monochromatic Word8 r ->
-                          HIplImage Monochromatic Word8 r
+                          Word8 -> Image Monochromatic Word8 r ->
+                          Image Monochromatic Word8 r
 thresholdBinaryOtsuInv maxValue = cvThresholdOtsu maxValue tType
     where tType = fromEnumC ThreshBinaryInv
 {-# INLINE thresholdBinaryOtsuInv #-}
 
 -- |Maps pixels that are greater than @threshold@ to the @threshold@
 -- value; leaves all other pixels unchanged. Takes the source
--- 'HIplImage'; the @threshold@ value is chosen using Otsu's method
+-- 'Image'; the @threshold@ value is chosen using Otsu's method
 -- and returned along with the thresholded image.
 thresholdTruncateOtsu :: (Inplace r M Word8 M Word8) =>
-                         HIplImage Monochromatic Word8 r -> 
-                         HIplImage Monochromatic Word8 r
+                         Image Monochromatic Word8 r -> 
+                         Image Monochromatic Word8 r
 thresholdTruncateOtsu = cvThresholdOtsu 0 (fromEnumC ThreshTrunc)
 {-# INLINE thresholdTruncateOtsu #-}
 
@@ -193,8 +193,8 @@ thresholdTruncateOtsu = cvThresholdOtsu 0 (fromEnumC ThreshTrunc)
 -- leaves all other pixels unchaged.The @threshold@ value is chosen
 -- using Otsu's method and returned along with the thresholded image.
 thresholdToZeroOtsu :: (Inplace r M Word8 M Word8) =>
-                       HIplImage Monochromatic Word8 r -> 
-                       HIplImage Monochromatic Word8 r
+                       Image Monochromatic Word8 r -> 
+                       Image Monochromatic Word8 r
 thresholdToZeroOtsu = cvThresholdOtsu 0 (fromEnumC ThreshToZero)
 {-# INLINE thresholdToZeroOtsu #-}
 
@@ -202,7 +202,7 @@ thresholdToZeroOtsu = cvThresholdOtsu 0 (fromEnumC ThreshToZero)
 -- other pixels unchaged.The @threshold@ value is chosen using Otsu's
 -- method and returned along with the thresholded image.
 thresholdToZeroOtsuInv :: (Inplace r M Word8 M Word8) =>
-                          HIplImage Monochromatic Word8 r -> 
-                          HIplImage Monochromatic Word8 r
+                          Image Monochromatic Word8 r -> 
+                          Image Monochromatic Word8 r
 thresholdToZeroOtsuInv = cvThresholdOtsu 0 (fromEnumC ThreshToZeroInv)
 {-# INLINE thresholdToZeroOtsuInv #-}

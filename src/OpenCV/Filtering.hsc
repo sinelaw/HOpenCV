@@ -8,7 +8,7 @@ import Data.Int (Int16)
 import Foreign.C.Types (CInt(..), CDouble(..))
 import Foreign.Ptr (Ptr, castPtr)
 import OpenCV.Core.CxCore
-import OpenCV.Core.HIplUtil
+import OpenCV.Core.ImageUtil
 import OpenCV.Core.CVOp
 
 #include <opencv2/imgproc/types_c.h>
@@ -30,25 +30,25 @@ cvGaussian = #{const CV_GAUSSIAN}
 
 -- |Smooth a source image using a linear convolution with a Gaussian
 -- kernel. Parameters are the kernel width and the source
--- 'HIplImage'. The kernel height will be set to the same value as the
+-- 'Image'. The kernel height will be set to the same value as the
 -- width, and the Gaussian standard deviation will be calculated from
 -- the kernel size. This function is the same as calling
 -- @smoothGaussian' width Nothing Nothing@. May be performed in-place
 -- under composition.
-smoothGaussian :: (ByteOrFloat d, HasChannels c, Inplace r c d c d) => 
-                  Int -> HIplImage c d r -> HIplImage c d r
+smoothGaussian :: (ByteOrFloat d, Inplace r c d c d) => 
+                  Int -> Image c d r -> Image c d r
 smoothGaussian w = smoothGaussian' w Nothing Nothing
 {-# INLINE smoothGaussian #-}
 
--- |Smooth a source 'HIplImage' using a linear convolution with a
+-- |Smooth a source 'Image' using a linear convolution with a
 -- Gaussian kernel. Parameters are the kernel width, the kernel height
 -- (if 'Nothing', the height will be set to the same value as the
 -- width), the Gaussian standard deviation (if 'Nothing', it will be
 -- calculated from the kernel size), and the source image. May be
 -- performed in-place under composition.
-smoothGaussian' :: (ByteOrFloat d, HasChannels c, Inplace r c d c d) => 
-                   Int -> Maybe Int -> Maybe Double -> HIplImage c d r -> 
-                   HIplImage c d r
+smoothGaussian' :: (ByteOrFloat d, Inplace r c d c d) => 
+                   Int -> Maybe Int -> Maybe Double -> Image c d r -> 
+                   Image c d r
 smoothGaussian' w h sigma = 
     cv2 $ \src dst -> smooth src dst cvGaussian w h' sigma' 0
     where sigma' = case sigma of { Nothing -> 0; Just s -> s }
@@ -85,10 +85,9 @@ type instance SobelDest Float = Float
 
 -- |Calculates the first, second, third or mixed image derivatives
 -- using an extended Sobel operators. @sobel xOrder yOrder apertureSize img@
-sobel :: (HasDepth d1, HasDepth d2, d2 ~ SobelDest d1, 
-          HasChannels c, Inplace r c d1 c d2) =>
+sobel :: (HasDepth d1, HasDepth d2, d2 ~ SobelDest d1, Inplace r c d1 c d2) =>
          DerivativeOrder -> DerivativeOrder -> ApertureSize -> 
-         HIplImage c d1 r -> HIplImage c d2 r
+         Image c d1 r -> Image c d2 r
 sobel xOrder yOrder apertureSize = cv2 $ \src dst -> cvSobel src dst x y ap
   where ap = apertureToInt apertureSize
         x = orderToInt xOrder
@@ -96,15 +95,13 @@ sobel xOrder yOrder apertureSize = cv2 $ \src dst -> cvSobel src dst x y ap
 {-# INLINE sobel #-}
 
 -- |Compute the first X derivative of an image using a Sobel operator.
-sobelDX :: (HasDepth d1, HasDepth d2, d2 ~ SobelDest d1, 
-            HasChannels c, Inplace r c d1 c d2) =>
-           ApertureSize -> HIplImage c d1 r -> HIplImage c d2 r
+sobelDX :: (HasDepth d1, HasDepth d2, d2 ~ SobelDest d1, Inplace r c d1 c d2) =>
+           ApertureSize -> Image c d1 r -> Image c d2 r
 sobelDX = sobel OrderOne OrderZero
 {-# INLINE sobelDX #-}
 
 -- |Compute the first Y derivative of an image using a Sobel operator.
-sobelDY :: (HasDepth d1, HasDepth d2, d2 ~ SobelDest d1,
-            HasChannels c, Inplace r c d1 c d2) =>
-            ApertureSize -> HIplImage c d1 r -> HIplImage c d2 r
+sobelDY :: (HasDepth d1, HasDepth d2, d2 ~ SobelDest d1, Inplace r c d1 c d2) =>
+            ApertureSize -> Image c d1 r -> Image c d2 r
 sobelDY = sobel OrderZero OrderOne
 {-# INLINE sobelDY #-}

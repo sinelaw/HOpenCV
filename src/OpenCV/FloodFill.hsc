@@ -5,7 +5,7 @@ import Data.Bits ((.|.))
 import Foreign.C.Types (CInt(..))
 import Foreign.Ptr (Ptr, nullPtr, castPtr)
 import OpenCV.Core.CxCore 
-import OpenCV.Core.HIplUtil
+import OpenCV.Core.ImageUtil
 import OpenCV.Core.CVOp
 import OpenCV.Core.StorableUtil
 
@@ -62,12 +62,11 @@ floodHelper (x,y) newVal loDiff upDiff range src =
 -- pixel; a flag indicating whether pixels under consideration for
 -- painting should be compared to the seed pixel ('FloodFixed') or to
 -- their neighbors ('FloodFloating'); the source image.
-floodFill :: (ByteOrFloat d, HasChannels c, HasScalar c d, 
-              IsCvScalar s, s ~ CvScalarT c d, ImgBuilder r) => 
-             (Int, Int) -> s -> s -> s -> FloodRange -> HIplImage c d r -> 
-             HIplImage c d r
-floodFill seed newVal loDiff upDiff range = 
-    cv $ floodHelper seed (toCvScalar newVal) (toCvScalar loDiff)
-                     (toCvScalar upDiff) range
+floodFill :: (ByteOrFloat d, AsCvScalar s, s ~ CvScalarT c d) => 
+             (Int, Int) -> s -> s -> s -> FloodRange -> 
+             Image c d r -> Image c d r
+floodFill seed newVal loDiff upDiff range img@Image{}= 
+    flip cv img $ floodHelper seed (toCvScalar newVal) (toCvScalar loDiff)
+                              (toCvScalar upDiff) range
 
 {-# INLINE floodFill #-}

@@ -1,7 +1,7 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, ScopedTypeVariables, 
              TypeFamilies, MultiParamTypeClasses, FlexibleInstances, GADTs, 
              BangPatterns, FlexibleContexts, TypeSynonymInstances,
-             DataKinds, TemplateHaskell #-}
+             DataKinds, TemplateHaskell, ConstraintKinds #-}
 {-# OPTIONS_GHC -funbox-strict-fields -fno-warn-unused-binds #-}
 module OpenCV.Core.Image (
     -- * Phantom types that statically describe image properties
@@ -11,7 +11,7 @@ module OpenCV.Core.Image (
     HasDepth(..), 
 
     -- * Typed support for image operations that take scalar (color) parameters
-    CvScalarT, AsCvScalar(..),
+    CvScalarT, AsCvScalar(..), ScalarOK,
 
     -- * Low-level image data structure
     Image(..), mkImage, mallocImage, blackImage, blackoutPixels, 
@@ -132,6 +132,8 @@ type family CvScalarT (c::Channels) d :: *
 type instance CvScalarT Monochromatic d = d
 type instance CvScalarT Trichromatic d = (d,d,d)
 
+type ScalarOK s c d = (AsCvScalar s, s ~ CvScalarT c d)
+
 -- |Scalar types are often round-tripped via doubles in OpenCV to
 -- allow for non-overloaded interfaces of functions with scalar
 -- parameters.
@@ -181,7 +183,7 @@ bytesPerPixel = (`div` 8) . fromIntegral . unSign . unDepth . depth
 -- depth (e.g. 'Word8', 'Float'), and whether or not the image has a
 -- region-of-interest (ROI) set ('HasROI' or 'NoROI').
 data Image (c::Channels) d (r::ROIEnabled) where
-  Image :: (SingI c, HasDepth d, SingI r) => 
+  Image :: (SingI c, HasDepth d, SingI r, UpdateROI r) => 
            { origin :: !CInt
            , width :: !CInt
            , height :: !CInt
@@ -306,7 +308,7 @@ maybePeekROI img p | p == nullPtr = return Nothing
 
 -- |An internal class that makes runtime guarantees about type level
 -- ROI assertions.
-class UpdateROI (a::ROIEnabled) where
+class SingI a => UpdateROI (a::ROIEnabled) where
   updateROI :: Maybe CvRect -> Image c d a -> Image c d b
 
 -- These functions are runtime checks that type-level guarantees are

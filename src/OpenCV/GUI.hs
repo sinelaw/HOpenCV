@@ -2,7 +2,7 @@
 -- and 'runNamedWindow' interfaces are the recommended entrypoints.
 module OpenCV.GUI (namedWindow, WindowFlag(..), MouseCallback, 
                    waitKey, cvInit, runWindow, runNamedWindow) where
-import OpenCV.Core.HIplImage
+import OpenCV.Core.Image
 import OpenCV.Core.HighGui
 import OpenCV.Core.CxCore (fromArr)
 import Control.Monad ((>=>))
@@ -17,20 +17,19 @@ bool _ f False = f
 
 -- |Simple window runner. Takes an action that produces images to be
 -- shown in the window. Exits when any key is pressed.
-runWindow :: (HasChannels c, ImgBuilder r) => IO (HIplImage c Word8 r) -> IO ()
+runWindow :: IO (Image c Word8 r) -> IO ()
 runWindow mkImg = newWindow 0 True >> go
-    where go = do mkImg >>= flip withHIplImage (showImage 0)
+    where go = do mkImg >>= flip withIplImage (showImage 0)
                   cvWaitKey 1 >>= bool (delWindow 0) go . (> 0)
 
 -- |Simple named window runner. Exits when any key is pressed. The
 -- name is shown in the window's title bar.
-runNamedWindow :: (HasChannels c, ImgBuilder r) => 
-                  String -> IO (HIplImage c Word8 r) -> IO ()
+runNamedWindow :: String -> IO (Image c Word8 r) -> IO ()
 runNamedWindow name mkImg = 
     do name' <- newCString name
        cvNamedWindow name' (windowFlagsToEnum [AutoSize])
        let showImg = cvShowImage name' . castPtr
-           go = do mkImg >>= flip withHIplImage showImg
+           go = do mkImg >>= flip withIplImage showImg
                    cvWaitKey 1 >>= bool (cvDestroyWindow name') go . (> 0)
        go
 
@@ -38,13 +37,12 @@ runNamedWindow name mkImg =
 -- action for showing an image, and an action for destroying the
 -- window. Be sure to repeatedly invoke 'waitKey' to keep the system
 -- alive.
-namedWindow :: (HasChannels c, HasDepth d, ImgBuilder r) => 
-               String -> [WindowFlag] -> 
+namedWindow :: String -> [WindowFlag] -> 
                --Maybe MouseCallback -> 
-               IO (HIplImage c d r -> IO (), IO ())
+               IO (Image c d r -> IO (), IO ())
 namedWindow name flags =
   do cstr <- newCString name
-     let showImg img = withHIplImage img $ \imgPtr ->
+     let showImg img = withIplImage img $ \imgPtr ->
                          cvShowImage cstr (fromArr imgPtr)
      cvNamedWindow cstr (windowFlagsToEnum flags)
      return (showImg, cvDestroyWindow cstr)

@@ -36,22 +36,26 @@ instance Storable CvSize where
         (#poke CvSize, width) ptr w
         (#poke CvSize, height) ptr h
 
-liftCvSize ::(RealFrac c, Num b) => (b -> c) -> CvSize -> CvSize
-liftCvSize f (CvSize w h) = CvSize (f' w) (f' h)
-    where f' = toFromIntegral f
+--liftCvSize ::(RealFrac c, Num b) => (b -> c) -> CvSize -> CvSize
+--liftCvSize f (CvSize w h) = CvSize (f' w) (f' h)
+--     where f' = toFromIntegral f
+liftCvSize :: (CInt -> CInt) -> CvSize -> CvSize
+liftCvSize f (CvSize w h) = CvSize (f w) (f h)
 
-liftCvSize2 :: (Num b, Num b1, RealFrac a) => (b -> b1 -> a) -> CvSize -> CvSize -> CvSize
-liftCvSize2 f (CvSize w1 h1) (CvSize w2 h2) = CvSize (f' w1 w2) (f' h1 h2)
-    where f' = toFromIntegral2 f
+-- liftCvSize2 :: (Num b, Num b1, RealFrac a) => (b -> b1 -> a) -> CvSize -> CvSize -> CvSize
+-- liftCvSize2 f (CvSize w1 h1) (CvSize w2 h2) = CvSize (f' w1 w2) (f' h1 h2)
+--     where f' = toFromIntegral2 f
+liftCvSize2 :: (CInt -> CInt -> CInt) -> CvSize -> CvSize -> CvSize
+liftCvSize2 f (CvSize w1 h1) (CvSize w2 h2) = CvSize (f w1 w2) (f h1 h2)
 
 instance AdditiveGroup CvSize where
   zeroV = CvSize 0 0
   (^+^) = liftCvSize2 (+)
-  negateV = liftCvSize (0-)
+  negateV = liftCvSize (0 -)
 
 instance VectorSpace CvSize where
   type Scalar CvSize = Double -- todo: use CInt instead of Double here?
-  a *^ s = liftCvSize (a*) s
+  a *^ s = liftCvSize (floor . (a*) . fromIntegral) s
 
 data CvRect  = CvRect { rectX      :: {-# UNPACK #-} !CInt
                       , rectY      :: {-# UNPACK #-} !CInt
@@ -75,22 +79,27 @@ instance Storable CvRect where
         (#poke CvRect, height) ptr h
 
 -- |Apply a function to each component of a 'CvRect'.
-liftCvRect :: (RealFrac c, Num b) => (b -> c) -> CvRect -> CvRect
-liftCvRect f (CvRect x y w h) = CvRect (f' x) (f' y) (f' w) (f' h)
-    where f' = toFromIntegral f
+-- liftCvRect :: (RealFrac c, Num b) => (b -> c) -> CvRect -> CvRect
+-- liftCvRect f (CvRect x y w h) = CvRect (f' x) (f' y) (f' w) (f' h)
+--     where f' = toFromIntegral f
+liftCvRect :: (CInt -> CInt) -> CvRect -> CvRect
+liftCvRect f (CvRect x y w h) = CvRect (f x) (f y) (f w) (f h)
 
-liftCvRect2 :: (Num b, Num b1, RealFrac a) => (b -> b1 -> a) -> CvRect -> CvRect -> CvRect
-liftCvRect2 f (CvRect x1 y1 w1 h1) (CvRect x2 y2 w2 h2) = CvRect (f' x1 x2) (f' y1 y2) (f' w1 w2) (f' h1 h2)
-    where f' = toFromIntegral2 f
+-- liftCvRect2 :: (Num b, Num b1, RealFrac a) => (b -> b1 -> a) -> CvRect -> CvRect -> CvRect
+-- liftCvRect2 f (CvRect x1 y1 w1 h1) (CvRect x2 y2 w2 h2) = CvRect (f' x1 x2) (f' y1 y2) (f' w1 w2) (f' h1 h2)
+--     where f' = toFromIntegral2 f
+liftCvRect2 :: (CInt -> CInt -> CInt) -> CvRect -> CvRect -> CvRect
+liftCvRect2 f (CvRect x1 y1 w1 h1) (CvRect x2 y2 w2 h2) = 
+  CvRect (f x1 x2) (f y1 y2) (f w1 w2) (f h1 h2)
 
 instance AdditiveGroup CvRect where
   zeroV = CvRect 0 0 0 0
   (^+^) = liftCvRect2 (+)
-  negateV = liftCvRect (0-)
+  negateV = liftCvRect (0 -)
 
 instance VectorSpace CvRect where
   type Scalar CvRect = Double -- todo: use CInt instead of Double here?
-  a *^ r = liftCvRect (a*) r
+  a *^ r = liftCvRect (round . (a*) . fromIntegral) r
 
 data CvPoint = CvPoint {-# UNPACK #-} !CInt {-# UNPACK #-} !CInt
 

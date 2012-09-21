@@ -2,7 +2,7 @@
 module OpenCV.Histograms (equalizeHist) where
 import Foreign.Ptr (Ptr)
 import OpenCV.Core.CxCore
-import OpenCV.Core.HIplUtil
+import OpenCV.Core.ImageUtil
 import OpenCV.Core.CVOp
 
 foreign import ccall "opencv2/imgproc/imgproc_c.h cvEqualizeHist"
