@@ -12,11 +12,11 @@ description:
    .
    /Installation/
    .
-   You must install OpenCV (development packages) prior to installing this package. Currently tested on Ubuntu Linux 11.04, Mac OS 10.5 and 10.6, Windows 7.
+   You must install OpenCV (development packages) prior to installing this package. Currently tested on Mac OS 10.7.
    .
    /Usage/
    .
-   The "OpenCV.HighCV" module exposes the most commonly used functionality. Other modules not in the @Core@ directory provide specific types of operations. While the @Core@ modules contain to low-level OpenCV interfaces.
+   The "OpenCV.HighCV" module exposes the most commonly used functionality. The @Core@ modules contain to low-level OpenCV interfaces, while modules not in the @Core@ directory provide specific types of operations.
    .
    See @src\/Examples\/VideoFunhouse@ for an example application.
 build-type:         Custom
@@ -79,7 +79,7 @@ library
        extra-libraries: cv highgui
      else
        extra-libraries: opencv_core,opencv_imgproc,opencv_highgui,opencv_video
-   build-depends: base >=4 && <5, 
+   build-depends: base >= 4.6 && <5, 
                   template-haskell,
                   vector-space >= 0.7.2,
                   directory >= 1.0.1.0 && < 2,
