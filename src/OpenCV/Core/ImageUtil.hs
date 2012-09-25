@@ -12,7 +12,7 @@ module OpenCV.Core.ImageUtil
      GrayImage, GrayImage16, GrayImage16S, ColorImage, 
      withDuplicatePixels, c_cvSetImageROI, c_cvResetImageROI,
      HasDepth(..), CvScalarT, AsCvScalar(..), ScalarOK,
-     colorDepth, UpdateROI, SingI,
+     colorDepth, UpdateROI, SingI, withDuplicateRGBPixels,
      ByteOrFloat, getRect, fromFile, unsafeWithHIplImage,
      duplicateImagePtr, compatibleImagePtr, compatibleImagePtrPtr) where
 import OpenCV.Core.CxCore (IplImage, cvFree, cvFreePtr, createImageF,
@@ -20,6 +20,7 @@ import OpenCV.Core.CxCore (IplImage, cvFree, cvFreePtr, createImageF,
                            getNumChannels, getDepth, cvGetSize)
 import OpenCV.Core.HighGui (cvLoadImage, cvSaveImage, LoadColor(..))
 import OpenCV.Core.Image
+import OpenCV.Color
 import Control.Applicative
 import Control.Arrow (second, (***))
 import Control.Monad (when, unless, join)
@@ -101,6 +102,18 @@ withDuplicatePixels img1@Image{} f = do img2 <- duplicateImage img1
                                         r <- f $ VM.unsafeFromForeignPtr0 ptr n
                                         return (img2, r)
   where n = numPixels img1 * imgChannels img1
+
+-- |Specialization of 'withDuplicatePixels' to ease the common case of
+-- dealing with 8 bit triples for each pixel.
+withDuplicateRGBPixels :: Image Trichromatic Word8 NoROI -> 
+                          (VM.IOVector RGB8 -> IO r) -> 
+                          IO (Image Trichromatic Word8 NoROI, r)
+withDuplicateRGBPixels img1 f = do img2 <- duplicateImage img1
+                                   let ptr = castForeignPtr $ 
+                                             imageDataOrigin img2
+                                   r <- f $ VM.unsafeFromForeignPtr0 ptr n
+                                   return (img2, r)
+  where n = numPixels img1
 
 -- |Return a 'V.Vector' containing a copy of the pixels that make up a
 -- 'HIplImage'.

@@ -14,6 +14,7 @@ module OpenCV.HighCV (
                       -- * Image Data Accessors
                       pixelVector, withPixelVector, withImagePixels, 
                       withDuplicatePixels, sampleLine, getRect,
+                      withDuplicateRGBPixels, RGB8(..), rgbmap,
                       -- * Image Processing
                       erode, dilate, houghStandard, houghProbabilistic, 
                       normalize, resize, setROI, resetROI,
@@ -33,7 +34,7 @@ module OpenCV.HighCV (
                       -- * Image types
                       Image, Channels(..), HasDepth, 
                       GrayImage, ColorImage, GrayImage16, GrayImage16S,
-                      Word8, Word16
+                      Word8, Word16, RGB8
     ) where
 import OpenCV.Core.CxCore
 import OpenCV.Core.CV
@@ -46,6 +47,7 @@ import Foreign.C.Types (CDouble)
 import Foreign.Ptr
 import Foreign.Storable
 import System.IO.Unsafe (unsafePerformIO)
+import OpenCV.Color
 import OpenCV.GUI
 import OpenCV.Threshold
 import OpenCV.FloodFill

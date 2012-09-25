@@ -60,6 +60,7 @@ library
       OpenCV.Filtering
       OpenCV.FeatureDetection
       OpenCV.Histograms
+      OpenCV.Color
    c-sources:
       src/OpenCV/Core/HOpenCV_wrap.c
       src/OpenCV/ArrayOps_hsc.c
