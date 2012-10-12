@@ -267,8 +267,7 @@ withPixelVector w h pix f = if len == sz
                          _ -> error "fromPixels non-zero offset"
 
 -- |Construct a fresh 'Image' from a width, a height, and a 'V.Vector'
--- of pixel values. The returned 'Image' shares the underlying
--- 'V.Vector'\'s data.
+-- of pixel values.
 fromPixels :: forall a c d. (Integral a, SingI c, HasDepth d) =>
               a -> a -> V.Vector d -> Image c d NoROI
 fromPixels w h pix = unsafePerformIO $ 
