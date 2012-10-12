@@ -273,12 +273,11 @@ fromPixels :: forall a c d. (Integral a, SingI c, HasDepth d) =>
 fromPixels w h pix = unsafePerformIO $ 
                      do fp <- copyData
                         return $ mkImage w h fp
-    where copyData = let (vfp,offset,len) = V.unsafeToForeignPtr pix
+    where copyData = let (vfp,len) = V.unsafeToForeignPtr0 pix
                      in do fp <- mallocForeignPtrBytes len
                            withForeignPtr vfp $ \src -> 
                              withForeignPtr fp $ \dst -> 
-                               let src' = plusPtr src offset
-                               in copyBytes dst src' len
+                               copyBytes dst src len
                            return fp
 {-# INLINE [0] fromPixels #-}
 
