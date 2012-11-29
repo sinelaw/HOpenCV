@@ -92,48 +92,48 @@ class (HasDepth d1, HasDepth d2, SingI c2) =>
   cv2 :: IplArrayType e =>
            (Ptr e -> Ptr e -> IO a) -> Image c1 d1 r -> Image c2 d2 r
   cv2 = cv2Alloc
-  {-# INLINE cv2 #-}
+  {-# INLINE [1] cv2 #-}
 
 -- | We clone an image and operate within its ROI if the source and
 -- destination images are compatible (same number of channels and
 -- pixel depth).
 instance (c1~c2, HasDepth d, SingI c2) => Inplace HasROI c1 d c2 d where
   cv2 = cv . dupArg
-  {-# INLINE cv2 #-}
+  {-# INLINE [1] cv2 #-}
 
 instance (HasDepth d1, HasDepth d2) => 
          Inplace HasROI Trichromatic d1 Monochromatic d2 where
   cv2 = cv2Alloc
-  {-# INLINE cv2 #-}
+  {-# INLINE [1] cv2 #-}
 
 instance (HasDepth d1, HasDepth d2) => 
          Inplace HasROI Monochromatic d1 Trichromatic d2 where
   cv2 = cv2Alloc
-  {-# INLINE cv2 #-}
+  {-# INLINE [1] cv2 #-}
 
 instance SingI c2 => Inplace HasROI c1 Word8 c2 Float where
   cv2 = cv2Alloc
-  {-# INLINE cv2 #-}
+  {-# INLINE [1] cv2 #-}
 
 instance SingI c2 => Inplace HasROI c1 Word8 c2 Word16 where
   cv2 = cv2Alloc
-  {-# INLINE cv2 #-}
+  {-# INLINE [1] cv2 #-}
 
 instance SingI c2 => Inplace HasROI c1 Word8 c2 Double where
   cv2 = cv2Alloc
-  {-# INLINE cv2 #-}
+  {-# INLINE [1] cv2 #-}
 
 instance SingI c2 => Inplace HasROI c1 Word16 c2 Word8 where
   cv2 = cv2Alloc
-  {-# INLINE cv2 #-}
+  {-# INLINE [1] cv2 #-}
 
 instance SingI c2 => Inplace HasROI c1 Float c2 Word8 where
   cv2 = cv2Alloc
-  {-# INLINE cv2 #-}
+  {-# INLINE [1] cv2 #-}
 
 instance (HasDepth d1, HasDepth d2, SingI c2) => Inplace NoROI c1 d1 c2 d2 where
   cv2 = cv2Alloc
-  {-# INLINE cv2 #-}
+  {-# INLINE [1] cv2 #-}
 
 -- If the source and destination are not compatible, then it doesn't
 -- matter if there is a ROI set as we can never operate in-place.
