@@ -12,8 +12,8 @@ module OpenCV.HighCV (
                       -- * Image Construction
                       fromPixels, fromGrayPixels, fromColorPixels, peekIpl,
                       -- * Image Data Accessors
-                      pixelVector, withPixelVector, withImagePixels, 
-                      withDuplicatePixels, sampleLine, getRect,
+                      pixelVector, unsafePixelVector, withPixelVector, 
+                      withImagePixels, withDuplicatePixels, sampleLine, getRect,
                       withDuplicateRGBPixels, RGB8(..), rgbmap,
                       -- * Image Processing
                       erode, dilate, houghStandard, houghProbabilistic, 
@@ -33,8 +33,8 @@ module OpenCV.HighCV (
                       module OpenCV.Video,
                       -- * Image types
                       Image, Channels(..), HasDepth, 
-                      GrayImage, ColorImage, GrayImage16, GrayImage16S,
-                      Word8, Word16, RGB8
+                      GrayImage, ColorImage, GrayImage16, GrayImage16S, 
+                      GrayImageF, Word8, Word16, RGB8
     ) where
 import OpenCV.Core.CxCore
 import OpenCV.Core.CV

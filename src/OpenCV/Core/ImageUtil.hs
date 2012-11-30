@@ -2,14 +2,14 @@
              FlexibleInstances, DataKinds, KindSignatures #-}
 -- |Functions for working with 'HIplImage's.
 module OpenCV.Core.ImageUtil
-    (isColor, isMono, imgChannels, withPixelVector, pixelVector,
+    (isColor, isMono, imgChannels, withPixelVector, pixelVector, 
      peekIpl, fromFileColor, fromFileGray, fromPGM16, toFile, 
-     compatibleImage, duplicateImage, fromPixels,
+     compatibleImage, duplicateImage, fromPixels, unsafePixelVector,
      withImagePixels, fromGrayPixels, fromColorPixels,
      withDuplicateImage, withCompatibleImage, setROI, resetROI,
      mkImage, mallocImage, numPixels, blackImage, Image(..), 
      ROIEnabled(..), withIplImage, Channels(..), 
-     GrayImage, GrayImage16, GrayImage16S, ColorImage, 
+     GrayImage, GrayImage16, GrayImage16S, GrayImageF, ColorImage,
      withDuplicatePixels, c_cvSetImageROI, c_cvResetImageROI,
      HasDepth(..), CvScalarT, AsCvScalar(..), ScalarOK,
      colorDepth, UpdateROI, SingI, withDuplicateRGBPixels,
@@ -52,6 +52,9 @@ type GrayImage16 = Image Monochromatic Word16 NoROI
 
 -- |Grayscale signed 16-bit (per-pixel) image type.
 type GrayImage16S = Image Monochromatic Int16 NoROI
+
+-- |Grayscale single precision floating point image type.
+type GrayImageF = Image Monochromatic Float NoROI
 
 -- |Color 8-bit (per-color) image type.
 type ColorImage = Image Trichromatic Word8 NoROI
@@ -115,17 +118,26 @@ withDuplicateRGBPixels img1 f = do img2 <- duplicateImage img1
                                    return (img2, r)
   where n = numPixels img1
 
--- |Return a 'V.Vector' containing a copy of the pixels that make up a
--- 'HIplImage'.
-pixelVector :: Storable d => Image c d NoROI -> V.Vector d
+-- |Return a 'V.Vector' containing a copy of the pixels that make up
+-- an 'Image'.
+pixelVector :: forall c d. (HasDepth d, Storable d) => 
+               Image c d NoROI -> V.Vector d
 pixelVector img = unsafePerformIO $ 
                   do ptr <- mallocForeignPtrBytes len
                      withForeignPtr ptr $ \dst -> 
                        withForeignPtr (imageData img) $ \src -> 
                          copyBytes dst src len
-                     return $ V.unsafeFromForeignPtr ptr 0 len
+                     return $ V.unsafeFromForeignPtr0 ptr n
     where len = fromIntegral $ imageSize img
+          n = len `quot` bytesPerPixel (undefined::d)
 {-# NOINLINE pixelVector #-}
+
+-- |Return a 'V.Vector' pointing to the pixels that make up an
+-- 'Image'.
+unsafePixelVector :: forall c d. (HasDepth d, Storable d) => 
+                     Image c d NoROI -> V.Vector d
+unsafePixelVector img = V.unsafeFromForeignPtr0 (imageData img) n
+  where n = imageSize img `quot` bytesPerPixel (undefined::d)
 
 -- Ensure that a file exists.
 checkFile :: FilePath -> IO ()
