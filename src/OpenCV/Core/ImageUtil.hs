@@ -269,8 +269,8 @@ duplicateImagePtr = flip withIplImage cloneImageF
 -- lets the user apply a function on 'Image's to a 'V.Vector' of pixel
 -- data.
 withPixelVector :: forall a c d r. (HasDepth d, Integral a, SingI c) =>
-                   a -> a -> V.Vector d -> (Image c d NoROI -> r) -> r
-withPixelVector w h pix f = if len == sz
+                   a -> a -> (Image c d NoROI -> r) -> V.Vector d -> r
+withPixelVector w h f pix = if len == sz
                             then f $ mkImage w h fp
                             else error "Length disagreement"
     where sz = fromIntegral (w * h) * numChannels (Proxy::Proxy c)
