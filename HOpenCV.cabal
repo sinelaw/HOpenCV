@@ -1,5 +1,5 @@
 name: HOpenCV
-version: 0.1.2.4
+version: 0.2
 license: BSD3
 maintainer: Noam Lewis <jones.noamle@gmail.com>
 bug-reports: mailto:jones.noamle@gmail.com
@@ -31,31 +31,43 @@ extra-source-files:
 
 library
    exposed-modules:
-      AI.CV.OpenCV.CV
-      AI.CV.OpenCV.CxCore
-      AI.CV.OpenCV.HighGui
-      AI.CV.OpenCV.Types
+     AI.CV.OpenCV
+   other-modules:
+     AI.CV.OpenCV.Util
+     AI.CV.OpenCV.CxCore
+     AI.CV.OpenCV.CV
+     AI.CV.OpenCV.HighGui
+     AI.CV.OpenCV.ImgProc
+--     AI.CV.OpenCV.Gtk
    c-sources:
       src/AI/CV/OpenCV/HOpenCV_wrap.c
    hs-Source-Dirs: src
-   include-dirs: /usr/include/opencv
    pkgconfig-depends: opencv
    build-depends: base >= 4 && < 5, allocated-processor >= 0.0.1, vector-space
    ghc-options: -Wall -fno-warn-type-defaults
 
-executable test-hopencv
+executable cannyVideo
   c-sources:
      src/AI/CV/OpenCV/HOpenCV_wrap.c
-  include-dirs: /usr/include/opencv
-  hs-source-dirs:  src
+  hs-source-dirs: demo,src
   Build-Depends: base >= 4 && < 5
-  main-is: Test.hs
+  main-is: cannyVideo.hs
   Ghc-Options: -Wall -fno-warn-type-defaults
   Ghc-Prof-Options:  -prof -auto-all 
   pkgconfig-depends: opencv
-  other-modules: AI.CV.OpenCV.CxCore, AI.CV.OpenCV.CV, AI.CV.OpenCV.HighGui, AI.CV.OpenCV.Types
+  other-modules: AI.CV.OpenCV.CxCore, AI.CV.OpenCV.CV, AI.CV.OpenCV.HighGui
 
+-- executable usingOpenCV_WithGtk
+--   c-sources:
+--      src/AI/CV/OpenCV/HOpenCV_wrap.c
+--   hs-source-dirs: demo,src
+--   Build-Depends: base >= 4 && < 5
+--   main-is: usingOpenCV_WithGtk.hs
+--   Ghc-Options: -Wall -fno-warn-type-defaults
+--   Ghc-Prof-Options:  -prof -auto-all 
+--   pkgconfig-depends: opencv
+--   other-modules: AI.CV.OpenCV.CxCore, AI.CV.OpenCV.CV, AI.CV.OpenCV.HighGui, AI.CV.OpenCV.Gtk
 
---source-repository head
---  type: git
---  location: git://github.com/sinelaw/HOpenCV.git
+source-repository head
+  type: git
+  location: git://github.com/sinelaw/HOpenCV.git
