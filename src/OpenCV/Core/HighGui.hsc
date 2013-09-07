@@ -21,6 +21,8 @@ import Foreign.C.String
 import Data.List (foldl') 
 import OpenCV.Core.CxCore
 
+import Foreign.Marshal.Array
+
 #include <opencv2/highgui/highgui_c.h>
 
 ------------------------------------------------
@@ -129,7 +131,7 @@ fourCC (a,b,c,d) = (c1 .&. 255) + shiftL (c2 .&. 255) 8 +
                    shiftL (c3 .&. 255) 16 + shiftL (c4 .&. 255) 24
     where [c1,c2,c3,c4] = map (fromIntegral . fromEnum) [a,b,c,d]
 
-foreign import ccall "opencv2/highgui/highgui_c.h cvCreateVideoWriter"
+foreign import ccall "HOpenCV_wrap.h cvCreateVideoWriter2"
   c_cvCreateVideoWriter :: CString -> CInt -> CDouble -> CInt -> CInt -> CInt ->
                            IO (Ptr CvVideoWriter)
 
@@ -138,19 +140,24 @@ foreign import ccall "HOpenCV_wrap.h &release_video_writer"
 
 cvCreateVideoWriter :: FilePath -> FourCC -> Double -> (Int, Int) -> 
                        IO (Ptr CvVideoWriter)
-cvCreateVideoWriter fname codec fps (w, h) = 
+cvCreateVideoWriter fname codec fps (w,h) = do
     withCString fname $ \str ->
         c_cvCreateVideoWriter str (fourCC codec) (realToFrac fps) 
-                              (fromIntegral w) (fromIntegral h) 1
-                              
+            (fromIntegral w) (fromIntegral h) 1
+
 -- |Create a video file writer.
 createVideoWriterF :: FilePath -> FourCC -> Double -> (Int, Int) -> 
                       IO (ForeignPtr CvVideoWriter)
-createVideoWriterF fname codec fps sz = createForeignPtr cp_release_writer $
-                                        cvCreateVideoWriter fname codec fps sz
+createVideoWriterF fname codec fps sz =
+    createForeignPtr cp_release_writer $ cvCreateVideoWriter fname codec fps sz
 
 foreign import ccall "opencv2/highgui/highgui_c.h cvWriteFrame"
   cvWriteFrame :: Ptr CvVideoWriter -> Ptr IplImage -> IO ()
+
+{-
+foreign import ccall "opencv2/core/types_c.h cvSize"
+  cvSize :: Int -> Int -> IO (Ptr ())
+-}
 
 -------------------------------------------------
 -- Windows

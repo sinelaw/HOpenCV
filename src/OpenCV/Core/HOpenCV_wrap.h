@@ -31,6 +31,9 @@ void cv_free(void *obj);
 int seq_total(const CvSeq *seq);
 /* CvRect *c_rect_cvGetSeqElem(const CvSeq *seq, int index); */
 
+CvVideoWriter* cvCreateVideoWriter(const char* filename, int fourcc, 
+        double fps, int frame_x, int frame_y, int is_color);
+
 void c_cvRectangle(CvArr *img, int x, int y, int width, int height);
 
 void c_cvLine(CvArr *img, int x1, int y1, int x2, int y2, double r, double g, 

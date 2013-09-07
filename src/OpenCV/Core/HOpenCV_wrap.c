@@ -111,6 +111,14 @@ void dilate(const CvArr *src, CvArr *dest, int iterations)
     cvDilate(src, dest, NULL, iterations);
 }
 
+CvVideoWriter* cvCreateVideoWriter2( const char* filename, int fourcc,
+                                           double fps, int frame_x, int frame_y,
+                                           int is_color CV_DEFAULT(1))
+{
+    return cvCreateVideoWriter(filename, fourcc, fps, cvSize(frame_x, frame_y), is_color);
+}
+
+
 /**********************************************************/
 
 void release_mem_storage(CvMemStorage *mem_store)
