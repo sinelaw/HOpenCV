@@ -279,11 +279,11 @@ peekIpl = peek . castPtr
 pokeIpl :: forall c d r. (SingI c, HasDepth d) => 
            Image (c::Channels) d r -> Ptr IplImage -> Ptr Word8 -> IO ()
 pokeIpl himg ptr hp =
-    do (#poke IplImage, nSize) ptr ((#size IplImage)::Int)
-       (#poke IplImage, ID) ptr (0::Int)
-       (#poke IplImage, nChannels) ptr (numChannels (Proxy::Proxy c))
+    do (#poke IplImage, nSize) ptr ((#size IplImage)::CInt)
+       (#poke IplImage, ID) ptr (0::CInt)
+       (#poke IplImage, nChannels) ptr (h2c $ numChannels (Proxy::Proxy c))
        (#poke IplImage, depth) ptr (unDepth (depth (undefined::d)))
-       (#poke IplImage, dataOrder) ptr (0::Int)
+       (#poke IplImage, dataOrder) ptr (0::CInt)
        (#poke IplImage, origin) ptr (h2c $ origin himg)
        (#poke IplImage, align) ptr (4::CInt)
        (#poke IplImage, width) ptr (h2c $ width himg)
@@ -360,10 +360,10 @@ instance forall c d r. (SingI c, HasDepth d, SingI r, UpdateROI r) =>
                                                        conv
                 (#peek IplImage, imageDataOrigin) ptr >>= cvFree
                 return $ unsafeCoerce img2
-        else do origin' <- (#peek IplImage, origin) ptr
-                imageSize' <- (#peek IplImage, imageSize) ptr
+        else do origin' <- c2h <$> (#peek IplImage, origin) ptr
+                imageSize' <- c2h <$> (#peek IplImage, imageSize) ptr
                 imageData' <- (#peek IplImage, imageData) ptr >>= newForeignPtr_
                 imageDataOrigin' <- (#peek IplImage, imageDataOrigin) ptr >>= newForeignPtr_
-                widthStep' <- (#peek IplImage, widthStep) ptr
+                widthStep' <- c2h <$> (#peek IplImage, widthStep) ptr
                 return $ Image origin' width' height' roir imageSize'
                                imageData' imageDataOrigin' widthStep'
