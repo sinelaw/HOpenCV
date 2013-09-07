@@ -7,7 +7,7 @@ module OpenCV.Core.HighGui
      CapturePos(..), cvQueryFrame,
      newWindow, delWindow, showImage, cvWaitKey,
      cvConvertImage, c_debug_ipl,
-     createVideoWriterF, cvWriteFrame, FourCC,
+     createVideoWriterF, cvWriteFrame, FourCC, toFourCC,
      cvNamedWindow, cvDestroyWindow, cvShowImage, WindowFlag(..),
      MouseCallback, cvSetMouseCallback, wrapMouseCB, cvInit,
      windowFlagsToEnum, Event(..), EventFlag(..)) where
@@ -125,6 +125,11 @@ cvQueryFrame cap = ptrToMaybe `fmap` c_cvQueryFrame cap
 data CvVideoWriter
 
 type FourCC = (Char, Char, Char, Char)
+
+-- | Parse a four-character 'String' into a 'FourCC' code (e.g. "XVID").
+toFourCC :: String -> FourCC
+toFourCC [a,b,c,d] = (a,b,c,d)
+toFourCC c = error $ "Invalid FourCC code: "++c
 
 fourCC :: FourCC -> CInt
 fourCC (a,b,c,d) = (c1 .&. 255) + shiftL (c2 .&. 255) 8 + 

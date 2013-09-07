@@ -3,7 +3,7 @@
 -- for writing to video files.
 module OpenCV.Video (createFileCapture, createFileCaptureLoop, 
                      createCameraCapture, createVideoWriter, 
-                     FourCC, mpeg4CC) where
+                     FourCC, toFourCC, mpeg4CC) where
 import Data.Maybe (fromMaybe)
 import Foreign.Ptr
 import Foreign.ForeignPtr (withForeignPtr)
