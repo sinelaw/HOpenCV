@@ -4,7 +4,8 @@ module OpenCV.ColorConversion
     (convertGrayToRGB, convertGrayToBGR, 
      convertBGRToGray, convertRGBToGray,
      convertBayerBgToBGR, convertBayerBgToRGB,
-     convertRGBToHSV, convertBGRToHSV, convertHSVToBGR) where
+     convertRGBToHSV, convertBGRToHSV, convertHSVToBGR,
+     convertColor) where
 import OpenCV.Core.CV
 import OpenCV.Core.ImageUtil
 import OpenCV.Core.ColorConversion
