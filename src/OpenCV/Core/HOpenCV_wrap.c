@@ -139,6 +139,12 @@ int seq_total(const CvSeq *seq) {
     return seq->total;
 }
 
+void c_cvGetSeqPoint(const CvSeq *seq, int i, int*x, int*y) {
+  CvPoint* p = CV_GET_SEQ_ELEM( CvPoint, seq, i);
+  *x = p->x;
+  *y = p->y;
+}
+
 /* Commonly used case of CV_GET_SEQ_ELEM is CvRect-typed elements.
    The macro CV_GET_SEQ_ELEM is supposed to be faster in some cases
    than the function cvGetSeqElem. */
@@ -184,6 +190,26 @@ int c_cvFindContours(CvArr *img, CvMemStorage *storage, CvSeq** first_contour,
                           method, cvPoint(offset_x,offset_y));
 }
 
+
+double c_cvContourArea( const CvArr *contour)
+{
+  return cvContourArea( contour, CV_WHOLE_SEQ, 0 );
+}
+
+
+
+void c_cvMoments( const CvArr* arr, CvMoments* moments)
+{
+  cvMoments( arr, moments, 0);
+}
+
+double c_cvContourPerimeter( const void* contour)
+{
+  cvContourPerimeter(contour);
+}
+
+// int c_cvFollowContourList
+
 void c_cvSetRoi(IplImage* img, int x, int y, int width, int height)
 {
   cvSetImageROI(img, cvRect(x,y,width,height));
@@ -203,6 +229,17 @@ void c_cvAvg(const CvArr *img, const CvArr *mask, CvScalar* avg)
   CvScalar s = cvAvg(img, mask);
   memcpy(avg, &s, sizeof(CvScalar));
 }
+
+
+void c_cvDrawContours( CvArr * img, CvSeq* contour,
+      CvScalar * external_color,
+      CvScalar * hole_color,
+      int max_level, int max_thickness, int line_type, CvPoint * offset )
+{
+  cvDrawContours( img, contour, *external_color, *hole_color,
+        max_level, max_thickness, line_type, *offset);
+}
+
 
 
 /****************************************************************************/

@@ -80,6 +80,10 @@ library
        extra-libraries: cv highgui
      else
        extra-libraries: opencv_core,opencv_imgproc,opencv_highgui,opencv_video
+
+   -- needed to load in ghci-7.8 
+   cc-options: -fPIC
+
    build-depends: base >= 4.6 && <5, 
                   template-haskell,
                   vector-space >= 0.7.2,
