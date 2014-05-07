@@ -29,7 +29,8 @@ import Control.Monad (when)
 import Data.Bits (complement, (.&.))
 import Data.Int
 import Data.Proxy
-import Data.Singletons
+import Data.Singletons hiding (Proxy)
+import Data.Singletons.TH
 import Data.Word (Word8, Word16)
 import Foreign.C.Types
 import Foreign.ForeignPtr

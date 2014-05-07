@@ -31,6 +31,9 @@ void cv_free(void *obj);
 int seq_total(const CvSeq *seq);
 /* CvRect *c_rect_cvGetSeqElem(const CvSeq *seq, int index); */
 
+void c_cvGetSeqPoint(const CvSeq *seq, int i, int*x, int*y);
+
+
 CvVideoWriter* cvCreateVideoWriter(const char* filename, int fourcc, 
         double fps, int frame_x, int frame_y, int is_color);
 
@@ -49,6 +52,9 @@ int c_cvFindContours(CvArr *img, CvMemStorage *storage, CvSeq** first_contour,
                      int header_size, int mode, int method, int offset_x, 
                      int offset_y);
 
+double c_cvContourArea( const CvArr *contour);
+double c_cvContourPerimeter( const void* contour);
+
 void c_cvAvg(const CvArr *img, const CvArr *mask, CvScalar* avg);
 
 CvSeq *c_cvHaarDetectObjects( const CvArr* image,
@@ -57,3 +63,8 @@ CvSeq *c_cvHaarDetectObjects( const CvArr* image,
                               int min_neighbors , int flags,
                               int width, int height);
 
+
+void c_cvDrawContours( CvArr * img, CvSeq* contour,
+      CvScalar * external_color,
+      CvScalar * hole_color,
+      int max_level, int max_thickness, int line_type, CvPoint * offset );
