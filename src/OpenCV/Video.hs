@@ -73,7 +73,7 @@ mpeg4CC = ('F','M','P','4')
 -- returned action may be used to add frames to the video stream.
 createVideoWriter :: (HasDepth d, UpdateROI r) =>
                      FilePath -> FourCC -> Double -> (Int,Int) -> 
-                     IO (Image c d r -> IO ())
+                     IO (Image Trichromatic d r -> IO ())
 createVideoWriter fname codec fps sz = 
     do writer <- createVideoWriterF fname codec fps sz
        let writeFrame img = withForeignPtr writer $ \writer' ->
