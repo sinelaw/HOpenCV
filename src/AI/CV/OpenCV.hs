@@ -9,6 +9,7 @@ module AI.CV.OpenCV
   , liftCvRect2
   -- * CvSeq
   , CvSeq
+  , seqToList
   -- * Depth
   , Depth
   , iplDepth1u 
@@ -74,6 +75,7 @@ module AI.CV.OpenCV
   -- * Canny Edge Detection
   , canny
   -- * Haar Object Detection
+  , load
   , HaarClassifierCascade
   , HaarDetectFlag
   , haarFlagNone
