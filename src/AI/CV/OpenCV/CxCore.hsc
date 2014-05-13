@@ -132,7 +132,7 @@ numToDepth x = lookup x depthsLookupList
 foreign import ccall unsafe "cxcore.h cvCreateMemStorage"
   c_cvCreateMemStorage :: CInt -> IO (Ptr Priv_CvMemStorage)
 
-foreign import ccall unsafe "core_c.h &cvReleaseMemStorage"
+foreign import ccall unsafe "HOpenCV_wrap.h &release_mem_storage"
   releaseMemStorage :: FunPtr (Ptr a -> IO ())
 
 createMemStorage :: Int -> IO MemStorage
