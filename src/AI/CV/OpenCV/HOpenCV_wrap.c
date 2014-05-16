@@ -107,13 +107,11 @@ void dilate(const CvArr *src, CvArr *dest, int iterations)
 }
 
 /**********************************************************/
-/*
 void release_mem_storage(CvMemStorage *mem_store)
 {
     CvMemStorage *temp = mem_store;
     cvReleaseMemStorage(&temp);
 }
-*/
 
 void cv_free(void *obj)
 {
