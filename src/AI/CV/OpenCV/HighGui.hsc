@@ -186,37 +186,3 @@ setTrackbarPos trackbarName winName pos
   = withCString trackbarName $ \tb ->
     withCString winName      $ \wn ->
       cvSetTrackbarPos tb wn (fromIntegral pos)
-
--- Video
-
-data Priv_CvVideoWriter
-
-type VideoWriter = ForeignPtr Priv_CvVideoWriter
-
-foreign import ccall unsafe "HOpenCV_wrap.h wrap_cvCreateVideoWriter"
-  wrap_cvCreateVideoWriter :: CString -> CInt -> CDouble -> CInt -> CInt -> IO (Ptr Priv_CvVideoWriter)
-
-type FourCC = String
-
-createVideoWriter :: String -> FourCC -> Double -> CvSize -> IO VideoWriter
-createVideoWriter file fourCC fps size
-  = do p  <- withCString file $ \f  ->
-             wrap_cvCreateVideoWriter f (toCInt fourCC)
-                                        (realToFrac fps)
-                                        (sizeWidth size) (sizeHeight size)
-       newForeignPtr releaseVideoWriter p
- where
-  toCInt = fromIntegral . sum . map fromEnum
-
-foreign import ccall unsafe "highgui.h &cvReleaseVideoWriter"
-  releaseVideoWriter :: FunPtr (Ptr Priv_CvVideoWriter -> IO ())
-
-foreign import ccall unsafe "highgui.h cvWriteFrame"
-  cvWriteFrame :: Ptr Priv_CvVideoWriter -> Ptr Priv_IplImage -> IO CInt
-
-writeFrame :: VideoWriter -> IplImage -> IO Int
-writeFrame vw im
-  = do i <- withForeignPtr2 vw im
-             $ \v' i' -> cvWriteFrame v' i'
-       return $ fromIntegral i
-

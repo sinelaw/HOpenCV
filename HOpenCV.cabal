@@ -1,5 +1,5 @@
 name: HOpenCV
-version: 0.2
+version: 0.3
 license: BSD3
 maintainer: Noam Lewis <jones.noamle@gmail.com>
 bug-reports: mailto:jones.noamle@gmail.com
@@ -32,12 +32,12 @@ extra-source-files:
 library
    exposed-modules:
      AI.CV.OpenCV
-   other-modules:
      AI.CV.OpenCV.Util
      AI.CV.OpenCV.CxCore
      AI.CV.OpenCV.CV
      AI.CV.OpenCV.HighGui
      AI.CV.OpenCV.ImgProc
+     AI.CV.OpenCV.Video
 --     AI.CV.OpenCV.Gtk
    c-sources:
       src/AI/CV/OpenCV/HOpenCV_wrap.c
