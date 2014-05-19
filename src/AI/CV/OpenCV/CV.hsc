@@ -67,7 +67,7 @@ pyrDown src dst
 ------------------------------------------------------------------------------
 
 data Priv_CvHaarClassifierCascade
-type HaarClassifierCascade = Ptr Priv_CvHaarClassifierCascade
+type HaarClassifierCascade = ForeignPtr Priv_CvHaarClassifierCascade
 
 -- thanks to http://book.realworldhaskell.org/read/interfacing-with-c-the-ffi.html
 newtype HaarDetectFlag = HaarDetectFlag { unHaarDetectFlag :: CInt }
@@ -104,8 +104,8 @@ haarDetectObjects :: IplImage              -- ^ image
                   -> CvSize                -- ^ min_size
                   -> IO (CvSeq CvRect)
 haarDetectObjects image cascade storage scaleFactor minNeighbors flags minSize
-  = do p  <- withForeignPtr2 image storage $ \im' s' -> 
-             c_cvHaarDetectObjects im' cascade s'
+  = do p  <- withForeignPtr3 image storage cascade $ \im' s' c' -> 
+             c_cvHaarDetectObjects im' c' s'
                                    (realToFrac scaleFactor)
                                    (fromIntegral minNeighbors)
                                    (unHaarDetectFlag flags)

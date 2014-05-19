@@ -133,13 +133,19 @@ foreign import ccall unsafe "cxcore.h cvCreateMemStorage"
   c_cvCreateMemStorage :: CInt -> IO (Ptr Priv_CvMemStorage)
 
 foreign import ccall unsafe "HOpenCV_wrap.h &release_mem_storage"
-  releaseMemStorage :: FunPtr (Ptr a -> IO ())
+  cf_releaseMemStorage :: FunPtr (Ptr Priv_CvMemStorage -> IO ())
+
+foreign import ccall unsafe "HOpenCV_wrap.h release_mem_storage"  
+  c_releaseMemStorage :: Ptr Priv_CvMemStorage -> IO ()
+                         
+releaseMemStorage :: MemStorage -> IO ()
+releaseMemStorage memstorage = withForeignPtr memstorage c_releaseMemStorage
 
 createMemStorage :: Int -> IO MemStorage
 createMemStorage i 
   = do p <- errorName "Failed to create mem storage" 
             . checkPtr . c_cvCreateMemStorage $ fromIntegral i
-       newForeignPtr releaseMemStorage p
+       newForeignPtr cf_releaseMemStorage p
 
 ---------------------------------------------------------------
 -- images / matrices / arrays
@@ -160,7 +166,10 @@ createImage size depth numChans
        return fp
 
 foreign import ccall unsafe "HOpenCV_wrap.h release_image"
-  releaseImage :: Ptr Priv_IplImage -> IO ()
+  c_releaseImage :: Ptr Priv_IplImage -> IO ()
+
+releaseImage :: IplImage -> IO ()
+releaseImage image = withForeignPtr image c_releaseImage
 
 -- foreign import ccall unsafe "HOpenCV_wrap.h &release_image"
   -- cp_release_image :: FunPtr (Ptr Priv_IplImage -> IO ())
