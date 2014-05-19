@@ -61,7 +61,7 @@ createFileCapture filename
   
 
 foreign import ccall unsafe "HOpenCV_wrap.h release_capture"
-  cvReleaseCapture  :: Ptr Priv_CvCapture -> IO ()
+  releaseCapture  :: Ptr Priv_CvCapture -> IO ()
 
 foreign import ccall unsafe "HOpenCV_wrap.h &release_capture"
   cp_release_capture  :: FunPtr (Ptr Priv_CvCapture -> IO ())

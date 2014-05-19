@@ -159,8 +159,8 @@ createImage size depth numChans
        fp <- newForeignPtr cvFree im
        return fp
 
--- foreign import ccall unsafe "HOpenCV_wrap.h release_image"
-  -- cvReleaseImage :: Ptr Priv_IplImage -> IO ()
+foreign import ccall unsafe "HOpenCV_wrap.h release_image"
+  releaseImage :: Ptr Priv_IplImage -> IO ()
 
 -- foreign import ccall unsafe "HOpenCV_wrap.h &release_image"
   -- cp_release_image :: FunPtr (Ptr Priv_IplImage -> IO ())
