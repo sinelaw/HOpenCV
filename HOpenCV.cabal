@@ -23,7 +23,7 @@ description:
    .
    You should then have libcv4 and libhighgui4 installed automatically too.
    .
-   
+
 build-type: Simple
 cabal-version:  >= 1.2
 extra-source-files:
@@ -45,6 +45,7 @@ library
    pkgconfig-depends: opencv
    build-depends: base >= 4 && < 5, allocated-processor >= 0.0.1, vector-space
    ghc-options: -Wall -fno-warn-type-defaults
+   Ghc-Prof-Options: -Wall
 
 executable cannyVideo
   c-sources:
@@ -53,7 +54,7 @@ executable cannyVideo
   Build-Depends: base >= 4 && < 5
   main-is: cannyVideo.hs
   Ghc-Options: -Wall -fno-warn-type-defaults
-  Ghc-Prof-Options:  -prof -auto-all 
+  Ghc-Prof-Options: -Wall
   pkgconfig-depends: opencv
   other-modules: AI.CV.OpenCV.CxCore, AI.CV.OpenCV.CV, AI.CV.OpenCV.HighGui
 
@@ -64,7 +65,7 @@ executable cannyVideo
 --   Build-Depends: base >= 4 && < 5
 --   main-is: usingOpenCV_WithGtk.hs
 --   Ghc-Options: -Wall -fno-warn-type-defaults
---   Ghc-Prof-Options:  -prof -auto-all 
+--   Ghc-Prof-Options:  -prof -auto-all
 --   pkgconfig-depends: opencv
 --   other-modules: AI.CV.OpenCV.CxCore, AI.CV.OpenCV.CV, AI.CV.OpenCV.HighGui, AI.CV.OpenCV.Gtk
 
