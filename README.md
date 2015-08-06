@@ -1,15 +1,10 @@
-HOpenCV
--------
+# HOpenCV
 
 OpenCV bindings for Haskell (rather low-level)
 
 For a functional wrapping of this library, see cv-combinators
 
 
-TODO:
------
+## TODO
 
-* Embed the depth and number of channels of images in their type using a typeclass
-  This will make things a little safer (e.g. prevent us calling cvCanny with color images in most cases)
-
-
+There is a [major fork](https://github.com/acowley/HOpenCV) that needs to be merged back into this version of HOpenCV.
