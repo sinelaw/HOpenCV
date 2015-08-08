@@ -70,7 +70,7 @@ queryFrame cap
   = do i <- withForeignPtr cap $ \c ->
               errorName "Failed to query frame from camera" . checkPtr
               $ c_cvQueryFrame c
-       fp <- newForeignPtr cvFree i
+       fp <- newForeignPtr_ i -- no free! OpenCV demands queryFrame results not be freed by user.
        return fp
 
 -------------------------------------------------
