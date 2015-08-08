@@ -54,7 +54,7 @@ instance VectorSpace CvSize where
 
 data CvRect  = CvRect { rectX :: CInt, rectY :: CInt, rectWidth :: CInt, rectHeight :: CInt }
                deriving (Show, Eq)
-                        
+
 instance Storable CvRect where
     sizeOf    _ = (#size CvRect)
     alignment _ = alignment (undefined :: CInt)
@@ -69,7 +69,7 @@ instance Storable CvRect where
         (#poke CvRect, y) ptr y
         (#poke CvRect, width) ptr w
         (#poke CvRect, height) ptr h
-        
+
 
 liftCvRect :: (RealFrac c, Num b) => (b -> c) -> CvRect -> CvRect
 liftCvRect f (CvRect x y w h) = CvRect (f' x) (f' y) (f' w) (f' h)
@@ -87,7 +87,7 @@ instance AdditiveGroup CvRect where
 instance VectorSpace CvRect where
   type Scalar CvRect = Double -- todo: use CInt instead of Double here?
   a *^ r = liftCvRect (a*) r
-  
+
 ------------------------------------------------------
 {-
 data Priv_CvArr
@@ -103,10 +103,10 @@ type MemStorage = ForeignPtr Priv_CvMemStorage
 data Priv_CvSeq a
 type CvSeq a = ForeignPtr (Priv_CvSeq a)
 
-newtype Depth = Depth { unDepth :: CInt } 
+newtype Depth = Depth { unDepth :: CInt }
     deriving (Eq, Show)
-             
-#{enum Depth, Depth             
+
+#{enum Depth, Depth
   , iplDepth1u = IPL_DEPTH_1U
   , iplDepth8u = IPL_DEPTH_8U
   , iplDepth8s = IPL_DEPTH_8S
@@ -115,7 +115,7 @@ newtype Depth = Depth { unDepth :: CInt }
   , iplDepth32s = IPL_DEPTH_32S
   , iplDepth32f = IPL_DEPTH_32F
   , iplDepth64f = IPL_DEPTH_64F
-}               
+}
 
 validDepths :: [Depth]
 validDepths = [iplDepth1u, iplDepth8u, iplDepth8s, iplDepth16u, iplDepth16s, iplDepth32s, iplDepth32f, iplDepth64f]
@@ -125,7 +125,7 @@ depthsLookupList = map (\d -> (unDepth d, d)) validDepths
 
 numToDepth :: CInt -> Maybe Depth
 numToDepth x = lookup x depthsLookupList
-  
+
 ---------------------------------------------------------------
 -- mem storage
 
@@ -136,8 +136,8 @@ foreign import ccall unsafe "HOpenCV_wrap.h &release_mem_storage"
   cf_releaseMemStorage :: FunPtr (Ptr Priv_CvMemStorage -> IO ())
 
 createMemStorage :: Int -> IO MemStorage
-createMemStorage i 
-  = do p <- errorName "Failed to create mem storage" 
+createMemStorage i
+  = do p <- errorName "Failed to create mem storage"
             . checkPtr . c_cvCreateMemStorage $ fromIntegral i
        newForeignPtr cf_releaseMemStorage p
 
@@ -152,7 +152,7 @@ foreign import ccall unsafe "HOpenCV_wrap.h create_image"
 
 createImage :: CvSize -> Depth -> Int -> IO IplImage
 createImage size depth numChans
-  = do im <- errorName "Failed to create image" . checkPtr 
+  = do im <- errorName "Failed to create image" . checkPtr
              $ c_cvCreateImage (sizeWidth size) (sizeHeight size)
                                (unDepth depth)
                                (fromIntegral numChans)
@@ -168,17 +168,17 @@ foreign import ccall unsafe "cxcore.h cvCloneImage"
 
 cloneImage :: IplImage -> IO IplImage
 cloneImage p
-  = do p' <- errorName "Failed to clone image" . checkPtr 
+  = do p' <- errorName "Failed to clone image" . checkPtr
              $ withForeignPtr p c_cvCloneImage
        fp <- newForeignPtr cvFree p'
-       return fp 
-                  
+       return fp
+
 foreign import ccall unsafe "HOpenCV_wrap.h get_size"
   c_get_size :: Ptr Priv_IplImage -> Ptr CvSize -> IO ()
 
 foreign import ccall unsafe "cxcore.h cvCopy"
   c_cvCopy :: Ptr Priv_IplImage -> Ptr Priv_IplImage -> Ptr Priv_IplImage -> IO ()
-                   
+
 -- todo add mask support
 copy :: IplImage -> IplImage -> IO ()
 copy src dst
@@ -213,7 +213,7 @@ foreign import ccall unsafe "HOpenCV_wrap.h get_depth"
 
 getDepth :: IplImage -> IO Depth
 getDepth img = do
-  depthInt <- withForeignPtr img c_get_depth 
+  depthInt <- withForeignPtr img c_get_depth
   case numToDepth depthInt of
     Nothing -> fail "Bad depth in image struct"
     Just depth -> return depth
@@ -260,16 +260,16 @@ load filename mem name
                       $ c_cvLoad filenameC mem' nameC ptrRealNameC
            ptrObj <- withForeignPtr mem g
            realNameC <- peek ptrRealNameC
-           realName <- if realNameC == nullPtr 
-                         then return Nothing 
+           realName <- if realNameC == nullPtr
+                         then return Nothing
                          else fmap Just $ peekCString realNameC
            -- cvFree realNameC
            fp <- newForeignPtr cvFree ptrObj
            return (fp, realName)
-              
+
 foreign import ccall unsafe "cxcore.h cvGetSeqElem"
   cvGetSeqElem :: Ptr (Priv_CvSeq a) -> CInt -> IO (Ptr a)
-  
+
 -- foreign import ccall unsafe "HOpenCV_wrap.h c_rect_cvGetSeqElem"
 --   cvGetSeqElemRect :: Ptr (CvSeq (Ptr CvRect)) -> CInt -> IO (Ptr CvRect)
 
@@ -296,7 +296,7 @@ seqToList pseq = do
 
 -- seqToRectList :: Ptr (CvSeq (Ptr CvRect)) -> IO [CvRect]
 -- seqToRectList pseq = do
---   numElems <- withForeignPtr pseq seqNumElems 
+--   numElems <- withForeignPtr pseq seqNumElems
 --   flip mapM [1..(numElems)] $ \i -> do
 --     rectP <- cvGetSeqElemRect pseq i
 --     rect <- peek rectP
