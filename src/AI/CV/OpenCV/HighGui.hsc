@@ -58,13 +58,6 @@ createFileCapture filename
        newForeignPtr cp_release_capture c
     where err' = errorName $ "Failed to capture from file: '" ++ filename ++ "'"
           f filenameC = c_cvCreateFileCapture filenameC
-  
-
-foreign import ccall unsafe "HOpenCV_wrap.h release_capture"
-  c_releaseCapture  :: Ptr Priv_CvCapture -> IO ()
-                       
-releaseCapture :: Capture -> IO ()                       
-releaseCapture cap = withForeignPtr cap c_releaseCapture
 
 foreign import ccall unsafe "HOpenCV_wrap.h &release_capture"
   cp_release_capture  :: FunPtr (Ptr Priv_CvCapture -> IO ())
